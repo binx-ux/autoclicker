@@ -1,6 +1,5 @@
--- Bin Hub X - AutoClicker Hub
--- Full sidebar hub style UI + autoclicker in "Main" tab
--- RCTRL = Show/Hide GUI
+-- Bin Hub X - Full Hub w/ Sidebar + Autoclicker
+-- RCTRL = Show/Hide whole hub
 
 --// Services
 local UIS = game:GetService("UserInputService")
@@ -51,6 +50,7 @@ root.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 root.BorderSizePixel = 0
 root.Active = true
 root.Draggable = true
+root.ZIndex = 1
 root.Parent = gui
 
 local rootCorner = Instance.new("UICorner")
@@ -62,7 +62,6 @@ rootStroke.Thickness = 1
 rootStroke.Color = Color3.fromRGB(60, 60, 60)
 rootStroke.Parent = root
 
--- Fake blur overlay (soft gradient background)
 local bgGradient = Instance.new("UIGradient")
 bgGradient.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(0, Color3.fromRGB(15,15,20)),
@@ -71,7 +70,7 @@ bgGradient.Color = ColorSequence.new{
 bgGradient.Rotation = 45
 bgGradient.Parent = root
 
---// Particle Dots
+-- Particles
 local function createDot()
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0, 4, 0, 4)
@@ -84,19 +83,19 @@ local function createDot()
     dot.ZIndex = 0
     dot.Parent = root
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = dot
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(1, 0)
+    c.Parent = dot
 
     dot.Position = UDim2.new(math.random(), 0, math.random(), 0)
 
     local function tweenDot()
-        local goal = {}
-        goal.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        local goal = {Position = UDim2.new(math.random(), 0, math.random(), 0)}
         local t = TweenService:Create(dot, TweenInfo.new(math.random(10,20), Enum.EasingStyle.Linear), goal)
         t:Play()
         t.Completed:Connect(tweenDot)
     end
+
     tweenDot()
 end
 
@@ -104,14 +103,17 @@ for i = 1, 35 do
     createDot()
 end
 
---// Sidebar
+---------------------------------------------------------------------//
+-- SIDEBAR
+---------------------------------------------------------------------//
+
 local sidebar = Instance.new("Frame")
 sidebar.Name = "Sidebar"
-sidebar.Size = UDim2.new(0, 220, 1, 0)
+sidebar.Size = UDim2.new(0, 240, 1, 0) -- hard width so it never collapses
 sidebar.Position = UDim2.new(0, 0, 0, 0)
 sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 sidebar.BorderSizePixel = 0
-sidebar.ZIndex = 2
+sidebar.ZIndex = 5
 sidebar.Parent = root
 
 local sidebarCorner = Instance.new("UICorner")
@@ -123,27 +125,29 @@ sidebarStroke.Thickness = 1
 sidebarStroke.Color = Color3.fromRGB(40, 40, 45)
 sidebarStroke.Parent = sidebar
 
--- Top title
+-- Title
 local titleBar = Instance.new("TextLabel")
-titleBar.Size = UDim2.new(1, -20, 0, 30)
-titleBar.Position = UDim2.new(0, 10, 0, 10)
+titleBar.Size = UDim2.new(1, -70, 0, 30)
+titleBar.Position = UDim2.new(0, 20, 0, 14)
 titleBar.BackgroundTransparency = 1
 titleBar.Text = "Bin Hub X"
 titleBar.Font = Enum.Font.GothamBlack
-titleBar.TextSize = 20
+titleBar.TextSize = 22
 titleBar.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleBar.TextXAlignment = Enum.TextXAlignment.Left
+titleBar.ZIndex = 6
 titleBar.Parent = sidebar
 
 -- Version pill
 local versionPill = Instance.new("TextLabel")
-versionPill.Size = UDim2.new(0, 60, 0, 22)
-versionPill.Position = UDim2.new(1, -70, 0, 10)
+versionPill.Size = UDim2.new(0, 60, 0, 24)
+versionPill.Position = UDim2.new(1, -80, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.Text = "v1.0"
 versionPill.Font = Enum.Font.GothamBold
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
+versionPill.ZIndex = 6
 versionPill.Parent = sidebar
 
 local versionCorner = Instance.new("UICorner")
@@ -152,8 +156,8 @@ versionCorner.Parent = versionPill
 
 -- Search bar
 local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(1, -20, 0, 30)
-searchBox.Position = UDim2.new(0, 10, 0, 50)
+searchBox.Size = UDim2.new(1, -40, 0, 34)
+searchBox.Position = UDim2.new(0, 20, 0, 56)
 searchBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 searchBox.BorderSizePixel = 0
 searchBox.PlaceholderText = "Search"
@@ -162,17 +166,19 @@ searchBox.Font = Enum.Font.Gotham
 searchBox.TextSize = 14
 searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 searchBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
+searchBox.ZIndex = 6
 searchBox.Parent = sidebar
 
 local searchCorner = Instance.new("UICorner")
 searchCorner.CornerRadius = UDim.new(0, 10)
 searchCorner.Parent = searchBox
 
--- Nav list holder
+-- Nav holder
 local navHolder = Instance.new("Frame")
-navHolder.Size = UDim2.new(1, -20, 1, -140)
-navHolder.Position = UDim2.new(0, 10, 0, 90)
+navHolder.Size = UDim2.new(1, -40, 1, -160)
+navHolder.Position = UDim2.new(0, 20, 0, 100)
 navHolder.BackgroundTransparency = 1
+navHolder.ZIndex = 6
 navHolder.Parent = sidebar
 
 local navLayout = Instance.new("UIListLayout")
@@ -180,38 +186,38 @@ navLayout.SortOrder = Enum.SortOrder.LayoutOrder
 navLayout.Padding = UDim.new(0, 4)
 navLayout.Parent = navHolder
 
--- Section label helper
-local function createSectionLabel(text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 0, 18)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 12
-    lbl.TextColor3 = Color3.fromRGB(140, 140, 150)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = text
-    lbl.Parent = navHolder
-    return lbl
-end
-
--- Nav button helper
 local pages = {}
-local currentPage = nil
 local navButtons = {}
+local currentPage = nil
 
 local function setActivePage(name)
     for pageName, frame in pairs(pages) do
         frame.Visible = (pageName == name)
     end
-    currentPage = name
 
     for btnName, btn in pairs(navButtons) do
         if btnName == name then
-            btn.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+            btn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
         else
             btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
         end
     end
+
+    currentPage = name
+end
+
+local function createSectionLabel(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 18)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 12
+    lbl.TextColor3 = Color3.fromRGB(140, 140, 150)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 6
+    lbl.Parent = navHolder
+    return lbl
 end
 
 local function createNavButton(name, labelText)
@@ -224,6 +230,7 @@ local function createNavButton(name, labelText)
     btn.TextSize = 14
     btn.TextColor3 = Color3.fromRGB(220, 220, 230)
     btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.ZIndex = 6
     btn.Parent = navHolder
 
     local corner = Instance.new("UICorner")
@@ -238,7 +245,7 @@ local function createNavButton(name, labelText)
     return btn
 end
 
--- Sections & buttons
+-- Sections + buttons
 createSectionLabel("Home")
 createNavButton("Home", ".Home")
 
@@ -252,10 +259,11 @@ createNavButton("Settings", "Settings")
 
 -- Bottom profile
 local profileFrame = Instance.new("Frame")
-profileFrame.Size = UDim2.new(1, -20, 0, 60)
-profileFrame.Position = UDim2.new(0, 10, 1, -70)
+profileFrame.Size = UDim2.new(1, -40, 0, 60)
+profileFrame.Position = UDim2.new(0, 20, 1, -70)
 profileFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 profileFrame.BorderSizePixel = 0
+profileFrame.ZIndex = 6
 profileFrame.Parent = sidebar
 
 local profileCorner = Instance.new("UICorner")
@@ -271,6 +279,7 @@ pfName.Font = Enum.Font.GothamBold
 pfName.TextSize = 14
 pfName.TextColor3 = Color3.fromRGB(255, 255, 255)
 pfName.TextXAlignment = Enum.TextXAlignment.Left
+pfName.ZIndex = 7
 pfName.Parent = profileFrame
 
 local pfTag = Instance.new("TextLabel")
@@ -282,13 +291,18 @@ pfTag.Font = Enum.Font.Gotham
 pfTag.TextSize = 12
 pfTag.TextColor3 = Color3.fromRGB(160, 160, 170)
 pfTag.TextXAlignment = Enum.TextXAlignment.Left
+pfTag.ZIndex = 7
 pfTag.Parent = profileFrame
 
---// Top bar for main content (window controls)
+---------------------------------------------------------------------//
+-- TOP BAR + CONTENT AREA
+---------------------------------------------------------------------//
+
 local contentTop = Instance.new("Frame")
-contentTop.Size = UDim2.new(1, -230, 0, 36)
-contentTop.Position = UDim2.new(0, 230, 0, 0)
+contentTop.Size = UDim2.new(1, -250, 0, 36)
+contentTop.Position = UDim2.new(0, 250, 0, 0)
 contentTop.BackgroundTransparency = 1
+contentTop.ZIndex = 3
 contentTop.Parent = root
 
 local topTitle = Instance.new("TextLabel")
@@ -300,6 +314,7 @@ topTitle.Text = "AutoClicker Hub"
 topTitle.Font = Enum.Font.GothamBold
 topTitle.TextSize = 18
 topTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
+topTitle.ZIndex = 3
 topTitle.Parent = contentTop
 
 local closeBtn = Instance.new("TextButton")
@@ -310,6 +325,7 @@ closeBtn.Text = "X"
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 14
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.ZIndex = 3
 closeBtn.Parent = contentTop
 
 local closeCorner = Instance.new("UICorner")
@@ -321,14 +337,13 @@ closeBtn.MouseButton1Click:Connect(function()
     gui.Enabled = false
 end)
 
---// Main content container
 local contentHolder = Instance.new("Frame")
-contentHolder.Size = UDim2.new(1, -230, 1, -40)
-contentHolder.Position = UDim2.new(0, 230, 0, 40)
+contentHolder.Size = UDim2.new(1, -250, 1, -40)
+contentHolder.Position = UDim2.new(0, 250, 0, 40)
 contentHolder.BackgroundTransparency = 1
+contentHolder.ZIndex = 2
 contentHolder.Parent = root
 
--- Helper to create page frame
 local function createPage(name)
     local page = Instance.new("Frame")
     page.Name = name .. "Page"
@@ -337,22 +352,27 @@ local function createPage(name)
     page.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
     page.BorderSizePixel = 0
     page.Visible = false
+    page.ZIndex = 2
     page.Parent = contentHolder
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 16)
-    corner.Parent = page
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 16)
+    c.Parent = page
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1
-    stroke.Color = Color3.fromRGB(40, 40, 45)
-    stroke.Parent = page
+    local s = Instance.new("UIStroke")
+    s.Thickness = 1
+    s.Color = Color3.fromRGB(40, 40, 45)
+    s.Parent = page
 
     pages[name] = page
     return page
 end
 
---// Home page
+---------------------------------------------------------------------//
+-- PAGES
+---------------------------------------------------------------------//
+
+-- Home
 local homePage = createPage("Home")
 
 local homeTitle = Instance.new("TextLabel")
@@ -365,22 +385,24 @@ homeTitle.Text = "Hello, Bin"
 homeTitle.Font = Enum.Font.GothamBlack
 homeTitle.TextSize = 26
 homeTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+homeTitle.ZIndex = 3
 homeTitle.Parent = homePage
 
 local homeDesc = Instance.new("TextLabel")
-homeDesc.Size = UDim2.new(1, -40, 0, 80)
+homeDesc.Size = UDim2.new(1, -40, 0, 100)
 homeDesc.Position = UDim2.new(0, 20, 0, 60)
 homeDesc.BackgroundTransparency = 1
+homeDesc.TextWrapped = true
 homeDesc.TextXAlignment = Enum.TextXAlignment.Left
 homeDesc.TextYAlignment = Enum.TextYAlignment.Top
-homeDesc.TextWrapped = true
-homeDesc.Text = "Welcome to Bin Hub X. This hub controls your custom autoclicker with keybinds, CPS, and hold/toggle modes. Switch to 'Main' on the left to start cooking."
+homeDesc.Text = "Welcome to Bin Hub X. This controls your custom autoclicker with CPS, keybinds and Toggle/Hold modes. Click 'Main' on the left to configure it."
 homeDesc.Font = Enum.Font.Gotham
 homeDesc.TextSize = 14
 homeDesc.TextColor3 = Color3.fromRGB(210, 210, 220)
+homeDesc.ZIndex = 3
 homeDesc.Parent = homePage
 
---// Blatant / Others / Settings placeholder pages
+-- Blatant
 local blatantPage = createPage("Blatant")
 local blatantLabel = Instance.new("TextLabel")
 blatantLabel.Size = UDim2.new(1, -40, 1, -40)
@@ -389,23 +411,29 @@ blatantLabel.BackgroundTransparency = 1
 blatantLabel.TextWrapped = true
 blatantLabel.TextXAlignment = Enum.TextXAlignment.Left
 blatantLabel.TextYAlignment = Enum.TextYAlignment.Top
-blatantLabel.Text = "Blatant tab placeholder.\nYou can add more scripts/features here later."
+blatantLabel.Text = "Blatant tab placeholder.\nYou can add more heavy scripts here later."
 blatantLabel.Font = Enum.Font.Gotham
 blatantLabel.TextSize = 16
 blatantLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+blatantLabel.ZIndex = 3
 blatantLabel.Parent = blatantPage
 
+-- Others
 local othersPage = createPage("Others")
 local othersLabel = blatantLabel:Clone()
-othersLabel.Text = "Others tab placeholder.\nDrop utilities or fun stuff here later."
+othersLabel.Text = "Others tab placeholder.\nPut utilities and extra tools here later."
 othersLabel.Parent = othersPage
 
+-- Settings
 local settingsPage = createPage("Settings")
 local settingsLabel = blatantLabel:Clone()
-settingsLabel.Text = "Settings tab.\n• RCTRL = Show/Hide Hub\n• Close button top-right hides hub\n\nMore settings can be added here."
+settingsLabel.Text = "Settings tab.\n\n• RCTRL = Show/Hide hub\n• Close button = hide hub\n\nYou can add more settings here."
 settingsLabel.Parent = settingsPage
 
---// MAIN PAGE (AutoClicker UI)
+---------------------------------------------------------------------//
+-- MAIN PAGE (AUTOCLICKER)
+---------------------------------------------------------------------//
+
 local mainPage = createPage("Main")
 
 -- Status
@@ -418,9 +446,10 @@ status.Text = "Status: OFF (Toggle)"
 status.Font = Enum.Font.Gotham
 status.TextSize = 16
 status.TextColor3 = Color3.fromRGB(255, 80, 80)
+status.ZIndex = 3
 status.Parent = mainPage
 
--- CPS label
+-- CPS
 local cpsLabel = Instance.new("TextLabel")
 cpsLabel.Size = UDim2.new(0, 80, 0, 20)
 cpsLabel.Position = UDim2.new(0, 20, 0, 60)
@@ -430,6 +459,7 @@ cpsLabel.Font = Enum.Font.Gotham
 cpsLabel.TextSize = 14
 cpsLabel.TextColor3 = Color3.fromRGB(230, 230, 235)
 cpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+cpsLabel.ZIndex = 3
 cpsLabel.Parent = mainPage
 
 local cpsBox = Instance.new("TextBox")
@@ -442,6 +472,7 @@ cpsBox.Font = Enum.Font.Gotham
 cpsBox.TextSize = 14
 cpsBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 cpsBox.ClearTextOnFocus = false
+cpsBox.ZIndex = 3
 cpsBox.Parent = mainPage
 
 local cpsCorner = Instance.new("UICorner")
@@ -463,6 +494,7 @@ keyButton.Text = "F"
 keyButton.Font = Enum.Font.GothamBold
 keyButton.TextSize = 14
 keyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyButton.ZIndex = 3
 keyButton.Parent = mainPage
 
 local keyCorner = Instance.new("UICorner")
@@ -484,6 +516,7 @@ modeButton.Text = "Toggle"
 modeButton.Font = Enum.Font.GothamBold
 modeButton.TextSize = 14
 modeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+modeButton.ZIndex = 3
 modeButton.Parent = mainPage
 
 local modeCorner = Instance.new("UICorner")
@@ -502,9 +535,10 @@ infoLabel.Text = "Click keybind button, then press a key. RCTRL is reserved for 
 infoLabel.Font = Enum.Font.Gotham
 infoLabel.TextSize = 12
 infoLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+infoLabel.ZIndex = 3
 infoLabel.Parent = mainPage
 
--- Start/Stop button
+-- Start button
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 220, 0, 34)
 toggleBtn.Position = UDim2.new(0, 20, 0, 216)
@@ -514,18 +548,22 @@ toggleBtn.Text = "Start"
 toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 18
 toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.ZIndex = 3
 toggleBtn.Parent = mainPage
 
 local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 10)
 toggleCorner.Parent = toggleBtn
 
---// AutoClicker Logic
+---------------------------------------------------------------------//
+-- AUTOCLICKER LOGIC
+---------------------------------------------------------------------//
+
 local clicking = false
 local cps = 10
 local toggleKey = Enum.KeyCode.F
 local listeningForKey = false
-local mode = "Toggle" -- "Toggle" or "Hold"
+local mode = "Toggle" -- Toggle / Hold
 
 local function keyToString(keycode)
     local s = tostring(keycode)
@@ -565,15 +603,11 @@ local function toggleClicker()
     updateUI()
 end
 
-toggleBtn.MouseButton1Click:Connect(function()
-    toggleClicker()
-end)
+toggleBtn.MouseButton1Click:Connect(toggleClicker)
 
 cpsBox.FocusLost:Connect(function()
     cps = getCPS()
-    if clicking then
-        updateUI()
-    end
+    if clicking then updateUI() end
 end)
 
 modeButton.MouseButton1Click:Connect(function()
@@ -590,19 +624,19 @@ end)
 keyButton.MouseButton1Click:Connect(function()
     if listeningForKey then return end
     listeningForKey = true
-    infoLabel.Text = "Press a key for autoclicker (RCTRL is for hub)."
+    infoLabel.Text = "Press a key for autoclicker (RCTRL is hub)."
 end)
 
 UIS.InputBegan:Connect(function(input, gp)
     if input.UserInputType == Enum.UserInputType.Keyboard then
-        -- RCTRL: show/hide GUI
+        -- Hub toggle
         if input.KeyCode == Enum.KeyCode.RightControl and not listeningForKey then
             guiVisible = not guiVisible
             gui.Enabled = guiVisible
             return
         end
 
-        -- Rebinding keybind
+        -- Rebind key
         if listeningForKey then
             if input.KeyCode == Enum.KeyCode.RightControl then
                 infoLabel.Text = "RCTRL is reserved for hub toggle."
@@ -646,14 +680,14 @@ task.spawn(function()
                 mouse1click()
             end)
             cps = getCPS()
-            local delay = 1 / cps
-            if delay < 0.001 then delay = 0.001 end
-            task.wait(delay)
+            local d = 1 / cps
+            if d < 0.001 then d = 0.001 end
+            task.wait(d)
         else
             task.wait(0.05)
         end
     end
 end)
 
---// Start on Home page
+-- Start on Home
 setActivePage("Home")
