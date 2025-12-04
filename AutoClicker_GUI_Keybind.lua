@@ -1,5 +1,5 @@
---// Auto Clicker GUI w/ Changeable Keybind
---// Toggle by GUI button or your custom key
+--// Auto Clicker GUI w/ Changeable Keybind + Hold/Toggle Mode + RCTRL Show/Hide
+--// Made for Anthony (binx-ux)
 
 -- // Services
 local UIS = game:GetService("UserInputService")
@@ -27,6 +27,7 @@ local function safeParent()
             g.ResetOnSpawn = false
             syn.protect_gui(g)
             g.Parent = CoreGui
+            syn.protect_gui(g)
             return g
         end
     end)
@@ -44,8 +45,8 @@ parentGui = safeParent()
 -- // Main frame
 local main = Instance.new("Frame")
 main.Name = "Main"
-main.Size = UDim2.new(0, 230, 0, 150)
-main.Position = UDim2.new(0.5, -115, 0.5, -75)
+main.Size = UDim2.new(0, 240, 0, 170)
+main.Position = UDim2.new(0.5, -120, 0.5, -85)
 main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 main.BorderSizePixel = 0
 main.Active = true
@@ -137,22 +138,49 @@ local keyCorner = Instance.new("UICorner")
 keyCorner.CornerRadius = UDim.new(0, 6)
 keyCorner.Parent = keyButton
 
--- // Info label under keybind
+-- // Mode label (Toggle / Hold)
+local modeLabel = Instance.new("TextLabel")
+modeLabel.Size = UDim2.new(0, 80, 0, 20)
+modeLabel.Position = UDim2.new(0, 5, 0, 102)
+modeLabel.BackgroundTransparency = 1
+modeLabel.Text = "Mode:"
+modeLabel.Font = Enum.Font.Gotham
+modeLabel.TextSize = 14
+modeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+modeLabel.TextXAlignment = Enum.TextXAlignment.Left
+modeLabel.Parent = main
+
+local modeButton = Instance.new("TextButton")
+modeButton.Size = UDim2.new(0, 80, 0, 22)
+modeButton.Position = UDim2.new(0, 70, 0, 100)
+modeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+modeButton.BorderSizePixel = 0
+modeButton.Text = "Toggle"
+modeButton.Font = Enum.Font.GothamBold
+modeButton.TextSize = 14
+modeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+modeButton.Parent = main
+
+local modeCorner = Instance.new("UICorner")
+modeCorner.CornerRadius = UDim.new(0, 6)
+modeCorner.Parent = modeButton
+
+-- // Info label
 local keyInfo = Instance.new("TextLabel")
 keyInfo.Size = UDim2.new(1, -10, 0, 18)
-keyInfo.Position = UDim2.new(0, 5, 0, 100)
+keyInfo.Position = UDim2.new(0, 5, 0, 126)
 keyInfo.BackgroundTransparency = 1
-keyInfo.Text = "Click button, then press a key"
+keyInfo.Text = "Keybind + Mode | RCTRL = Show/Hide"
 keyInfo.Font = Enum.Font.Gotham
-keyInfo.TextSize = 12
+keyInfo.TextSize = 11
 keyInfo.TextColor3 = Color3.fromRGB(180, 180, 180)
 keyInfo.TextXAlignment = Enum.TextXAlignment.Left
 keyInfo.Parent = main
 
 -- // Toggle button
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 210, 0, 30)
-toggleBtn.Position = UDim2.new(0, 10, 0, 120)
+toggleBtn.Size = UDim2.new(0, 220, 0, 30)
+toggleBtn.Position = UDim2.new(0, 10, 0, 138)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Text = "Start"
@@ -170,8 +198,10 @@ local clicking = false
 local cps = 10
 local toggleKey = Enum.KeyCode.F
 local listeningForKey = false
+local mode = "Toggle" -- "Toggle" or "Hold"
+local guiVisible = true
 
--- // Small helper to make key name pretty
+-- // helper: key name
 local function keyToString(keycode)
     local s = tostring(keycode) -- "Enum.KeyCode.F"
     return s:match("%.(.+)") or s
@@ -191,22 +221,22 @@ local function getCPS()
     return n
 end
 
--- // Update UI visuals based on clicking state
+-- // Update UI visuals
 local function updateUI()
     if clicking then
         toggleBtn.Text = "Stop"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 140, 70)
-        status.Text = ("Status: ON (%d CPS)"):format(cps)
+        status.Text = ("Status: ON (%d CPS, %s)"):format(cps, mode)
         status.TextColor3 = Color3.fromRGB(0, 255, 0)
     else
         toggleBtn.Text = "Start"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        status.Text = "Status: OFF"
+        status.Text = ("Status: OFF (%s)"):format(mode)
         status.TextColor3 = Color3.fromRGB(255, 70, 70)
     end
 end
 
--- // Toggle function
+-- // Toggle function (for Toggle mode and GUI button)
 local function toggleClicker()
     clicking = not clicking
     cps = getCPS()
@@ -226,30 +256,78 @@ cpsBox.FocusLost:Connect(function()
     end
 end)
 
+-- // Mode button (Toggle <-> Hold)
+modeButton.MouseButton1Click:Connect(function()
+    if mode == "Toggle" then
+        mode = "Hold"
+        modeButton.Text = "Hold"
+    else
+        mode = "Toggle"
+        modeButton.Text = "Toggle"
+    end
+    -- if we switch mode while on, just refresh text
+    updateUI()
+end)
+
 -- // Keybind change flow
 keyButton.MouseButton1Click:Connect(function()
     if listeningForKey then return end
     listeningForKey = true
-    keyInfo.Text = "Press a key..."
+    keyInfo.Text = "Press a key (RCTRL reserved)"
 end)
 
+-- // Input handling
 UIS.InputBegan:Connect(function(input, gameProcessed)
+    -- Global show/hide with Right Control
+    if input.UserInputType == Enum.UserInputType.Keyboard
+        and input.KeyCode == Enum.KeyCode.RightControl
+        and not listeningForKey then
+
+        guiVisible = not guiVisible
+        parentGui.Enabled = guiVisible
+        return
+    end
+
     -- If we're rebinding key
     if listeningForKey then
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            toggleKey = input.KeyCode
-            keyButton.Text = keyToString(toggleKey)
-            keyInfo.Text = "Keybind set to: " .. keyButton.Text
-            listeningForKey = false
+            if input.KeyCode == Enum.KeyCode.RightControl then
+                -- Reserve RCTRL for GUI toggle
+                keyInfo.Text = "RCTRL is GUI toggle only"
+            else
+                toggleKey = input.KeyCode
+                keyButton.Text = keyToString(toggleKey)
+                keyInfo.Text = "Keybind set to: " .. keyButton.Text
+                listeningForKey = false
+            end
         end
         return
     end
 
-    -- Normal toggle with keybind
     if gameProcessed then return end
+
     if input.UserInputType == Enum.UserInputType.Keyboard then
         if input.KeyCode == toggleKey then
-            toggleClicker()
+            if mode == "Toggle" then
+                -- normal toggle behavior
+                toggleClicker()
+            elseif mode == "Hold" then
+                -- start clicking while key is held
+                clicking = true
+                cps = getCPS()
+                updateUI()
+            end
+        end
+    end
+end)
+
+UIS.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == toggleKey and mode == "Hold" then
+            -- stop when key released in hold mode
+            clicking = false
+            updateUI()
         end
     end
 end)
@@ -273,4 +351,3 @@ task.spawn(function()
         end
     end
 end)
-
