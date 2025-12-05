@@ -1,16 +1,17 @@
--- Bin Hub X - Argon-style Hub v2.1
+-- Bin Hub X - Argon-style Hub v2.2
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
 -- • Blatant tab: Semi Immortal, Settings, Speed/Jump sliders, Manual Spam, Triggerbot
 -- • RightCtrl = Show/Hide hub
--- • Window only draggable from TOP BAR so sliders don't move GUI
--- • Semi Immortal exposed as getgenv().BinHub_SemiImmortal (for your own game logic)
+-- • Window only moves when dragging the top bar
+-- • Semi Immortal: teleports character up/down so the ball can't hit you easily
+-- • Home page + sidebar show the Roblox account running the script
 
 ---------------------------------------------------------------------//
 -- SERVICES / SETUP
 ---------------------------------------------------------------------//
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
+local Players      = game:GetService("Players")
+local UIS          = game:GetService("UserInputService")
+local CoreGui      = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 
 local VIM
@@ -70,8 +71,6 @@ root.Size = UDim2.new(0, 720, 0, 380)
 root.Position = UDim2.new(0.5, -360, 0.5, -190)
 root.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 root.BorderSizePixel = 0
-root.Active = false       -- not draggable directly
-root.Draggable = false
 root.Parent = gui
 
 local rootCorner = Instance.new("UICorner")
@@ -91,6 +90,7 @@ rootGrad.Color = ColorSequence.new{
 rootGrad.Rotation = 45
 rootGrad.Parent = root
 
+-- floating color dots
 local function createDot()
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0, 4, 0, 4)
@@ -108,16 +108,12 @@ local function createDot()
     c.Parent = dot
 
     local function tweenDot()
-        local goal = {Position = UDim2.new(math.random(), 0, math.random(), 0)}
         dot.Position = UDim2.new(math.random(),0,math.random(),0)
+        local goal = {Position = UDim2.new(math.random(),0,math.random(),0)}
         local ti = TweenInfo.new(math.random(10,20), Enum.EasingStyle.Linear)
         TweenService:Create(dot, ti, goal):Play()
     end
-
     tweenDot()
-    dot:GetPropertyChangedSignal("Position"):Connect(function()
-        -- no-op, just keep alive
-    end)
 end
 
 for i = 1, 40 do
@@ -145,6 +141,9 @@ sidebarStroke.Thickness = 1
 sidebarStroke.Color = Color3.fromRGB(40, 40, 45)
 sidebarStroke.Parent = sidebar
 
+local displayName = (LocalPlayer and LocalPlayer.DisplayName) or "Player"
+local userName    = (LocalPlayer and LocalPlayer.Name)        or "Unknown"
+
 local titleBar = Instance.new("TextLabel")
 titleBar.Size = UDim2.new(1, -80, 0, 30)
 titleBar.Position = UDim2.new(0, 18, 0, 14)
@@ -163,7 +162,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.1"
+versionPill.Text = "v2.2"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -203,8 +202,8 @@ navLayout.SortOrder = Enum.SortOrder.LayoutOrder
 navLayout.Padding = UDim.new(0, 4)
 navLayout.Parent = navHolder
 
-local pages = {}
-local navButtons = {}
+local pages     = {}
+local navButtons= {}
 local currentPage
 
 local function setActivePage(name)
@@ -285,7 +284,7 @@ pfName.Font = Enum.Font.GothamBold
 pfName.TextSize = 14
 pfName.TextColor3 = Color3.fromRGB(255, 255, 255)
 pfName.TextXAlignment = Enum.TextXAlignment.Left
-pfName.Text = "Bin"
+pfName.Text = displayName
 pfName.ZIndex = 4
 pfName.Parent = profileFrame
 
@@ -297,20 +296,18 @@ pfTag.Font = Enum.Font.Gotham
 pfTag.TextSize = 12
 pfTag.TextColor3 = Color3.fromRGB(170, 170, 185)
 pfTag.TextXAlignment = Enum.TextXAlignment.Left
-pfTag.Text = "@TheReal_binxix"
+pfTag.Text = "@"..userName
 pfTag.ZIndex = 4
 pfTag.Parent = profileFrame
 
 ---------------------------------------------------------------------//
--- TOP BAR + CONTENT AREA (TOP BAR DRAGGABLE)
+-- TOP BAR + DRAGGING (ONLY PLACE YOU CAN MOVE HUB)
 ---------------------------------------------------------------------//
 local contentTop = Instance.new("Frame")
 contentTop.Size = UDim2.new(1, -230, 0, 36)
 contentTop.Position = UDim2.new(0, 230, 0, 0)
 contentTop.BackgroundTransparency = 1
 contentTop.ZIndex = 2
-contentTop.Active = true
-contentTop.Draggable = true
 contentTop.Parent = root
 
 local topTitle = Instance.new("TextLabel")
@@ -344,6 +341,43 @@ closeCorner.Parent = closeBtn
 closeBtn.MouseButton1Click:Connect(function()
     guiVisible = false
     gui.Enabled = false
+end)
+
+-- manual drag logic (so only this bar moves the whole GUI)
+local dragging, dragInput, dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    root.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end
+
+contentTop.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos  = root.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+contentTop.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
 end)
 
 local contentHolder = Instance.new("Frame")
@@ -386,7 +420,7 @@ local blatantPage = createPage("Blatant")
 local othersPage  = createPage("Others")
 local settingsPage= createPage("Settings")
 
--- Home
+-- Home content (shows current account)
 do
     local t = Instance.new("TextLabel")
     t.Size = UDim2.new(1, -40, 0, 40)
@@ -397,7 +431,7 @@ do
     t.TextColor3 = Color3.fromRGB(255, 255, 255)
     t.TextXAlignment = Enum.TextXAlignment.Left
     t.TextYAlignment = Enum.TextYAlignment.Top
-    t.Text = "Hello, Bin"
+    t.Text = "Hello, "..displayName
     t.ZIndex = 3
     t.Parent = homePage
 
@@ -411,7 +445,7 @@ do
     d.TextWrapped = true
     d.TextXAlignment = Enum.TextXAlignment.Left
     d.TextYAlignment = Enum.TextYAlignment.Top
-    d.Text = "Argon-style hub for your game. Main tab handles auto click / auto parry. Blatant tab has Semi Immortal, player options, manual spam and triggerbot."
+    d.Text = "Account: @"..userName.."\nThis hub controls your auto clicker, auto parry spam and player options for your game."
     d.ZIndex = 3
     d.Parent = homePage
 end
@@ -433,7 +467,7 @@ local function simpleLabel(parent, txt)
 end
 
 simpleLabel(othersPage,   "Others tab placeholder.\nAdd extra tools here later.")
-simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Top bar = drag window\n• Close button = hide hub")
+simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Drag ONLY the top bar to move hub\n• Close button = hide hub")
 
 ---------------------------------------------------------------------//
 -- MAIN PAGE: AutoClicker + Parry
@@ -594,7 +628,7 @@ toggleCorner.CornerRadius = UDim.new(0, 10)
 toggleCorner.Parent = toggleBtn
 
 ---------------------------------------------------------------------//
--- BLATANT PAGE: SCROLLING MENU (SO EVERYTHING FITS)
+-- BLATANT PAGE: SCROLLING CONTENT
 ---------------------------------------------------------------------//
 local blatantScroll = Instance.new("ScrollingFrame")
 blatantScroll.Size = UDim2.new(1, -20, 1, -20)
@@ -643,12 +677,6 @@ local function blatantHeader(text)
     lbl.Parent = blatantScroll
 end
 
--- Semi Immortal (global flag)
-getgenv().BinHub_SemiImmortal = getgenv().BinHub_SemiImmortal or false
-local semiImmortal = getgenv().BinHub_SemiImmortal
-
-local semiCard = createCard(52)
-
 local baseTitle = Instance.new("TextLabel")
 baseTitle.Size = UDim2.new(1, -60, 0, 20)
 baseTitle.Position = UDim2.new(0, 10, 0, 6)
@@ -669,12 +697,17 @@ baseDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
 baseDesc.TextXAlignment = Enum.TextXAlignment.Left
 baseDesc.ZIndex = 4
 
+-- Semi Immortal (global flag + real movement)
+getgenv().BinHub_SemiImmortal = getgenv().BinHub_SemiImmortal or false
+local semiImmortal = getgenv().BinHub_SemiImmortal
+
+local semiCard = createCard(52)
 local semiTitle = baseTitle:Clone()
 semiTitle.Text = "Semi Immortal"
 semiTitle.Parent = semiCard
 
 local semiDesc = baseDesc:Clone()
-semiDesc.Text = "Prevents the ball from killing you. (Hook this in your game.)"
+semiDesc.Text = "Prevents the ball from killing you by bouncing you up/down."
 semiDesc.Parent = semiCard
 
 local semiToggle = Instance.new("Frame")
@@ -721,12 +754,11 @@ end)
 
 refreshSemi()
 
--- Settings card
+-- SETTINGS CARD
 local settingModes = {"Normal", "Safer", "Aggressive"}
 local currentSettingIndex = 1
 
 local setCard = createCard(52)
-
 local setTitle = baseTitle:Clone()
 setTitle.Text = "Settings"
 setTitle.Parent = setCard
@@ -757,13 +789,11 @@ setButton.MouseButton1Click:Connect(function()
     setButton.Text = settingModes[currentSettingIndex]
 end)
 
--- Player options header
+-- PLAYER OPTIONS
 blatantHeader("Player Options")
 
--- Slider helper (inside scroll)
 local function createSlider(title, desc, min, max, default, callback)
     local card = createCard(64)
-
     local t = baseTitle:Clone()
     t.Text = title
     t.Parent = card
@@ -813,9 +843,7 @@ local function createSlider(title, desc, min, max, default, callback)
         local val = math.floor(min + (max-min)*rel + 0.5)
         valueLabel.Text = tostring(val)
         fill.Size = UDim2.new(rel, 0, 1, 0)
-        if callback then
-            callback(val)
-        end
+        if callback then callback(val) end
     end
 
     bar.InputBegan:Connect(function(inp)
@@ -837,16 +865,12 @@ local function createSlider(title, desc, min, max, default, callback)
         end
     end)
 
-    if callback then
-        callback(default)
-    end
+    if callback then callback(default) end
 end
 
 createSlider("Speed", "Choose the speed of your character.", 10, 100, 20, function(val)
     local hum = getHumanoid()
-    if hum then
-        hum.WalkSpeed = val
-    end
+    if hum then hum.WalkSpeed = val end
 end)
 
 createSlider("Jump Power", "Choose the jump power of your character.", 25, 150, 50, function(val)
@@ -966,10 +990,7 @@ local function toggleClicker()
 end
 
 toggleBtn.MouseButton1Click:Connect(toggleClicker)
-
-cpsBox.FocusLost:Connect(function()
-    updateStatus()
-end)
+cpsBox.FocusLost:Connect(updateStatus)
 
 modeButton.MouseButton1Click:Connect(function()
     mode = (mode == "Toggle") and "Hold" or "Toggle"
@@ -1025,7 +1046,6 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
-    -- rebind main
     if listeningForKey then
         if input.KeyCode == Enum.KeyCode.RightControl then
             infoLabel.Text = "RightCtrl is hub toggle only."
@@ -1038,7 +1058,6 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
-    -- rebind parry
     if listeningForParry then
         parryKey = input.KeyCode
         parryKeyButton.Text = keyToString(parryKey)
@@ -1047,7 +1066,6 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
-    -- rebind manual
     if listeningForManual then
         manualKey = input.KeyCode
         manualKeyButton.Text = keyToString(manualKey)
@@ -1058,7 +1076,6 @@ UIS.InputBegan:Connect(function(input, gp)
 
     if gp then return end
 
-    -- main toggle/hold
     if input.KeyCode == toggleKey then
         if mode == "Toggle" then
             toggleClicker()
@@ -1069,7 +1086,6 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
-    -- manual spam start
     if input.KeyCode == manualKey then
         manualSpamActive = true
     end
@@ -1090,7 +1106,29 @@ UIS.InputEnded:Connect(function(input, gp)
 end)
 
 ---------------------------------------------------------------------//
--- MAIN LOOP
+-- SEMI IMMORTAL MOVEMENT LOOP (BOUNCE THROUGH MAP)
+---------------------------------------------------------------------//
+task.spawn(function()
+    local dir = 1
+    while true do
+        if getgenv().BinHub_SemiImmortal then
+            local char = LocalPlayer.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local pos = hrp.Position
+                dir = -dir
+                -- bounce up & down by 25 studs
+                hrp.CFrame = CFrame.new(pos.X, pos.Y + dir*25, pos.Z)
+            end
+            task.wait(0.12)
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+---------------------------------------------------------------------//
+-- MAIN SPAM LOOP
 ---------------------------------------------------------------------//
 task.spawn(function()
     while true do
@@ -1098,6 +1136,7 @@ task.spawn(function()
             local delay = 1 / getCPS()
             if delay < 0.001 then delay = 0.001 end
 
+            -- main click/parry
             if clicking then
                 if actionMode == "Click" then
                     pcall(function() mouse1click() end)
@@ -1112,6 +1151,7 @@ task.spawn(function()
                 end
             end
 
+            -- triggerbot (always parry)
             if triggerbotOn and VIM and parryKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, parryKey, false, game)
@@ -1120,6 +1160,7 @@ task.spawn(function()
                 end)
             end
 
+            -- manual spam
             if manualSpamActive and VIM and manualKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, manualKey, false, game)
