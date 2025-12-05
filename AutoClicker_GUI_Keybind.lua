@@ -1,15 +1,33 @@
--- Bin Hub X - Sidebar Hub w/ AutoClicker + Auto Parry Spam
--- RightCtrl = Show/Hide hub
+-- Bin Hub X - Argon-style Hub
+-- Features:
+--  • Auto Click / Auto Parry spam (CPS, Toggle/Hold, keybinds)
+--  • Manual Spam (spam a key while held)  [Blatant tab]
+--  • Triggerbot toggle (constant parry spam) [Blatant tab]
+--  • Semi Immortal toggle (placeholder flag for your own game logic)
+--  • Settings dropdown (mode text only)
+--  • Player Options: Speed & Jump Power sliders
+--  • RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
--- SERVICES / SCREEN GUI
+-- SERVICES / SETUP
 ---------------------------------------------------------------------//
+local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+
 local VIM
 pcall(function()
     VIM = game:GetService("VirtualInputManager")
 end)
+
+local LocalPlayer = Players.LocalPlayer
+
+local function getHumanoid()
+    if not LocalPlayer then return end
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    return char:FindFirstChildOfClass("Humanoid")
+end
 
 local function safeParent()
     local ok, res = pcall(function()
@@ -47,7 +65,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 local guiVisible = true
 
 ---------------------------------------------------------------------//
--- ROOT WINDOW
+-- ROOT WINDOW + PARTICLES
 ---------------------------------------------------------------------//
 local root = Instance.new("Frame")
 root.Name = "Root"
@@ -68,15 +86,61 @@ rootStroke.Thickness = 1
 rootStroke.Color = Color3.fromRGB(60, 60, 60)
 rootStroke.Parent = root
 
+-- background gradient
+local rootGrad = Instance.new("UIGradient")
+rootGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 26)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 10))
+}
+rootGrad.Rotation = 45
+rootGrad.Parent = root
+
+-- little floating color dots like Argon
+local function createDot()
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 4, 0, 4)
+    dot.BackgroundColor3 = Color3.fromRGB(
+        math.random(140,255),
+        math.random(80,255),
+        math.random(80,255)
+    )
+    dot.BorderSizePixel = 0
+    dot.ZIndex = 0
+    dot.Parent = root
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(1, 0)
+    c.Parent = dot
+
+    local function place()
+        dot.Position = UDim2.new(math.random(), 0, math.random(), 0)
+    end
+    place()
+
+    local function tweenDot()
+        local goal = {Position = UDim2.new(math.random(), 0, math.random(), 0)}
+        local ti = TweenInfo.new(math.random(10, 20), Enum.EasingStyle.Linear)
+        local tw = TweenService:Create(dot, ti, goal)
+        tw:Play()
+        tw.Completed:Connect(tweenDot)
+    end
+    tweenDot()
+end
+
+for i = 1, 40 do
+    createDot()
+end
+
 ---------------------------------------------------------------------//
 -- SIDEBAR
 ---------------------------------------------------------------------//
 local sidebar = Instance.new("Frame")
 sidebar.Name = "Sidebar"
-sidebar.Size = UDim2.new(0, 220, 1, 0)
+sidebar.Size = UDim2.new(0, 230, 1, 0)
 sidebar.Position = UDim2.new(0, 0, 0, 0)
-sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 sidebar.BorderSizePixel = 0
+sidebar.ZIndex = 2
 sidebar.Parent = root
 
 local sidebarCorner = Instance.new("UICorner")
@@ -88,38 +152,38 @@ sidebarStroke.Thickness = 1
 sidebarStroke.Color = Color3.fromRGB(40, 40, 45)
 sidebarStroke.Parent = sidebar
 
--- title
 local titleBar = Instance.new("TextLabel")
-titleBar.Size = UDim2.new(1, -20, 0, 30)
-titleBar.Position = UDim2.new(0, 10, 0, 10)
+titleBar.Size = UDim2.new(1, -80, 0, 30)
+titleBar.Position = UDim2.new(0, 18, 0, 14)
 titleBar.BackgroundTransparency = 1
 titleBar.Font = Enum.Font.GothamBlack
 titleBar.TextSize = 20
-titleBar.Text = "Bin Hub X"
-titleBar.TextColor3 = Color3.new(1, 1, 1)
+titleBar.Text = "Argon-Bin Hub"
+titleBar.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleBar.TextXAlignment = Enum.TextXAlignment.Left
+titleBar.ZIndex = 3
 titleBar.Parent = sidebar
 
--- version pill
 local versionPill = Instance.new("TextLabel")
 versionPill.Size = UDim2.new(0, 60, 0, 22)
-versionPill.Position = UDim2.new(1, -70, 0, 12)
+versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v1.1"
+versionPill.Text = "v2.0"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
+versionPill.ZIndex = 3
 versionPill.Parent = sidebar
 
-local versionCorner = Instance.new("UICorner")
-versionCorner.CornerRadius = UDim.new(1, 0)
-versionCorner.Parent = versionPill
+local vCorner = Instance.new("UICorner")
+vCorner.CornerRadius = UDim.new(1, 0)
+vCorner.Parent = versionPill
 
--- simple search bar
+-- Search
 local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(1, -20, 0, 30)
-searchBox.Position = UDim2.new(0, 10, 0, 50)
+searchBox.Size = UDim2.new(1, -36, 0, 32)
+searchBox.Position = UDim2.new(0, 18, 0, 54)
 searchBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 searchBox.BorderSizePixel = 0
 searchBox.PlaceholderText = "Search"
@@ -127,18 +191,20 @@ searchBox.Text = ""
 searchBox.Font = Enum.Font.Gotham
 searchBox.TextSize = 14
 searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+searchBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
+searchBox.ZIndex = 3
 searchBox.Parent = sidebar
 
 local searchCorner = Instance.new("UICorner")
-searchCorner.CornerRadius = UDim.new(0, 8)
+searchCorner.CornerRadius = UDim.new(0, 10)
 searchCorner.Parent = searchBox
 
--- nav holder
+-- Nav list
 local navHolder = Instance.new("Frame")
-navHolder.Size = UDim2.new(1, -20, 1, -140)
-navHolder.Position = UDim2.new(0, 10, 0, 90)
+navHolder.Size = UDim2.new(1, -36, 1, -150)
+navHolder.Position = UDim2.new(0, 18, 0, 96)
 navHolder.BackgroundTransparency = 1
+navHolder.ZIndex = 3
 navHolder.Parent = sidebar
 
 local navLayout = Instance.new("UIListLayout")
@@ -148,49 +214,50 @@ navLayout.Parent = navHolder
 
 local pages = {}
 local navButtons = {}
-local currentPage = nil
+local currentPage
 
 local function setActivePage(name)
-    for k, v in pairs(pages) do
-        v.Visible = (k == name)
+    for pageName, frame in pairs(pages) do
+        frame.Visible = (pageName == name)
     end
-    for k, v in pairs(navButtons) do
-        if k == name then
-            v.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+    for btnName, btn in pairs(navButtons) do
+        if btnName == name then
+            btn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
         else
-            v.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+            btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
         end
     end
     currentPage = name
 end
 
-local function createSectionLabel(txt)
+local function sectionLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 18)
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamSemibold
     lbl.TextSize = 12
+    lbl.TextColor3 = Color3.fromRGB(150, 150, 165)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextColor3 = Color3.fromRGB(150, 150, 160)
-    lbl.Text = txt
+    lbl.Text = text
+    lbl.ZIndex = 3
     lbl.Parent = navHolder
-    return lbl
 end
 
-local function createNavButton(name, txt)
+local function navButton(name, text)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
     btn.BorderSizePixel = 0
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 14
+    btn.TextColor3 = Color3.fromRGB(235, 235, 240)
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.TextColor3 = Color3.fromRGB(230, 230, 235)
-    btn.Text = txt
+    btn.Text = text
+    btn.ZIndex = 3
     btn.Parent = navHolder
 
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 8)
+    c.CornerRadius = UDim.new(0, 10)
     c.Parent = btn
 
     btn.MouseButton1Click:Connect(function()
@@ -198,31 +265,30 @@ local function createNavButton(name, txt)
     end)
 
     navButtons[name] = btn
-    return btn
 end
 
--- sections + buttons
-createSectionLabel("Home")
-createNavButton("Home", ".Home")
+sectionLabel("Home")
+navButton("Home", ".Home")
 
-createSectionLabel("Main")
-createNavButton("Main", "Main")
-createNavButton("Blatant", "Blatant")
-createNavButton("Others", "Others")
+sectionLabel("Main")
+navButton("Main", "Main")
+navButton("Blatant", "Blatant")
+navButton("Others", "Others")
 
-createSectionLabel("Settings")
-createNavButton("Settings", "Settings")
+sectionLabel("Settings")
+navButton("Settings", "Settings")
 
 -- profile bottom
 local profileFrame = Instance.new("Frame")
-profileFrame.Size = UDim2.new(1, -20, 0, 60)
-profileFrame.Position = UDim2.new(0, 10, 1, -70)
-profileFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+profileFrame.Size = UDim2.new(1, -36, 0, 60)
+profileFrame.Position = UDim2.new(0, 18, 1, -70)
+profileFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
 profileFrame.BorderSizePixel = 0
+profileFrame.ZIndex = 3
 profileFrame.Parent = sidebar
 
 local pfCorner = Instance.new("UICorner")
-pfCorner.CornerRadius = UDim.new(0, 12)
+pfCorner.CornerRadius = UDim.new(0, 14)
 pfCorner.Parent = profileFrame
 
 local pfName = Instance.new("TextLabel")
@@ -234,6 +300,7 @@ pfName.TextSize = 14
 pfName.TextColor3 = Color3.fromRGB(255, 255, 255)
 pfName.TextXAlignment = Enum.TextXAlignment.Left
 pfName.Text = "Bin"
+pfName.ZIndex = 4
 pfName.Parent = profileFrame
 
 local pfTag = Instance.new("TextLabel")
@@ -242,22 +309,24 @@ pfTag.Position = UDim2.new(0, 10, 0, 30)
 pfTag.BackgroundTransparency = 1
 pfTag.Font = Enum.Font.Gotham
 pfTag.TextSize = 12
-pfTag.TextColor3 = Color3.fromRGB(170, 170, 180)
+pfTag.TextColor3 = Color3.fromRGB(170, 170, 185)
 pfTag.TextXAlignment = Enum.TextXAlignment.Left
 pfTag.Text = "@TheReal_binxix"
+pfTag.ZIndex = 4
 pfTag.Parent = profileFrame
 
 ---------------------------------------------------------------------//
--- TOP BAR + CONTENT HOLDER
+-- TOP BAR + CONTENT AREA
 ---------------------------------------------------------------------//
 local contentTop = Instance.new("Frame")
-contentTop.Size = UDim2.new(1, -220, 0, 32)
-contentTop.Position = UDim2.new(0, 220, 0, 0)
+contentTop.Size = UDim2.new(1, -230, 0, 36)
+contentTop.Position = UDim2.new(0, 230, 0, 0)
 contentTop.BackgroundTransparency = 1
+contentTop.ZIndex = 2
 contentTop.Parent = root
 
 local topTitle = Instance.new("TextLabel")
-topTitle.Size = UDim2.new(1, -60, 1, 0)
+topTitle.Size = UDim2.new(1, -80, 1, 0)
 topTitle.Position = UDim2.new(0, 10, 0, 0)
 topTitle.BackgroundTransparency = 1
 topTitle.Font = Enum.Font.GothamBold
@@ -265,17 +334,19 @@ topTitle.TextSize = 18
 topTitle.TextXAlignment = Enum.TextXAlignment.Left
 topTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
 topTitle.Text = "AutoClicker + Parry Hub"
+topTitle.ZIndex = 2
 topTitle.Parent = contentTop
 
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 26, 0, 26)
-closeBtn.Position = UDim2.new(1, -30, 0.5, -13)
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
+closeBtn.Position = UDim2.new(1, -32, 0.5, -14)
 closeBtn.BackgroundColor3 = Color3.fromRGB(70, 30, 30)
 closeBtn.BorderSizePixel = 0
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 14
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.Text = "X"
+closeBtn.ZIndex = 2
 closeBtn.Parent = contentTop
 
 local closeCorner = Instance.new("UICorner")
@@ -288,9 +359,10 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 local contentHolder = Instance.new("Frame")
-contentHolder.Size = UDim2.new(1, -220, 1, -32)
-contentHolder.Position = UDim2.new(0, 220, 0, 32)
+contentHolder.Size = UDim2.new(1, -230, 1, -40)
+contentHolder.Position = UDim2.new(0, 230, 0, 40)
 contentHolder.BackgroundTransparency = 1
+contentHolder.ZIndex = 1
 contentHolder.Parent = root
 
 local function createPage(name)
@@ -301,10 +373,11 @@ local function createPage(name)
     page.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
     page.BorderSizePixel = 0
     page.Visible = false
+    page.ZIndex = 2
     page.Parent = contentHolder
 
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 14)
+    c.CornerRadius = UDim.new(0, 16)
     c.Parent = page
 
     local s = Instance.new("UIStroke")
@@ -320,23 +393,24 @@ end
 -- PAGES
 ---------------------------------------------------------------------//
 local homePage = createPage("Home")
+local mainPage = createPage("Main")
 local blatantPage = createPage("Blatant")
 local othersPage = createPage("Others")
 local settingsPage = createPage("Settings")
-local mainPage = createPage("Main")
 
--- home text
+-- Home content
 do
     local t = Instance.new("TextLabel")
     t.Size = UDim2.new(1, -40, 0, 40)
     t.Position = UDim2.new(0, 20, 0, 20)
     t.BackgroundTransparency = 1
     t.Font = Enum.Font.GothamBlack
-    t.TextSize = 24
+    t.TextSize = 26
+    t.TextColor3 = Color3.fromRGB(255, 255, 255)
     t.TextXAlignment = Enum.TextXAlignment.Left
     t.TextYAlignment = Enum.TextYAlignment.Top
-    t.TextColor3 = Color3.fromRGB(255, 255, 255)
     t.Text = "Hello, Bin"
+    t.ZIndex = 3
     t.Parent = homePage
 
     local d = Instance.new("TextLabel")
@@ -345,11 +419,12 @@ do
     d.BackgroundTransparency = 1
     d.Font = Enum.Font.Gotham
     d.TextSize = 14
+    d.TextColor3 = Color3.fromRGB(210, 210, 220)
+    d.TextWrapped = true
     d.TextXAlignment = Enum.TextXAlignment.Left
     d.TextYAlignment = Enum.TextYAlignment.Top
-    d.TextWrapped = true
-    d.TextColor3 = Color3.fromRGB(210, 210, 220)
-    d.Text = "Welcome to Bin Hub X. Use the 'Main' tab on the left to control your auto clicker or auto parry spam for YOUR game."
+    d.Text = "This hub is styled like Argon and controls your auto clicker, auto parry spam, player options, and more for your game."
+    d.ZIndex = 3
     d.Parent = homePage
 end
 
@@ -365,15 +440,15 @@ local function simpleLabel(parent, txt)
     l.TextYAlignment = Enum.TextYAlignment.Top
     l.TextColor3 = Color3.fromRGB(230, 230, 235)
     l.Text = txt
+    l.ZIndex = 3
     l.Parent = parent
 end
 
-simpleLabel(blatantPage, "Blatant tab placeholder.\nYou can add more aggressive features for your game here later.")
-simpleLabel(othersPage, "Others tab placeholder.\nDrop utilities and extra tools here later.")
-simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Close button = hide hub\n\nMore settings can be added here later.")
+simpleLabel(othersPage, "Others tab placeholder.\nAdd whatever extra tools or fun stuff you want later.")
+simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Close button = hide hub\n\nYou can wire more hub settings here later.")
 
 ---------------------------------------------------------------------//
--- MAIN PAGE (AUTOCLICKER + AUTO PARRY)
+-- MAIN PAGE: AUTOCLICKER + ACTIONS
 ---------------------------------------------------------------------//
 local status = Instance.new("TextLabel")
 status.Size = UDim2.new(1, -40, 0, 24)
@@ -382,8 +457,9 @@ status.BackgroundTransparency = 1
 status.Font = Enum.Font.Gotham
 status.TextSize = 16
 status.TextXAlignment = Enum.TextXAlignment.Left
-status.Text = "Status: OFF (Toggle, Click)"
 status.TextColor3 = Color3.fromRGB(255, 80, 80)
+status.Text = "Status: OFF (Toggle, Click)"
+status.ZIndex = 3
 status.Parent = mainPage
 
 -- CPS
@@ -393,9 +469,10 @@ cpsLabel.Position = UDim2.new(0, 20, 0, 60)
 cpsLabel.BackgroundTransparency = 1
 cpsLabel.Font = Enum.Font.Gotham
 cpsLabel.TextSize = 14
-cpsLabel.TextXAlignment = Enum.TextXAlignment.Left
 cpsLabel.TextColor3 = Color3.fromRGB(230, 230, 235)
+cpsLabel.TextXAlignment = Enum.TextXAlignment.Left
 cpsLabel.Text = "CPS:"
+cpsLabel.ZIndex = 3
 cpsLabel.Parent = mainPage
 
 local cpsBox = Instance.new("TextBox")
@@ -408,6 +485,7 @@ cpsBox.TextSize = 14
 cpsBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 cpsBox.Text = "10"
 cpsBox.ClearTextOnFocus = false
+cpsBox.ZIndex = 3
 cpsBox.Parent = mainPage
 
 local cpsCorner = Instance.new("UICorner")
@@ -429,6 +507,7 @@ keyButton.Font = Enum.Font.GothamBold
 keyButton.TextSize = 14
 keyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 keyButton.Text = "F"
+keyButton.ZIndex = 3
 keyButton.Parent = mainPage
 
 local keyCorner = Instance.new("UICorner")
@@ -450,6 +529,7 @@ modeButton.Font = Enum.Font.GothamBold
 modeButton.TextSize = 14
 modeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 modeButton.Text = "Toggle"
+modeButton.ZIndex = 3
 modeButton.Parent = mainPage
 
 local modeCorner = Instance.new("UICorner")
@@ -471,6 +551,7 @@ actionButton.Font = Enum.Font.GothamBold
 actionButton.TextSize = 14
 actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 actionButton.Text = "Click"
+actionButton.ZIndex = 3
 actionButton.Parent = mainPage
 
 local actionCorner = Instance.new("UICorner")
@@ -492,13 +573,13 @@ parryKeyButton.Font = Enum.Font.GothamBold
 parryKeyButton.TextSize = 14
 parryKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 parryKeyButton.Text = "Q"
+parryKeyButton.ZIndex = 3
 parryKeyButton.Parent = mainPage
 
-local parryKeyCorner = Instance.new("UICorner")
-parryKeyCorner.CornerRadius = UDim.new(0, 8)
-parryKeyCorner.Parent = parryKeyButton
+local parryCorner = Instance.new("UICorner")
+parryCorner.CornerRadius = UDim.new(0, 8)
+parryCorner.Parent = parryKeyButton
 
--- Info
 local infoLabel = Instance.new("TextLabel")
 infoLabel.Size = UDim2.new(1, -40, 0, 40)
 infoLabel.Position = UDim2.new(0, 20, 0, 236)
@@ -509,10 +590,10 @@ infoLabel.TextWrapped = true
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 infoLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-infoLabel.Text = "RightCtrl = show/hide hub. Set CPS, Mode, Action (Click/Parry), and keys. Start/stop with keybind or button."
+infoLabel.Text = "RightCtrl = show/hide hub. Set CPS, Mode, Action (Click/Parry), keys, then use Start or keybind."
+infoLabel.ZIndex = 3
 infoLabel.Parent = mainPage
 
--- Start button
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 220, 0, 34)
 toggleBtn.Position = UDim2.new(0, 20, 0, 280)
@@ -522,6 +603,7 @@ toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 18
 toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleBtn.Text = "Start"
+toggleBtn.ZIndex = 3
 toggleBtn.Parent = mainPage
 
 local toggleCorner = Instance.new("UICorner")
@@ -529,16 +611,303 @@ toggleCorner.CornerRadius = UDim.new(0, 10)
 toggleCorner.Parent = toggleBtn
 
 ---------------------------------------------------------------------//
--- AUTOCLICKER + AUTO PARRY LOGIC
+-- BLATANT PAGE: Semi Immortal, Settings, Player Options, Manual Spam
 ---------------------------------------------------------------------//
-local clicking = false
+local function createCard(parent, y, height)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -40, 0, height)
+    card.Position = UDim2.new(0, 20, 0, y)
+    card.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    card.BorderSizePixel = 0
+    card.ZIndex = 3
+    card.Parent = blatantPage
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 12)
+    c.Parent = card
+
+    return card
+end
+
+-- Semi Immortal toggle (visual + flag)
+local semiImmortal = false
+local semiCard = createCard(blatantPage, 20, 52)
+
+local semiTitle = Instance.new("TextLabel")
+semiTitle.Size = UDim2.new(1, -60, 0, 20)
+semiTitle.Position = UDim2.new(0, 10, 0, 6)
+semiTitle.BackgroundTransparency = 1
+semiTitle.Font = Enum.Font.GothamSemibold
+semiTitle.TextSize = 14
+semiTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+semiTitle.TextXAlignment = Enum.TextXAlignment.Left
+semiTitle.Text = "Semi Immortal"
+semiTitle.ZIndex = 4
+semiTitle.Parent = semiCard
+
+local semiDesc = Instance.new("TextLabel")
+semiDesc.Size = UDim2.new(1, -60, 0, 16)
+semiDesc.Position = UDim2.new(0, 10, 0, 28)
+semiDesc.BackgroundTransparency = 1
+semiDesc.Font = Enum.Font.Gotham
+semiDesc.TextSize = 12
+semiDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
+semiDesc.TextXAlignment = Enum.TextXAlignment.Left
+semiDesc.Text = "Prevents the ball from killing you. (Hook this in your game.)"
+semiDesc.ZIndex = 4
+semiDesc.Parent = semiCard
+
+local semiToggle = Instance.new("Frame")
+semiToggle.Size = UDim2.new(0, 40, 0, 20)
+semiToggle.Position = UDim2.new(1, -50, 0, 16)
+semiToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+semiToggle.BorderSizePixel = 0
+semiToggle.ZIndex = 4
+semiToggle.Parent = semiCard
+
+local semiToggleCorner = Instance.new("UICorner")
+semiToggleCorner.CornerRadius = UDim.new(1, 0)
+semiToggleCorner.Parent = semiToggle
+
+local semiThumb = Instance.new("Frame")
+semiThumb.Size = UDim2.new(0, 16, 0, 16)
+semiThumb.Position = UDim2.new(0, 2, 0.5, -8)
+semiThumb.BackgroundColor3 = Color3.fromRGB(180, 180, 190)
+semiThumb.BorderSizePixel = 0
+semiThumb.ZIndex = 5
+semiThumb.Parent = semiToggle
+
+local semiThumbCorner = Instance.new("UICorner")
+semiThumbCorner.CornerRadius = UDim.new(1, 0)
+semiThumbCorner.Parent = semiThumb
+
+local function refreshSemi()
+    if semiImmortal then
+        semiToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+        semiThumb.Position = UDim2.new(1, -18, 0.5, -8)
+    else
+        semiToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+        semiThumb.Position = UDim2.new(0, 2, 0.5, -8)
+    end
+end
+
+semiToggle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        semiImmortal = not semiImmortal
+        refreshSemi()
+        -- hook your own game logic here if you want true "semi immortal"
+    end
+end)
+
+refreshSemi()
+
+-- Settings dropdown card (just cycles text)
+local settingModes = {"Normal", "Safer", "Aggressive"}
+local currentSettingIndex = 1
+
+local setCard = createCard(blatantPage, 80, 52)
+
+local setTitle = semiTitle:Clone()
+setTitle.Text = "Settings"
+setTitle.Parent = setCard
+
+local setDesc = semiDesc:Clone()
+setDesc.Text = "Select the Semi-Immortal configuration."
+setDesc.Parent = setCard
+
+local setButton = Instance.new("TextButton")
+setButton.Size = UDim2.new(0, 110, 0, 24)
+setButton.Position = UDim2.new(1, -120, 0, 14)
+setButton.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+setButton.BorderSizePixel = 0
+setButton.Font = Enum.Font.Gotham
+setButton.TextSize = 14
+setButton.TextColor3 = Color3.fromRGB(220, 220, 230)
+setButton.TextXAlignment = Enum.TextXAlignment.Center
+setButton.Text = settingModes[currentSettingIndex]
+setButton.ZIndex = 4
+setButton.Parent = setCard
+
+local setCorner = Instance.new("UICorner")
+setCorner.CornerRadius = UDim.new(0, 10)
+setCorner.Parent = setButton
+
+setButton.MouseButton1Click:Connect(function()
+    currentSettingIndex = currentSettingIndex % #settingModes + 1
+    setButton.Text = settingModes[currentSettingIndex]
+end)
+
+-- Player Options header
+local playerHeader = Instance.new("TextLabel")
+playerHeader.Size = UDim2.new(1, -40, 0, 20)
+playerHeader.Position = UDim2.new(0, 20, 0, 142)
+playerHeader.BackgroundTransparency = 1
+playerHeader.Font = Enum.Font.GothamSemibold
+playerHeader.TextSize = 14
+playerHeader.TextColor3 = Color3.fromRGB(230, 230, 235)
+playerHeader.TextXAlignment = Enum.TextXAlignment.Left
+playerHeader.Text = "Player Options"
+playerHeader.ZIndex = 3
+playerHeader.Parent = blatantPage
+
+-- slider helper
+local function createSlider(y, title, desc, min, max, default, callback)
+    local card = createCard(blatantPage, y, 64)
+
+    local t = semiTitle:Clone()
+    t.Text = title
+    t.Parent = card
+
+    local d = semiDesc:Clone()
+    d.Text = desc
+    d.Parent = card
+
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0, 40, 0, 16)
+    valueLabel.Position = UDim2.new(1, -46, 0, 8)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Font = Enum.Font.Gotham
+    valueLabel.TextSize = 12
+    valueLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+    valueLabel.Text = tostring(default)
+    valueLabel.ZIndex = 4
+    valueLabel.Parent = card
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1, -40, 0, 6)
+    bar.Position = UDim2.new(0, 10, 0, 40)
+    bar.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+    bar.BorderSizePixel = 0
+    bar.ZIndex = 4
+    bar.Parent = card
+
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0, 6)
+    barCorner.Parent = bar
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default - min)/(max-min), 0, 1, 0)
+    fill.Position = UDim2.new(0,0,0,0)
+    fill.BackgroundColor3 = Color3.fromRGB(140, 200, 255)
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 5
+    fill.Parent = bar
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 6)
+    fillCorner.Parent = fill
+
+    local dragging = false
+    local function setFromX(x)
+        local rel = math.clamp((x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X, 0, 1)
+        local val = math.floor(min + (max-min)*rel + 0.5)
+        valueLabel.Text = tostring(val)
+        fill.Size = UDim2.new(rel, 0, 1, 0)
+        if callback then
+            callback(val)
+        end
+    end
+
+    bar.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            setFromX(inp.Position.X)
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+            setFromX(inp.Position.X)
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    -- initial apply
+    if callback then
+        callback(default)
+    end
+end
+
+createSlider(168, "Speed", "Choose the speed of your character.", 10, 100, 16, function(val)
+    local hum = getHumanoid()
+    if hum then
+        hum.WalkSpeed = val
+    end
+end)
+
+createSlider(238, "Jump Power", "Choose the jump power of your character.", 25, 150, 50, function(val)
+    local hum = getHumanoid()
+    if hum then
+        if hum.UseJumpPower ~= nil then
+            hum.UseJumpPower = true
+        end
+        hum.JumpPower = val
+    end
+end)
+
+-- Manual Spam + Triggerbot cards (like screenshot)
+local manualCard = createCard(blatantPage, 308, 48)
+local manualTitle = semiTitle:Clone()
+manualTitle.Text = "Manual Spam"
+manualTitle.Parent = manualCard
+
+local manualDesc = semiDesc:Clone()
+manualDesc.Text = "Spam push on keypress."
+manualDesc.Parent = manualCard
+
+local manualKeyButton = Instance.new("TextButton")
+manualKeyButton.Size = UDim2.new(0, 40, 0, 24)
+manualKeyButton.Position = UDim2.new(1, -50, 0, 12)
+manualKeyButton.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+manualKeyButton.BorderSizePixel = 0
+manualKeyButton.Font = Enum.Font.GothamBold
+manualKeyButton.TextSize = 14
+manualKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+manualKeyButton.Text = "E"
+manualKeyButton.ZIndex = 4
+manualKeyButton.Parent = manualCard
+
+local manualKeyCorner = Instance.new("UICorner")
+manualKeyCorner.CornerRadius = UDim.new(0, 10)
+manualKeyCorner.Parent = manualKeyButton
+
+local triggerCard = createCard(blatantPage, 360, 48)
+local trigTitle = semiTitle:Clone()
+trigTitle.Text = "Triggerbot"
+trigTitle.Parent = triggerCard
+
+local trigDesc = semiDesc:Clone()
+trigDesc.Text = "Block instant when they target you. (Here: constant parry spam.)"
+trigDesc.Parent = triggerCard
+
+local trigToggle = semiToggle:Clone()
+trigToggle.Parent = triggerCard
+trigToggle.Position = UDim2.new(1, -50, 0, 14)
+local trigThumb = trigToggle:FindFirstChildOfClass("Frame")
+
+---------------------------------------------------------------------//
+-- STATE / LOGIC VARS
+---------------------------------------------------------------------//
+local clicking = false          -- main auto system (click or parry)
 local cps = 10
 local toggleKey = Enum.KeyCode.F
 local parryKey = Enum.KeyCode.Q
+
+local manualKey = Enum.KeyCode.E
+local manualSpamActive = false
+
+local triggerbotOn = false
 local listeningForKey = false
 local listeningForParry = false
-local mode = "Toggle" -- Toggle / Hold
-local actionMode = "Click" -- Click / Parry
+local listeningForManual = false
+
+local mode = "Toggle"       -- Toggle / Hold
+local actionMode = "Click"  -- Click / Parry
 
 local function keyToString(keycode)
     local s = tostring(keycode)
@@ -558,33 +927,46 @@ local function getCPS()
     return n
 end
 
-local function updateUI()
-    local actionText = actionMode
+local function updateStatus()
     cps = getCPS()
-    if clicking then
-        toggleBtn.Text = "Stop"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 140, 70)
-        status.Text = ("Status: ON (%d CPS, %s, %s)"):format(cps, mode, actionText)
-        status.TextColor3 = Color3.fromRGB(0, 255, 0)
+    local actionText = actionMode
+    local modeText = mode
+    local onOff = clicking and "ON" or "OFF"
+    local color = clicking and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 80, 80)
+
+    status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cps, modeText, actionText)
+    status.TextColor3 = color
+end
+
+local function updateTriggerVisual()
+    if not trigToggle or not trigThumb then return end
+    if triggerbotOn then
+        trigToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+        trigThumb.Position = UDim2.new(1, -18, 0.5, -8)
     else
-        toggleBtn.Text = "Start"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        status.Text = ("Status: OFF (%s, %s)"):format(mode, actionText)
-        status.TextColor3 = Color3.fromRGB(255, 80, 80)
+        trigToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+        trigThumb.Position = UDim2.new(0, 2, 0.5, -8)
     end
 end
 
 local function toggleClicker()
     clicking = not clicking
     cps = getCPS()
-    updateUI()
+    updateStatus()
+    if clicking then
+        toggleBtn.Text = "Stop"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 140, 70)
+    else
+        toggleBtn.Text = "Start"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    end
 end
 
 toggleBtn.MouseButton1Click:Connect(toggleClicker)
 
 cpsBox.FocusLost:Connect(function()
     cps = getCPS()
-    if clicking then updateUI() end
+    updateStatus()
 end)
 
 modeButton.MouseButton1Click:Connect(function()
@@ -595,7 +977,7 @@ modeButton.MouseButton1Click:Connect(function()
         mode = "Toggle"
         modeButton.Text = "Toggle"
     end
-    updateUI()
+    updateStatus()
 end)
 
 actionButton.MouseButton1Click:Connect(function()
@@ -606,45 +988,65 @@ actionButton.MouseButton1Click:Connect(function()
         actionMode = "Click"
         actionButton.Text = "Click"
     end
-    updateUI()
+    updateStatus()
 end)
 
 keyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForParry then return end
+    if listeningForKey or listeningForParry or listeningForManual then return end
     listeningForKey = true
-    infoLabel.Text = "Press a key for TOGGLE/HOLD (RightCtrl is hub)."
+    infoLabel.Text = "Press a key for main Toggle/Hold (RightCtrl reserved)."
 end)
 
 parryKeyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForParry then return end
+    if listeningForKey or listeningForParry or listeningForManual then return end
     listeningForParry = true
-    infoLabel.Text = "Press a key to use as PARRY key."
+    infoLabel.Text = "Press a key to use as Parry key."
 end)
 
+manualKeyButton.MouseButton1Click:Connect(function()
+    if listeningForKey or listeningForParry or listeningForManual then return end
+    listeningForManual = true
+    infoLabel.Text = "Press a key to use for Manual Spam."
+end)
+
+trigToggle.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        triggerbotOn = not triggerbotOn
+        updateTriggerVisual()
+    end
+end)
+
+updateTriggerVisual()
+updateStatus()
+
+---------------------------------------------------------------------//
+-- INPUT HANDLING
+---------------------------------------------------------------------//
 UIS.InputBegan:Connect(function(input, gp)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-    -- hub toggle
-    if input.KeyCode == Enum.KeyCode.RightControl and not listeningForKey and not listeningForParry then
+    -- show/hide hub
+    if input.KeyCode == Enum.KeyCode.RightControl
+        and not listeningForKey and not listeningForParry and not listeningForManual then
         guiVisible = not guiVisible
         gui.Enabled = guiVisible
         return
     end
 
-    -- rebind main key
+    -- rebinding main key
     if listeningForKey then
         if input.KeyCode == Enum.KeyCode.RightControl then
-            infoLabel.Text = "RightCtrl is reserved for hub toggle."
+            infoLabel.Text = "RightCtrl is hub toggle only."
         else
             toggleKey = input.KeyCode
             keyButton.Text = keyToString(toggleKey)
-            infoLabel.Text = "Click keybind set to: " .. keyButton.Text
+            infoLabel.Text = "Main keybind set to: " .. keyButton.Text
             listeningForKey = false
         end
         return
     end
 
-    -- rebind parry key
+    -- rebinding parry key
     if listeningForParry then
         parryKey = input.KeyCode
         parryKeyButton.Text = keyToString(parryKey)
@@ -653,53 +1055,91 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
+    -- rebinding manual key
+    if listeningForManual then
+        manualKey = input.KeyCode
+        manualKeyButton.Text = keyToString(manualKey)
+        infoLabel.Text = "Manual spam key set to: " .. manualKeyButton.Text
+        listeningForManual = false
+        return
+    end
+
     if gp then return end
 
-    -- normal toggle/hold start
+    -- main toggle / hold
     if input.KeyCode == toggleKey then
         if mode == "Toggle" then
             toggleClicker()
         elseif mode == "Hold" then
             clicking = true
-            cps = getCPS()
-            updateUI()
+            updateStatus()
         end
+        return
+    end
+
+    -- manual spam on keypress
+    if input.KeyCode == manualKey then
+        manualSpamActive = true
     end
 end)
 
 UIS.InputEnded:Connect(function(input, gp)
     if gp then return end
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
     if input.KeyCode == toggleKey and mode == "Hold" then
         clicking = false
-        updateUI()
+        updateStatus()
+    end
+
+    if input.KeyCode == manualKey then
+        manualSpamActive = false
     end
 end)
 
--- main loop
+---------------------------------------------------------------------//
+-- MAIN LOOP (AUTO CLICK / PARRY / MANUAL / TRIGGERBOT)
+---------------------------------------------------------------------//
 task.spawn(function()
     while true do
-        if clicking then
-            if actionMode == "Click" then
-                -- normal mouse spam
-                pcall(function()
-                    mouse1click()
-                end)
-            else
-                -- Parry key spam
-                if VIM and parryKey then
-                    pcall(function()
-                        VIM:SendKeyEvent(true, parryKey, false, game)
-                        task.wait(0.01)
-                        VIM:SendKeyEvent(false, parryKey, false, game)
-                    end)
+        if clicking or triggerbotOn or manualSpamActive then
+            local delay = 1 / getCPS()
+            if delay < 0.001 then delay = 0.001 end
+
+            -- Main click/parry
+            if clicking then
+                if actionMode == "Click" then
+                    pcall(function() mouse1click() end)
+                else
+                    if VIM and parryKey then
+                        pcall(function()
+                            VIM:SendKeyEvent(true, parryKey, false, game)
+                            task.wait(0.01)
+                            VIM:SendKeyEvent(false, parryKey, false, game)
+                        end)
+                end
                 end
             end
 
-            cps = getCPS()
-            local d = 1 / cps
-            if d < 0.001 then d = 0.001 end
-            task.wait(d)
+            -- Triggerbot: constant parry spam
+            if triggerbotOn and VIM and parryKey then
+                pcall(function()
+                    VIM:SendKeyEvent(true, parryKey, false, game)
+                    task.wait(0.01)
+                    VIM:SendKeyEvent(false, parryKey, false, game)
+                end)
+            end
+
+            -- Manual spam: spam the manual key while held
+            if manualSpamActive and VIM and manualKey then
+                pcall(function()
+                    VIM:SendKeyEvent(true, manualKey, false, game)
+                    task.wait(0.01)
+                    VIM:SendKeyEvent(false, manualKey, false, game)
+                end)
+            end
+
+            task.wait(delay)
         else
             task.wait(0.05)
         end
