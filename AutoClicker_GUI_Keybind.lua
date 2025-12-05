@@ -1,12 +1,9 @@
--- Bin Hub X - Argon-style Hub
--- Features:
---  • Auto Click / Auto Parry spam (CPS, Toggle/Hold, keybinds)
---  • Manual Spam (spam a key while held)  [Blatant tab]
---  • Triggerbot toggle (constant parry spam) [Blatant tab]
---  • Semi Immortal toggle (placeholder flag for your own game logic)
---  • Settings dropdown (mode text only)
---  • Player Options: Speed & Jump Power sliders
---  • RightCtrl = Show/Hide hub
+-- Bin Hub X - Argon-style Hub v2.1
+-- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
+-- • Blatant tab: Semi Immortal, Settings, Speed/Jump sliders, Manual Spam, Triggerbot
+-- • RightCtrl = Show/Hide hub
+-- • Window only draggable from TOP BAR so sliders don't move GUI
+-- • Semi Immortal exposed as getgenv().BinHub_SemiImmortal (for your own game logic)
 
 ---------------------------------------------------------------------//
 -- SERVICES / SETUP
@@ -73,8 +70,8 @@ root.Size = UDim2.new(0, 720, 0, 380)
 root.Position = UDim2.new(0.5, -360, 0.5, -190)
 root.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 root.BorderSizePixel = 0
-root.Active = true
-root.Draggable = true
+root.Active = false       -- not draggable directly
+root.Draggable = false
 root.Parent = gui
 
 local rootCorner = Instance.new("UICorner")
@@ -86,16 +83,14 @@ rootStroke.Thickness = 1
 rootStroke.Color = Color3.fromRGB(60, 60, 60)
 rootStroke.Parent = root
 
--- background gradient
 local rootGrad = Instance.new("UIGradient")
 rootGrad.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 26)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 10))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(20,20,26)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(5,5,10))
 }
 rootGrad.Rotation = 45
 rootGrad.Parent = root
 
--- little floating color dots like Argon
 local function createDot()
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0, 4, 0, 4)
@@ -112,19 +107,17 @@ local function createDot()
     c.CornerRadius = UDim.new(1, 0)
     c.Parent = dot
 
-    local function place()
-        dot.Position = UDim2.new(math.random(), 0, math.random(), 0)
-    end
-    place()
-
     local function tweenDot()
         local goal = {Position = UDim2.new(math.random(), 0, math.random(), 0)}
-        local ti = TweenInfo.new(math.random(10, 20), Enum.EasingStyle.Linear)
-        local tw = TweenService:Create(dot, ti, goal)
-        tw:Play()
-        tw.Completed:Connect(tweenDot)
+        dot.Position = UDim2.new(math.random(),0,math.random(),0)
+        local ti = TweenInfo.new(math.random(10,20), Enum.EasingStyle.Linear)
+        TweenService:Create(dot, ti, goal):Play()
     end
+
     tweenDot()
+    dot:GetPropertyChangedSignal("Position"):Connect(function()
+        -- no-op, just keep alive
+    end)
 end
 
 for i = 1, 40 do
@@ -170,7 +163,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.0"
+versionPill.Text = "v2.1"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -180,7 +173,6 @@ local vCorner = Instance.new("UICorner")
 vCorner.CornerRadius = UDim.new(1, 0)
 vCorner.Parent = versionPill
 
--- Search
 local searchBox = Instance.new("TextBox")
 searchBox.Size = UDim2.new(1, -36, 0, 32)
 searchBox.Position = UDim2.new(0, 18, 0, 54)
@@ -199,7 +191,6 @@ local searchCorner = Instance.new("UICorner")
 searchCorner.CornerRadius = UDim.new(0, 10)
 searchCorner.Parent = searchBox
 
--- Nav list
 local navHolder = Instance.new("Frame")
 navHolder.Size = UDim2.new(1, -36, 1, -150)
 navHolder.Position = UDim2.new(0, 18, 0, 96)
@@ -217,15 +208,11 @@ local navButtons = {}
 local currentPage
 
 local function setActivePage(name)
-    for pageName, frame in pairs(pages) do
-        frame.Visible = (pageName == name)
+    for n, frame in pairs(pages) do
+        frame.Visible = (n == name)
     end
-    for btnName, btn in pairs(navButtons) do
-        if btnName == name then
-            btn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
-        else
-            btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-        end
+    for n, btn in pairs(navButtons) do
+        btn.BackgroundColor3 = (n == name) and Color3.fromRGB(55,55,65) or Color3.fromRGB(25,25,32)
     end
     currentPage = name
 end
@@ -278,7 +265,6 @@ navButton("Others", "Others")
 sectionLabel("Settings")
 navButton("Settings", "Settings")
 
--- profile bottom
 local profileFrame = Instance.new("Frame")
 profileFrame.Size = UDim2.new(1, -36, 0, 60)
 profileFrame.Position = UDim2.new(0, 18, 1, -70)
@@ -316,13 +302,15 @@ pfTag.ZIndex = 4
 pfTag.Parent = profileFrame
 
 ---------------------------------------------------------------------//
--- TOP BAR + CONTENT AREA
+-- TOP BAR + CONTENT AREA (TOP BAR DRAGGABLE)
 ---------------------------------------------------------------------//
 local contentTop = Instance.new("Frame")
 contentTop.Size = UDim2.new(1, -230, 0, 36)
 contentTop.Position = UDim2.new(0, 230, 0, 0)
 contentTop.BackgroundTransparency = 1
 contentTop.ZIndex = 2
+contentTop.Active = true
+contentTop.Draggable = true
 contentTop.Parent = root
 
 local topTitle = Instance.new("TextLabel")
@@ -392,13 +380,13 @@ end
 ---------------------------------------------------------------------//
 -- PAGES
 ---------------------------------------------------------------------//
-local homePage = createPage("Home")
-local mainPage = createPage("Main")
+local homePage    = createPage("Home")
+local mainPage    = createPage("Main")
 local blatantPage = createPage("Blatant")
-local othersPage = createPage("Others")
-local settingsPage = createPage("Settings")
+local othersPage  = createPage("Others")
+local settingsPage= createPage("Settings")
 
--- Home content
+-- Home
 do
     local t = Instance.new("TextLabel")
     t.Size = UDim2.new(1, -40, 0, 40)
@@ -423,7 +411,7 @@ do
     d.TextWrapped = true
     d.TextXAlignment = Enum.TextXAlignment.Left
     d.TextYAlignment = Enum.TextYAlignment.Top
-    d.Text = "This hub is styled like Argon and controls your auto clicker, auto parry spam, player options, and more for your game."
+    d.Text = "Argon-style hub for your game. Main tab handles auto click / auto parry. Blatant tab has Semi Immortal, player options, manual spam and triggerbot."
     d.ZIndex = 3
     d.Parent = homePage
 end
@@ -444,11 +432,11 @@ local function simpleLabel(parent, txt)
     l.Parent = parent
 end
 
-simpleLabel(othersPage, "Others tab placeholder.\nAdd whatever extra tools or fun stuff you want later.")
-simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Close button = hide hub\n\nYou can wire more hub settings here later.")
+simpleLabel(othersPage,   "Others tab placeholder.\nAdd extra tools here later.")
+simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Top bar = drag window\n• Close button = hide hub")
 
 ---------------------------------------------------------------------//
--- MAIN PAGE: AUTOCLICKER + ACTIONS
+-- MAIN PAGE: AutoClicker + Parry
 ---------------------------------------------------------------------//
 local status = Instance.new("TextLabel")
 status.Size = UDim2.new(1, -40, 0, 24)
@@ -462,7 +450,6 @@ status.Text = "Status: OFF (Toggle, Click)"
 status.ZIndex = 3
 status.Parent = mainPage
 
--- CPS
 local cpsLabel = Instance.new("TextLabel")
 cpsLabel.Size = UDim2.new(0, 80, 0, 20)
 cpsLabel.Position = UDim2.new(0, 20, 0, 60)
@@ -492,7 +479,6 @@ local cpsCorner = Instance.new("UICorner")
 cpsCorner.CornerRadius = UDim.new(0, 8)
 cpsCorner.Parent = cpsBox
 
--- Click keybind
 local keyLabel = cpsLabel:Clone()
 keyLabel.Text = "Click Keybind:"
 keyLabel.Position = UDim2.new(0, 20, 0, 96)
@@ -514,7 +500,6 @@ local keyCorner = Instance.new("UICorner")
 keyCorner.CornerRadius = UDim.new(0, 8)
 keyCorner.Parent = keyButton
 
--- Mode (Toggle / Hold)
 local modeLabel = cpsLabel:Clone()
 modeLabel.Text = "Mode:"
 modeLabel.Position = UDim2.new(0, 20, 0, 132)
@@ -536,7 +521,6 @@ local modeCorner = Instance.new("UICorner")
 modeCorner.CornerRadius = UDim.new(0, 8)
 modeCorner.Parent = modeButton
 
--- Action (Click / Parry)
 local actionLabel = cpsLabel:Clone()
 actionLabel.Text = "Action:"
 actionLabel.Position = UDim2.new(0, 20, 0, 168)
@@ -558,7 +542,6 @@ local actionCorner = Instance.new("UICorner")
 actionCorner.CornerRadius = UDim.new(0, 8)
 actionCorner.Parent = actionButton
 
--- Parry key
 local parryKeyLabel = cpsLabel:Clone()
 parryKeyLabel.Text = "Parry Key:"
 parryKeyLabel.Position = UDim2.new(0, 20, 0, 204)
@@ -611,16 +594,34 @@ toggleCorner.CornerRadius = UDim.new(0, 10)
 toggleCorner.Parent = toggleBtn
 
 ---------------------------------------------------------------------//
--- BLATANT PAGE: Semi Immortal, Settings, Player Options, Manual Spam
+-- BLATANT PAGE: SCROLLING MENU (SO EVERYTHING FITS)
 ---------------------------------------------------------------------//
-local function createCard(parent, y, height)
+local blatantScroll = Instance.new("ScrollingFrame")
+blatantScroll.Size = UDim2.new(1, -20, 1, -20)
+blatantScroll.Position = UDim2.new(0, 10, 0, 10)
+blatantScroll.BackgroundTransparency = 1
+blatantScroll.BorderSizePixel = 0
+blatantScroll.ScrollBarThickness = 4
+blatantScroll.CanvasSize = UDim2.new(0,0,0,0)
+blatantScroll.ZIndex = 3
+blatantScroll.Parent = blatantPage
+
+local bLayout = Instance.new("UIListLayout")
+bLayout.SortOrder = Enum.SortOrder.LayoutOrder
+bLayout.Padding = UDim.new(0, 10)
+bLayout.Parent = blatantScroll
+
+bLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    blatantScroll.CanvasSize = UDim2.new(0, 0, 0, bLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local function createCard(height)
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, -40, 0, height)
-    card.Position = UDim2.new(0, 20, 0, y)
+    card.Size = UDim2.new(1, 0, 0, height)
     card.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
     card.BorderSizePixel = 0
     card.ZIndex = 3
-    card.Parent = blatantPage
+    card.Parent = blatantScroll
 
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 12)
@@ -629,32 +630,51 @@ local function createCard(parent, y, height)
     return card
 end
 
--- Semi Immortal toggle (visual + flag)
-local semiImmortal = false
-local semiCard = createCard(blatantPage, 20, 52)
+local function blatantHeader(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 22)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 14
+    lbl.TextColor3 = Color3.fromRGB(230, 230, 235)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 3
+    lbl.Parent = blatantScroll
+end
 
-local semiTitle = Instance.new("TextLabel")
-semiTitle.Size = UDim2.new(1, -60, 0, 20)
-semiTitle.Position = UDim2.new(0, 10, 0, 6)
-semiTitle.BackgroundTransparency = 1
-semiTitle.Font = Enum.Font.GothamSemibold
-semiTitle.TextSize = 14
-semiTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-semiTitle.TextXAlignment = Enum.TextXAlignment.Left
+-- Semi Immortal (global flag)
+getgenv().BinHub_SemiImmortal = getgenv().BinHub_SemiImmortal or false
+local semiImmortal = getgenv().BinHub_SemiImmortal
+
+local semiCard = createCard(52)
+
+local baseTitle = Instance.new("TextLabel")
+baseTitle.Size = UDim2.new(1, -60, 0, 20)
+baseTitle.Position = UDim2.new(0, 10, 0, 6)
+baseTitle.BackgroundTransparency = 1
+baseTitle.Font = Enum.Font.GothamSemibold
+baseTitle.TextSize = 14
+baseTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+baseTitle.TextXAlignment = Enum.TextXAlignment.Left
+baseTitle.ZIndex = 4
+
+local baseDesc = Instance.new("TextLabel")
+baseDesc.Size = UDim2.new(1, -60, 0, 16)
+baseDesc.Position = UDim2.new(0, 10, 0, 28)
+baseDesc.BackgroundTransparency = 1
+baseDesc.Font = Enum.Font.Gotham
+baseDesc.TextSize = 12
+baseDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
+baseDesc.TextXAlignment = Enum.TextXAlignment.Left
+baseDesc.ZIndex = 4
+
+local semiTitle = baseTitle:Clone()
 semiTitle.Text = "Semi Immortal"
-semiTitle.ZIndex = 4
 semiTitle.Parent = semiCard
 
-local semiDesc = Instance.new("TextLabel")
-semiDesc.Size = UDim2.new(1, -60, 0, 16)
-semiDesc.Position = UDim2.new(0, 10, 0, 28)
-semiDesc.BackgroundTransparency = 1
-semiDesc.Font = Enum.Font.Gotham
-semiDesc.TextSize = 12
-semiDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
-semiDesc.TextXAlignment = Enum.TextXAlignment.Left
+local semiDesc = baseDesc:Clone()
 semiDesc.Text = "Prevents the ball from killing you. (Hook this in your game.)"
-semiDesc.ZIndex = 4
 semiDesc.Parent = semiCard
 
 local semiToggle = Instance.new("Frame")
@@ -682,6 +702,7 @@ semiThumbCorner.CornerRadius = UDim.new(1, 0)
 semiThumbCorner.Parent = semiThumb
 
 local function refreshSemi()
+    getgenv().BinHub_SemiImmortal = semiImmortal
     if semiImmortal then
         semiToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
         semiThumb.Position = UDim2.new(1, -18, 0.5, -8)
@@ -691,27 +712,26 @@ local function refreshSemi()
     end
 end
 
-semiToggle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+semiToggle.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
         semiImmortal = not semiImmortal
         refreshSemi()
-        -- hook your own game logic here if you want true "semi immortal"
     end
 end)
 
 refreshSemi()
 
--- Settings dropdown card (just cycles text)
+-- Settings card
 local settingModes = {"Normal", "Safer", "Aggressive"}
 local currentSettingIndex = 1
 
-local setCard = createCard(blatantPage, 80, 52)
+local setCard = createCard(52)
 
-local setTitle = semiTitle:Clone()
+local setTitle = baseTitle:Clone()
 setTitle.Text = "Settings"
 setTitle.Parent = setCard
 
-local setDesc = semiDesc:Clone()
+local setDesc = baseDesc:Clone()
 setDesc.Text = "Select the Semi-Immortal configuration."
 setDesc.Parent = setCard
 
@@ -737,28 +757,18 @@ setButton.MouseButton1Click:Connect(function()
     setButton.Text = settingModes[currentSettingIndex]
 end)
 
--- Player Options header
-local playerHeader = Instance.new("TextLabel")
-playerHeader.Size = UDim2.new(1, -40, 0, 20)
-playerHeader.Position = UDim2.new(0, 20, 0, 142)
-playerHeader.BackgroundTransparency = 1
-playerHeader.Font = Enum.Font.GothamSemibold
-playerHeader.TextSize = 14
-playerHeader.TextColor3 = Color3.fromRGB(230, 230, 235)
-playerHeader.TextXAlignment = Enum.TextXAlignment.Left
-playerHeader.Text = "Player Options"
-playerHeader.ZIndex = 3
-playerHeader.Parent = blatantPage
+-- Player options header
+blatantHeader("Player Options")
 
--- slider helper
-local function createSlider(y, title, desc, min, max, default, callback)
-    local card = createCard(blatantPage, y, 64)
+-- Slider helper (inside scroll)
+local function createSlider(title, desc, min, max, default, callback)
+    local card = createCard(64)
 
-    local t = semiTitle:Clone()
+    local t = baseTitle:Clone()
     t.Text = title
     t.Parent = card
 
-    local d = semiDesc:Clone()
+    local d = baseDesc:Clone()
     d.Text = desc
     d.Parent = card
 
@@ -827,36 +837,33 @@ local function createSlider(y, title, desc, min, max, default, callback)
         end
     end)
 
-    -- initial apply
     if callback then
         callback(default)
     end
 end
 
-createSlider(168, "Speed", "Choose the speed of your character.", 10, 100, 16, function(val)
+createSlider("Speed", "Choose the speed of your character.", 10, 100, 20, function(val)
     local hum = getHumanoid()
     if hum then
         hum.WalkSpeed = val
     end
 end)
 
-createSlider(238, "Jump Power", "Choose the jump power of your character.", 25, 150, 50, function(val)
+createSlider("Jump Power", "Choose the jump power of your character.", 25, 150, 50, function(val)
     local hum = getHumanoid()
     if hum then
-        if hum.UseJumpPower ~= nil then
-            hum.UseJumpPower = true
-        end
+        if hum.UseJumpPower ~= nil then hum.UseJumpPower = true end
         hum.JumpPower = val
     end
 end)
 
--- Manual Spam + Triggerbot cards (like screenshot)
-local manualCard = createCard(blatantPage, 308, 48)
-local manualTitle = semiTitle:Clone()
+-- Manual Spam + Triggerbot
+local manualCard = createCard(48)
+local manualTitle = baseTitle:Clone()
 manualTitle.Text = "Manual Spam"
 manualTitle.Parent = manualCard
 
-local manualDesc = semiDesc:Clone()
+local manualDesc = baseDesc:Clone()
 manualDesc.Text = "Spam push on keypress."
 manualDesc.Parent = manualCard
 
@@ -876,12 +883,12 @@ local manualKeyCorner = Instance.new("UICorner")
 manualKeyCorner.CornerRadius = UDim.new(0, 10)
 manualKeyCorner.Parent = manualKeyButton
 
-local triggerCard = createCard(blatantPage, 360, 48)
-local trigTitle = semiTitle:Clone()
+local triggerCard = createCard(48)
+local trigTitle = baseTitle:Clone()
 trigTitle.Text = "Triggerbot"
 trigTitle.Parent = triggerCard
 
-local trigDesc = semiDesc:Clone()
+local trigDesc = baseDesc:Clone()
 trigDesc.Text = "Block instant when they target you. (Here: constant parry spam.)"
 trigDesc.Parent = triggerCard
 
@@ -891,23 +898,23 @@ trigToggle.Position = UDim2.new(1, -50, 0, 14)
 local trigThumb = trigToggle:FindFirstChildOfClass("Frame")
 
 ---------------------------------------------------------------------//
--- STATE / LOGIC VARS
+-- STATE / LOGIC
 ---------------------------------------------------------------------//
-local clicking = false          -- main auto system (click or parry)
-local cps = 10
-local toggleKey = Enum.KeyCode.F
-local parryKey = Enum.KeyCode.Q
+local clicking          = false
+local cps               = 10
+local toggleKey         = Enum.KeyCode.F
+local parryKey          = Enum.KeyCode.Q
+local manualKey         = Enum.KeyCode.E
 
-local manualKey = Enum.KeyCode.E
-local manualSpamActive = false
+local manualSpamActive  = false
+local triggerbotOn      = false
 
-local triggerbotOn = false
-local listeningForKey = false
-local listeningForParry = false
+local listeningForKey    = false
+local listeningForParry  = false
 local listeningForManual = false
 
-local mode = "Toggle"       -- Toggle / Hold
-local actionMode = "Click"  -- Click / Parry
+local mode        = "Toggle" -- Toggle / Hold
+local actionMode  = "Click"  -- Click / Parry
 
 local function keyToString(keycode)
     local s = tostring(keycode)
@@ -929,12 +936,9 @@ end
 
 local function updateStatus()
     cps = getCPS()
-    local actionText = actionMode
-    local modeText = mode
     local onOff = clicking and "ON" or "OFF"
-    local color = clicking and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 80, 80)
-
-    status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cps, modeText, actionText)
+    local color = clicking and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,80,80)
+    status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cps, mode, actionMode)
     status.TextColor3 = color
 end
 
@@ -951,7 +955,6 @@ end
 
 local function toggleClicker()
     clicking = not clicking
-    cps = getCPS()
     updateStatus()
     if clicking then
         toggleBtn.Text = "Stop"
@@ -965,29 +968,18 @@ end
 toggleBtn.MouseButton1Click:Connect(toggleClicker)
 
 cpsBox.FocusLost:Connect(function()
-    cps = getCPS()
     updateStatus()
 end)
 
 modeButton.MouseButton1Click:Connect(function()
-    if mode == "Toggle" then
-        mode = "Hold"
-        modeButton.Text = "Hold"
-    else
-        mode = "Toggle"
-        modeButton.Text = "Toggle"
-    end
+    mode = (mode == "Toggle") and "Hold" or "Toggle"
+    modeButton.Text = mode
     updateStatus()
 end)
 
 actionButton.MouseButton1Click:Connect(function()
-    if actionMode == "Click" then
-        actionMode = "Parry"
-        actionButton.Text = "Parry"
-    else
-        actionMode = "Click"
-        actionButton.Text = "Click"
-    end
+    actionMode = (actionMode == "Click") and "Parry" or "Click"
+    actionButton.Text = actionMode
     updateStatus()
 end)
 
@@ -1000,13 +992,13 @@ end)
 parryKeyButton.MouseButton1Click:Connect(function()
     if listeningForKey or listeningForParry or listeningForManual then return end
     listeningForParry = true
-    infoLabel.Text = "Press a key to use as Parry key."
+    infoLabel.Text = "Press a key for Parry."
 end)
 
 manualKeyButton.MouseButton1Click:Connect(function()
     if listeningForKey or listeningForParry or listeningForManual then return end
     listeningForManual = true
-    infoLabel.Text = "Press a key to use for Manual Spam."
+    infoLabel.Text = "Press a key for Manual Spam."
 end)
 
 trigToggle.InputBegan:Connect(function(inp)
@@ -1025,7 +1017,7 @@ updateStatus()
 UIS.InputBegan:Connect(function(input, gp)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-    -- show/hide hub
+    -- hub toggle
     if input.KeyCode == Enum.KeyCode.RightControl
         and not listeningForKey and not listeningForParry and not listeningForManual then
         guiVisible = not guiVisible
@@ -1033,51 +1025,51 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
-    -- rebinding main key
+    -- rebind main
     if listeningForKey then
         if input.KeyCode == Enum.KeyCode.RightControl then
             infoLabel.Text = "RightCtrl is hub toggle only."
         else
             toggleKey = input.KeyCode
             keyButton.Text = keyToString(toggleKey)
-            infoLabel.Text = "Main keybind set to: " .. keyButton.Text
-            listeningForKey = false
+            infoLabel.Text = "Main keybind set to: "..keyButton.Text
         end
+        listeningForKey = false
         return
     end
 
-    -- rebinding parry key
+    -- rebind parry
     if listeningForParry then
         parryKey = input.KeyCode
         parryKeyButton.Text = keyToString(parryKey)
-        infoLabel.Text = "Parry key set to: " .. parryKeyButton.Text
+        infoLabel.Text = "Parry key set to: "..parryKeyButton.Text
         listeningForParry = false
         return
     end
 
-    -- rebinding manual key
+    -- rebind manual
     if listeningForManual then
         manualKey = input.KeyCode
         manualKeyButton.Text = keyToString(manualKey)
-        infoLabel.Text = "Manual spam key set to: " .. manualKeyButton.Text
+        infoLabel.Text = "Manual spam key set to: "..manualKeyButton.Text
         listeningForManual = false
         return
     end
 
     if gp then return end
 
-    -- main toggle / hold
+    -- main toggle/hold
     if input.KeyCode == toggleKey then
         if mode == "Toggle" then
             toggleClicker()
-        elseif mode == "Hold" then
+        else
             clicking = true
             updateStatus()
         end
         return
     end
 
-    -- manual spam on keypress
+    -- manual spam start
     if input.KeyCode == manualKey then
         manualSpamActive = true
     end
@@ -1098,7 +1090,7 @@ UIS.InputEnded:Connect(function(input, gp)
 end)
 
 ---------------------------------------------------------------------//
--- MAIN LOOP (AUTO CLICK / PARRY / MANUAL / TRIGGERBOT)
+-- MAIN LOOP
 ---------------------------------------------------------------------//
 task.spawn(function()
     while true do
@@ -1106,7 +1098,6 @@ task.spawn(function()
             local delay = 1 / getCPS()
             if delay < 0.001 then delay = 0.001 end
 
-            -- Main click/parry
             if clicking then
                 if actionMode == "Click" then
                     pcall(function() mouse1click() end)
@@ -1117,11 +1108,10 @@ task.spawn(function()
                             task.wait(0.01)
                             VIM:SendKeyEvent(false, parryKey, false, game)
                         end)
-                end
+                    end
                 end
             end
 
-            -- Triggerbot: constant parry spam
             if triggerbotOn and VIM and parryKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, parryKey, false, game)
@@ -1130,7 +1120,6 @@ task.spawn(function()
                 end)
             end
 
-            -- Manual spam: spam the manual key while held
             if manualSpamActive and VIM and manualKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, manualKey, false, game)
