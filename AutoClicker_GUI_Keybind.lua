@@ -1,9 +1,9 @@
--- Bin Hub X - Argon-style Hub v2.2
+-- Bin Hub X - Argon-style Hub v2.3
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
 -- • Blatant tab: Semi Immortal, Settings, Speed/Jump sliders, Manual Spam, Triggerbot
 -- • RightCtrl = Show/Hide hub
 -- • Window only moves when dragging the top bar
--- • Semi Immortal: teleports character up/down so the ball can't hit you easily
+-- • Semi Immortal: bounces character up/down but keeps camera still
 -- • Home page + sidebar show the Roblox account running the script
 
 ---------------------------------------------------------------------//
@@ -90,7 +90,6 @@ rootGrad.Color = ColorSequence.new{
 rootGrad.Rotation = 45
 rootGrad.Parent = root
 
--- floating color dots
 local function createDot()
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0, 4, 0, 4)
@@ -162,7 +161,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.2"
+versionPill.Text = "v2.3"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -202,8 +201,8 @@ navLayout.SortOrder = Enum.SortOrder.LayoutOrder
 navLayout.Padding = UDim.new(0, 4)
 navLayout.Parent = navHolder
 
-local pages     = {}
-local navButtons= {}
+local pages      = {}
+local navButtons = {}
 local currentPage
 
 local function setActivePage(name)
@@ -296,12 +295,12 @@ pfTag.Font = Enum.Font.Gotham
 pfTag.TextSize = 12
 pfTag.TextColor3 = Color3.fromRGB(170, 170, 185)
 pfTag.TextXAlignment = Enum.TextXAlignment.Left
-pfTag.Text = "@"..userName
+pfTag.Text = "@" .. userName
 pfTag.ZIndex = 4
 pfTag.Parent = profileFrame
 
 ---------------------------------------------------------------------//
--- TOP BAR + DRAGGING (ONLY PLACE YOU CAN MOVE HUB)
+-- TOP BAR + DRAGGING (ONLY TOP BAR MOVES HUB)
 ---------------------------------------------------------------------//
 local contentTop = Instance.new("Frame")
 contentTop.Size = UDim2.new(1, -230, 0, 36)
@@ -343,7 +342,7 @@ closeBtn.MouseButton1Click:Connect(function()
     gui.Enabled = false
 end)
 
--- manual drag logic (so only this bar moves the whole GUI)
+-- manual drag logic
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -359,7 +358,6 @@ contentTop.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos  = root.Position
-
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -414,11 +412,11 @@ end
 ---------------------------------------------------------------------//
 -- PAGES
 ---------------------------------------------------------------------//
-local homePage    = createPage("Home")
-local mainPage    = createPage("Main")
-local blatantPage = createPage("Blatant")
-local othersPage  = createPage("Others")
-local settingsPage= createPage("Settings")
+local homePage     = createPage("Home")
+local mainPage     = createPage("Main")
+local blatantPage  = createPage("Blatant")
+local othersPage   = createPage("Others")
+local settingsPage = createPage("Settings")
 
 -- Home content (shows current account)
 do
@@ -431,7 +429,7 @@ do
     t.TextColor3 = Color3.fromRGB(255, 255, 255)
     t.TextXAlignment = Enum.TextXAlignment.Left
     t.TextYAlignment = Enum.TextYAlignment.Top
-    t.Text = "Hello, "..displayName
+    t.Text = "Hello, " .. displayName
     t.ZIndex = 3
     t.Parent = homePage
 
@@ -445,7 +443,7 @@ do
     d.TextWrapped = true
     d.TextXAlignment = Enum.TextXAlignment.Left
     d.TextYAlignment = Enum.TextYAlignment.Top
-    d.Text = "Account: @"..userName.."\nThis hub controls your auto clicker, auto parry spam and player options for your game."
+    d.Text = "Account: @" .. userName .. "\nThis hub controls your auto clicker, auto parry spam and player options for your game."
     d.ZIndex = 3
     d.Parent = homePage
 end
@@ -466,8 +464,13 @@ local function simpleLabel(parent, txt)
     l.Parent = parent
 end
 
-simpleLabel(othersPage,   "Others tab placeholder.\nAdd extra tools here later.")
-simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Drag ONLY the top bar to move hub\n• Close button = hide hub")
+simpleLabel(othersPage,
+    "Others tab placeholder.\nAdd extra tools here later."
+)
+
+simpleLabel(settingsPage,
+    "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Drag ONLY the top bar to move hub\n• Close button = hide hub"
+)
 
 ---------------------------------------------------------------------//
 -- MAIN PAGE: AutoClicker + Parry
@@ -697,7 +700,7 @@ baseDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
 baseDesc.TextXAlignment = Enum.TextXAlignment.Left
 baseDesc.ZIndex = 4
 
--- Semi Immortal (global flag + real movement)
+-- Semi Immortal (global flag + movement)
 getgenv().BinHub_SemiImmortal = getgenv().BinHub_SemiImmortal or false
 local semiImmortal = getgenv().BinHub_SemiImmortal
 
@@ -707,7 +710,7 @@ semiTitle.Text = "Semi Immortal"
 semiTitle.Parent = semiCard
 
 local semiDesc = baseDesc:Clone()
-semiDesc.Text = "Prevents the ball from killing you by bouncing you up/down."
+semiDesc.Text = "Prevents the ball from killing you by bouncing you up/down (camera stays still)."
 semiDesc.Parent = semiCard
 
 local semiToggle = Instance.new("Frame")
@@ -754,7 +757,7 @@ end)
 
 refreshSemi()
 
--- SETTINGS CARD
+-- Settings card
 local settingModes = {"Normal", "Safer", "Aggressive"}
 local currentSettingIndex = 1
 
@@ -789,7 +792,7 @@ setButton.MouseButton1Click:Connect(function()
     setButton.Text = settingModes[currentSettingIndex]
 end)
 
--- PLAYER OPTIONS
+-- Player Options
 blatantHeader("Player Options")
 
 local function createSlider(title, desc, min, max, default, callback)
@@ -1052,7 +1055,7 @@ UIS.InputBegan:Connect(function(input, gp)
         else
             toggleKey = input.KeyCode
             keyButton.Text = keyToString(toggleKey)
-            infoLabel.Text = "Main keybind set to: "..keyButton.Text
+            infoLabel.Text = "Main keybind set to: " .. keyButton.Text
         end
         listeningForKey = false
         return
@@ -1061,7 +1064,7 @@ UIS.InputBegan:Connect(function(input, gp)
     if listeningForParry then
         parryKey = input.KeyCode
         parryKeyButton.Text = keyToString(parryKey)
-        infoLabel.Text = "Parry key set to: "..parryKeyButton.Text
+        infoLabel.Text = "Parry key set to: " .. parryKeyButton.Text
         listeningForParry = false
         return
     end
@@ -1069,7 +1072,7 @@ UIS.InputBegan:Connect(function(input, gp)
     if listeningForManual then
         manualKey = input.KeyCode
         manualKeyButton.Text = keyToString(manualKey)
-        infoLabel.Text = "Manual spam key set to: "..manualKeyButton.Text
+        infoLabel.Text = "Manual spam key set to: " .. manualKeyButton.Text
         listeningForManual = false
         return
     end
@@ -1106,20 +1109,25 @@ UIS.InputEnded:Connect(function(input, gp)
 end)
 
 ---------------------------------------------------------------------//
--- SEMI IMMORTAL MOVEMENT LOOP (BOUNCE THROUGH MAP)
+-- SEMI IMMORTAL MOVEMENT LOOP (BOUNCE, CAMERA STAYS STILL)
 ---------------------------------------------------------------------//
 task.spawn(function()
     local dir = 1
+    local bounceAmount = 25 -- how far up/down you bounce
     while true do
         if getgenv().BinHub_SemiImmortal then
             local char = LocalPlayer.Character
             local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local pos = hrp.Position
+            local cam  = workspace.CurrentCamera
+
+            if hrp and cam then
+                local oldCF = cam.CFrame  -- keep camera in place
+                local pos   = hrp.Position
                 dir = -dir
-                -- bounce up & down by 25 studs
-                hrp.CFrame = CFrame.new(pos.X, pos.Y + dir*25, pos.Z)
+                hrp.CFrame = CFrame.new(pos.X, pos.Y + dir * bounceAmount, pos.Z)
+                cam.CFrame = oldCF
             end
+
             task.wait(0.12)
         else
             task.wait(0.2)
@@ -1136,7 +1144,6 @@ task.spawn(function()
             local delay = 1 / getCPS()
             if delay < 0.001 then delay = 0.001 end
 
-            -- main click/parry
             if clicking then
                 if actionMode == "Click" then
                     pcall(function() mouse1click() end)
@@ -1151,7 +1158,6 @@ task.spawn(function()
                 end
             end
 
-            -- triggerbot (always parry)
             if triggerbotOn and VIM and parryKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, parryKey, false, game)
@@ -1160,7 +1166,6 @@ task.spawn(function()
                 end)
             end
 
-            -- manual spam
             if manualSpamActive and VIM and manualKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, manualKey, false, game)
