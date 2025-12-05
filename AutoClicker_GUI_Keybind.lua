@@ -1,11 +1,15 @@
--- Bin Hub X - Simple Stable Hub w/ Sidebar + Autoclicker
--- RCTRL = Show/Hide hub
+-- Bin Hub X - Sidebar Hub w/ AutoClicker + Auto Parry Spam
+-- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
 -- SERVICES / SCREEN GUI
 ---------------------------------------------------------------------//
 local UIS = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
+local VIM
+pcall(function()
+    VIM = game:GetService("VirtualInputManager")
+end)
 
 local function safeParent()
     local ok, res = pcall(function()
@@ -65,7 +69,7 @@ rootStroke.Color = Color3.fromRGB(60, 60, 60)
 rootStroke.Parent = root
 
 ---------------------------------------------------------------------//
--- SIDEBAR (VERY SIMPLE & HARD-CODED)
+-- SIDEBAR
 ---------------------------------------------------------------------//
 local sidebar = Instance.new("Frame")
 sidebar.Name = "Sidebar"
@@ -86,7 +90,6 @@ sidebarStroke.Parent = sidebar
 
 -- title
 local titleBar = Instance.new("TextLabel")
-titleBar.Name = "Title"
 titleBar.Size = UDim2.new(1, -20, 0, 30)
 titleBar.Position = UDim2.new(0, 10, 0, 10)
 titleBar.BackgroundTransparency = 1
@@ -104,7 +107,7 @@ versionPill.Position = UDim2.new(1, -70, 0, 12)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v1.0"
+versionPill.Text = "v1.1"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.Parent = sidebar
@@ -261,7 +264,7 @@ topTitle.Font = Enum.Font.GothamBold
 topTitle.TextSize = 18
 topTitle.TextXAlignment = Enum.TextXAlignment.Left
 topTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
-topTitle.Text = "AutoClicker Hub"
+topTitle.Text = "AutoClicker + Parry Hub"
 topTitle.Parent = contentTop
 
 local closeBtn = Instance.new("TextButton")
@@ -346,7 +349,7 @@ do
     d.TextYAlignment = Enum.TextYAlignment.Top
     d.TextWrapped = true
     d.TextColor3 = Color3.fromRGB(210, 210, 220)
-    d.Text = "Welcome to Bin Hub X. Use the 'Main' tab on the left to control your autoclicker with CPS, keybinds and Toggle/Hold modes."
+    d.Text = "Welcome to Bin Hub X. Use the 'Main' tab on the left to control your auto clicker or auto parry spam for YOUR game."
     d.Parent = homePage
 end
 
@@ -365,12 +368,12 @@ local function simpleLabel(parent, txt)
     l.Parent = parent
 end
 
-simpleLabel(blatantPage, "Blatant tab placeholder.\nYou can add more aggressive scripts here later.")
+simpleLabel(blatantPage, "Blatant tab placeholder.\nYou can add more aggressive features for your game here later.")
 simpleLabel(othersPage, "Others tab placeholder.\nDrop utilities and extra tools here later.")
 simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Close button = hide hub\n\nMore settings can be added here later.")
 
 ---------------------------------------------------------------------//
--- MAIN PAGE (AUTOCLICKER UI)
+-- MAIN PAGE (AUTOCLICKER + AUTO PARRY)
 ---------------------------------------------------------------------//
 local status = Instance.new("TextLabel")
 status.Size = UDim2.new(1, -40, 0, 24)
@@ -379,10 +382,11 @@ status.BackgroundTransparency = 1
 status.Font = Enum.Font.Gotham
 status.TextSize = 16
 status.TextXAlignment = Enum.TextXAlignment.Left
-status.Text = "Status: OFF (Toggle)"
+status.Text = "Status: OFF (Toggle, Click)"
 status.TextColor3 = Color3.fromRGB(255, 80, 80)
 status.Parent = mainPage
 
+-- CPS
 local cpsLabel = Instance.new("TextLabel")
 cpsLabel.Size = UDim2.new(0, 80, 0, 20)
 cpsLabel.Position = UDim2.new(0, 20, 0, 60)
@@ -410,14 +414,15 @@ local cpsCorner = Instance.new("UICorner")
 cpsCorner.CornerRadius = UDim.new(0, 8)
 cpsCorner.Parent = cpsBox
 
+-- Click keybind
 local keyLabel = cpsLabel:Clone()
-keyLabel.Text = "Keybind:"
+keyLabel.Text = "Click Keybind:"
 keyLabel.Position = UDim2.new(0, 20, 0, 96)
 keyLabel.Parent = mainPage
 
 local keyButton = Instance.new("TextButton")
 keyButton.Size = UDim2.new(0, 70, 0, 24)
-keyButton.Position = UDim2.new(0, 90, 0, 94)
+keyButton.Position = UDim2.new(0, 130, 0, 94)
 keyButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 keyButton.BorderSizePixel = 0
 keyButton.Font = Enum.Font.GothamBold
@@ -430,6 +435,7 @@ local keyCorner = Instance.new("UICorner")
 keyCorner.CornerRadius = UDim.new(0, 8)
 keyCorner.Parent = keyButton
 
+-- Mode (Toggle / Hold)
 local modeLabel = cpsLabel:Clone()
 modeLabel.Text = "Mode:"
 modeLabel.Position = UDim2.new(0, 20, 0, 132)
@@ -450,9 +456,52 @@ local modeCorner = Instance.new("UICorner")
 modeCorner.CornerRadius = UDim.new(0, 8)
 modeCorner.Parent = modeButton
 
+-- Action (Click / Parry)
+local actionLabel = cpsLabel:Clone()
+actionLabel.Text = "Action:"
+actionLabel.Position = UDim2.new(0, 20, 0, 168)
+actionLabel.Parent = mainPage
+
+local actionButton = Instance.new("TextButton")
+actionButton.Size = UDim2.new(0, 90, 0, 24)
+actionButton.Position = UDim2.new(0, 80, 0, 166)
+actionButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+actionButton.BorderSizePixel = 0
+actionButton.Font = Enum.Font.GothamBold
+actionButton.TextSize = 14
+actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+actionButton.Text = "Click"
+actionButton.Parent = mainPage
+
+local actionCorner = Instance.new("UICorner")
+actionCorner.CornerRadius = UDim.new(0, 8)
+actionCorner.Parent = actionButton
+
+-- Parry key
+local parryKeyLabel = cpsLabel:Clone()
+parryKeyLabel.Text = "Parry Key:"
+parryKeyLabel.Position = UDim2.new(0, 20, 0, 204)
+parryKeyLabel.Parent = mainPage
+
+local parryKeyButton = Instance.new("TextButton")
+parryKeyButton.Size = UDim2.new(0, 70, 0, 24)
+parryKeyButton.Position = UDim2.new(0, 110, 0, 202)
+parryKeyButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+parryKeyButton.BorderSizePixel = 0
+parryKeyButton.Font = Enum.Font.GothamBold
+parryKeyButton.TextSize = 14
+parryKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+parryKeyButton.Text = "Q"
+parryKeyButton.Parent = mainPage
+
+local parryKeyCorner = Instance.new("UICorner")
+parryKeyCorner.CornerRadius = UDim.new(0, 8)
+parryKeyCorner.Parent = parryKeyButton
+
+-- Info
 local infoLabel = Instance.new("TextLabel")
 infoLabel.Size = UDim2.new(1, -40, 0, 40)
-infoLabel.Position = UDim2.new(0, 20, 0, 164)
+infoLabel.Position = UDim2.new(0, 20, 0, 236)
 infoLabel.BackgroundTransparency = 1
 infoLabel.Font = Enum.Font.Gotham
 infoLabel.TextSize = 12
@@ -460,12 +509,13 @@ infoLabel.TextWrapped = true
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 infoLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-infoLabel.Text = "Click keybind button, then press a key. RightCtrl is reserved for hub toggle. Use mode to switch between Toggle / Hold."
+infoLabel.Text = "RightCtrl = show/hide hub. Set CPS, Mode, Action (Click/Parry), and keys. Start/stop with keybind or button."
 infoLabel.Parent = mainPage
 
+-- Start button
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 220, 0, 34)
-toggleBtn.Position = UDim2.new(0, 20, 0, 216)
+toggleBtn.Position = UDim2.new(0, 20, 0, 280)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Font = Enum.Font.GothamBold
@@ -479,13 +529,16 @@ toggleCorner.CornerRadius = UDim.new(0, 10)
 toggleCorner.Parent = toggleBtn
 
 ---------------------------------------------------------------------//
--- AUTOCLICKER LOGIC
+-- AUTOCLICKER + AUTO PARRY LOGIC
 ---------------------------------------------------------------------//
 local clicking = false
 local cps = 10
 local toggleKey = Enum.KeyCode.F
+local parryKey = Enum.KeyCode.Q
 local listeningForKey = false
+local listeningForParry = false
 local mode = "Toggle" -- Toggle / Hold
+local actionMode = "Click" -- Click / Parry
 
 local function keyToString(keycode)
     local s = tostring(keycode)
@@ -506,15 +559,17 @@ local function getCPS()
 end
 
 local function updateUI()
+    local actionText = actionMode
+    cps = getCPS()
     if clicking then
         toggleBtn.Text = "Stop"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 140, 70)
-        status.Text = ("Status: ON (%d CPS, %s)"):format(cps, mode)
+        status.Text = ("Status: ON (%d CPS, %s, %s)"):format(cps, mode, actionText)
         status.TextColor3 = Color3.fromRGB(0, 255, 0)
     else
         toggleBtn.Text = "Start"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        status.Text = ("Status: OFF (%s)"):format(mode)
+        status.Text = ("Status: OFF (%s, %s)"):format(mode, actionText)
         status.TextColor3 = Color3.fromRGB(255, 80, 80)
     end
 end
@@ -543,37 +598,64 @@ modeButton.MouseButton1Click:Connect(function()
     updateUI()
 end)
 
+actionButton.MouseButton1Click:Connect(function()
+    if actionMode == "Click" then
+        actionMode = "Parry"
+        actionButton.Text = "Parry"
+    else
+        actionMode = "Click"
+        actionButton.Text = "Click"
+    end
+    updateUI()
+end)
+
 keyButton.MouseButton1Click:Connect(function()
-    if listeningForKey then return end
+    if listeningForKey or listeningForParry then return end
     listeningForKey = true
-    infoLabel.Text = "Press a key for autoclicker (RightCtrl is hub)."
+    infoLabel.Text = "Press a key for TOGGLE/HOLD (RightCtrl is hub)."
+end)
+
+parryKeyButton.MouseButton1Click:Connect(function()
+    if listeningForKey or listeningForParry then return end
+    listeningForParry = true
+    infoLabel.Text = "Press a key to use as PARRY key."
 end)
 
 UIS.InputBegan:Connect(function(input, gp)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
     -- hub toggle
-    if input.KeyCode == Enum.KeyCode.RightControl and not listeningForKey then
+    if input.KeyCode == Enum.KeyCode.RightControl and not listeningForKey and not listeningForParry then
         guiVisible = not guiVisible
         gui.Enabled = guiVisible
         return
     end
 
-    -- rebinding
+    -- rebind main key
     if listeningForKey then
         if input.KeyCode == Enum.KeyCode.RightControl then
             infoLabel.Text = "RightCtrl is reserved for hub toggle."
         else
             toggleKey = input.KeyCode
             keyButton.Text = keyToString(toggleKey)
-            infoLabel.Text = "Keybind set to: " .. keyButton.Text
+            infoLabel.Text = "Click keybind set to: " .. keyButton.Text
             listeningForKey = false
         end
         return
     end
 
+    -- rebind parry key
+    if listeningForParry then
+        parryKey = input.KeyCode
+        parryKeyButton.Text = keyToString(parryKey)
+        infoLabel.Text = "Parry key set to: " .. parryKeyButton.Text
+        listeningForParry = false
+        return
+    end
+
     if gp then return end
 
+    -- normal toggle/hold start
     if input.KeyCode == toggleKey then
         if mode == "Toggle" then
             toggleClicker()
@@ -594,12 +676,26 @@ UIS.InputEnded:Connect(function(input, gp)
     end
 end)
 
+-- main loop
 task.spawn(function()
     while true do
         if clicking then
-            pcall(function()
-                mouse1click()
-            end)
+            if actionMode == "Click" then
+                -- normal mouse spam
+                pcall(function()
+                    mouse1click()
+                end)
+            else
+                -- Parry key spam
+                if VIM and parryKey then
+                    pcall(function()
+                        VIM:SendKeyEvent(true, parryKey, false, game)
+                        task.wait(0.01)
+                        VIM:SendKeyEvent(false, parryKey, false, game)
+                    end)
+                end
+            end
+
             cps = getCPS()
             local d = 1 / cps
             if d < 0.001 then d = 0.001 end
@@ -614,4 +710,3 @@ end)
 -- START ON HOME
 ---------------------------------------------------------------------//
 setActivePage("Home")
-
