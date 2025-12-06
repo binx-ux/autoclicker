@@ -1,4 +1,4 @@
--- Bin Hub X - Argon-style Hub v3.2
+-- Bin Hub X - Argon-style Hub v3.3
 -- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
@@ -228,27 +228,29 @@ getgenv().BinHub_SlashOfFuryDetection  = false
 
 local fpsBoostOn        = false
 local playerEffectsOn   = false
-local abilityEspOn      = false
-
+local abilityEspOn      = false -- but unavailable
 local clicking          = false
 local cps               = 10
 
 -- KEYS (LOCKED)
 local toggleKey         = Enum.KeyCode.F      -- main clicker key
-local parryKey          = Enum.KeyCode.E      -- LOCKED parry key
-local manualKey         = Enum.KeyCode.E      -- manual spam key (can change in future if you want)
-local abilityKey        = Enum.KeyCode.Q      -- LOCKED Slash of Fury ability key
+local parryKey          = Enum.KeyCode.E      -- locked parry key
+local manualKey         = Enum.KeyCode.E      -- manual spam key
+local abilityKey        = Enum.KeyCode.Q      -- locked Slash of Fury ability key (currently unused)
 
 local manualSpamActive  = false
 local triggerbotOn      = false
-local slashOfFuryOn     = false
+local slashOfFuryOn     = false -- unavailable
 
 local listeningForKey      = false
 local listeningForManual   = false
--- (no listening for parry/ability anymore, they are locked)
 
 local mode        = "Toggle"  -- Toggle / Hold
 local actionMode  = "Click"   -- Click / Parry
+
+-- Speed toggle state
+local speedEnabled = false
+local speedValue   = 20  -- default slider value
 
 ---------------------------------------------------------------------//
 -- FX HELPERS
@@ -303,8 +305,19 @@ local function applyPlayerEffects(on)
 end
 
 local function applyAbilityEsp(on)
-    abilityEspOn = on
-    -- hook your skill ESP for your game here
+    -- Unavailable (do nothing)
+    abilityEspOn = false
+end
+
+local function applySpeed()
+    local hum = getHumanoid()
+    if hum then
+        if speedEnabled then
+            hum.WalkSpeed = speedValue
+        else
+            hum.WalkSpeed = 16 -- default Roblox walk speed
+        end
+    end
 end
 
 ---------------------------------------------------------------------//
@@ -402,7 +415,7 @@ versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255,255,255)
-versionPill.Text = "v3.2"
+versionPill.Text = "v3.3"
 versionPill.ZIndex = 3
 versionPill.Parent = sidebar
 
@@ -827,7 +840,7 @@ do
 end
 
 ---------------------------------------------------------------------//
--- OTHERS PAGE (DISCORD + FPS + PLAYER FX + ABILITY ESP)
+-- OTHERS PAGE (DISCORD + FPS + PLAYER FX + ABILITY ESP UNAVAILABLE)
 ---------------------------------------------------------------------//
 local function makeCard(parent,y)
     local card = Instance.new("Frame")
@@ -868,7 +881,7 @@ do
     info.TextWrapped = true
     info.TextXAlignment = Enum.TextXAlignment.Left
     info.TextYAlignment = Enum.TextYAlignment.Top
-    info.Text = "Extra stuff: Discord invite, FPS booster, player effects and ability ESP."
+    info.Text = "Extra stuff: Discord invite, FPS booster, player effects. Ability ESP is temporarily unavailable."
     info.ZIndex = 3
     info.Parent = othersPage
 
@@ -1013,39 +1026,39 @@ do
         end
     end)
 
-    -- Ability ESP
+    -- Ability ESP (TEMP UNAVAILABLE)
     local espCard = makeCard(othersPage,292)
     local espTitle = dTitle:Clone()
-    espTitle.Text = "Ability ESP"
+    espTitle.Text = "Ability ESP (Unavailable)"
     espTitle.Parent = espCard
 
     local espDesc = dDesc:Clone()
-    espDesc.Text = "Displays the name of the player's skills (hook in your game)."
+    espDesc.Text = "Temporarily unavailable."
     espDesc.Parent = espCard
 
-    local espToggle = fpsToggleFrame:Clone()
+    local espToggle = Instance.new("Frame")
+    espToggle.Size = UDim2.new(0,40,0,20)
     espToggle.Position = UDim2.new(1,-50,0,18)
+    espToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+    espToggle.BorderSizePixel = 0
+    espToggle.ZIndex = 4
     espToggle.Parent = espCard
-    local espThumb = espToggle:FindFirstChildOfClass("Frame")
 
-    local function updateEspVisual()
-        if abilityEspOn then
-            espToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
-            espThumb.Position = UDim2.new(1,-18,0.5,-8)
-        else
-            espToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-            espThumb.Position = UDim2.new(0,2,0.5,-8)
-        end
-    end
-    updateEspVisual()
+    local espToggleCorner = Instance.new("UICorner")
+    espToggleCorner.CornerRadius = UDim.new(1,0)
+    espToggleCorner.Parent = espToggle
 
-    espToggle.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            abilityEspOn = not abilityEspOn
-            applyAbilityEsp(abilityEspOn)
-            updateEspVisual()
-        end
-    end)
+    local espThumb = Instance.new("Frame")
+    espThumb.Size = UDim2.new(0,16,0,16)
+    espThumb.Position = UDim2.new(0,2,0.5,-8)
+    espThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    espThumb.BorderSizePixel = 0
+    espThumb.ZIndex = 5
+    espThumb.Parent = espToggle
+
+    local espThumbCorner = Instance.new("UICorner")
+    espThumbCorner.CornerRadius = UDim.New(1,0)
+    espThumbCorner.Parent = espThumb
 end
 
 ---------------------------------------------------------------------//
@@ -1152,7 +1165,6 @@ local actionCorner = Instance.new("UICorner")
 actionCorner.CornerRadius = UDim.new(0,8)
 actionCorner.Parent = actionButton
 
--- LOCKED key info
 local lockedLabel = Instance.new("TextLabel")
 lockedLabel.Size = UDim2.new(1,-40,0,20)
 lockedLabel.Position = UDim2.new(0,20,0,204)
@@ -1161,7 +1173,7 @@ lockedLabel.Font = Enum.Font.Gotham
 lockedLabel.TextSize = 13
 lockedLabel.TextColor3 = Color3.fromRGB(200,200,210)
 lockedLabel.TextXAlignment = Enum.TextXAlignment.Left
-lockedLabel.Text = "Parry Key: E (locked)   |   Slash of Fury Key: Q (locked)"
+lockedLabel.Text = "Parry Key: E (locked)   |   Slash of Fury Key: Q (locked / disabled)"
 lockedLabel.ZIndex = 3
 lockedLabel.Parent = mainPage
 
@@ -1175,7 +1187,7 @@ infoLabel.TextWrapped = true
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 infoLabel.TextColor3 = Color3.fromRGB(180,180,190)
-infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Slash of Fury uses Q (ability) -> 32 hits -> E (parry)."
+infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Speed is now a toggle in Blatant > Player Options."
 infoLabel.ZIndex = 3
 infoLabel.Parent = mainPage
 
@@ -1428,14 +1440,14 @@ createDisabledDetection("Infinity Detection","Avoid accidental crashes by having
 createDisabledDetection("Death Slash Detection","Generates the shot when activating the ability.")
 createDisabledDetection("Time Hole Detection","Avoid failing when someone has that skill.")
 
--- Slash of Fury Detection (ACTIVE)
-local slashCard = createCard(72)
+-- Slash of Fury Detection (TEMP UNAVAILABLE)
+local slashCard = createCard(52)
 makeTitle(slashCard,"Slash of Fury Detection")
-makeDesc(slashCard,"When Q is pressed (toggle on): 32 hits -> 1 E parry.")
+makeDesc(slashCard,"Temporarily unavailable.")
 
 local slashToggle = Instance.new("Frame")
 slashToggle.Size = UDim2.new(0,40,0,20)
-slashToggle.Position = UDim2.new(1,-50,0,12)
+slashToggle.Position = UDim2.new(1,-50,0,16)
 slashToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
 slashToggle.BorderSizePixel = 0
 slashToggle.ZIndex = 4
@@ -1457,42 +1469,125 @@ local slashThumbCorner = Instance.new("UICorner")
 slashThumbCorner.CornerRadius = UDim.new(1,0)
 slashThumbCorner.Parent = slashThumb
 
-local ablLabel = Instance.new("TextLabel")
-ablLabel.Size = UDim2.new(1,-20,0,16)
-ablLabel.Position = UDim2.new(0,10,0,42)
-ablLabel.BackgroundTransparency = 1
-ablLabel.Font = Enum.Font.Gotham
-ablLabel.TextSize = 12
-ablLabel.TextColor3 = Color3.fromRGB(200,200,210)
-ablLabel.TextXAlignment = Enum.TextXAlignment.Left
-ablLabel.Text = "Ability Key: Q (locked) | Parry Key: E (locked)"
-ablLabel.ZIndex = 4
-ablLabel.Parent = slashCard
-
-local function updateSlashVisual()
-    if slashOfFuryOn then
-        slashToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
-        slashThumb.Position = UDim2.new(1,-18,0.5,-8)
-    else
-        slashToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-        slashThumb.Position = UDim2.new(0,2,0.5,-8)
-    end
-end
-updateSlashVisual()
-
-slashToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        slashOfFuryOn = not slashOfFuryOn
-        getgenv().BinHub_SlashOfFuryDetection = slashOfFuryOn
-        updateSlashVisual()
-    end
-end)
-
 ---------------------------------------------------------------------//
--- PLAYER OPTIONS (SCROLL SAFE)
+-- PLAYER OPTIONS  (Speed toggle + Jump slider)
 ---------------------------------------------------------------------//
 blatantHeader("Player Options")
 
+-- Speed card with toggle
+local speedCard = createCard(64)
+makeTitle(speedCard,"Speed")
+makeDesc(speedCard,"Choose the speed of your character. Toggle must be ON to apply.")
+
+local speedValueLabel = Instance.new("TextLabel")
+speedValueLabel.Size = UDim2.new(0,40,0,16)
+speedValueLabel.Position = UDim2.new(1,-90,0,8)
+speedValueLabel.BackgroundTransparency = 1
+speedValueLabel.Font = Enum.Font.Gotham
+speedValueLabel.TextSize = 12
+speedValueLabel.TextColor3 = Color3.fromRGB(220,220,230)
+speedValueLabel.Text = tostring(speedValue)
+speedValueLabel.ZIndex = 4
+speedValueLabel.Parent = speedCard
+
+-- Speed toggle
+local speedToggle = Instance.new("Frame")
+speedToggle.Size = UDim2.new(0,40,0,20)
+speedToggle.Position = UDim2.new(1,-50,0,8)
+speedToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+speedToggle.BorderSizePixel = 0
+speedToggle.ZIndex = 4
+speedToggle.Parent = speedCard
+
+local speedToggleCorner = Instance.new("UICorner")
+speedToggleCorner.CornerRadius = UDim.new(1,0)
+speedToggleCorner.Parent = speedToggle
+
+local speedThumb = Instance.new("Frame")
+speedThumb.Size = UDim2.new(0,16,0,16)
+speedThumb.Position = UDim2.new(0,2,0.5,-8)
+speedThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+speedThumb.BorderSizePixel = 0
+speedThumb.ZIndex = 5
+speedThumb.Parent = speedToggle
+
+local speedThumbCorner = Instance.new("UICorner")
+speedThumbCorner.CornerRadius = UDim.new(1,0)
+speedThumbCorner.Parent = speedThumb
+
+local function updateSpeedToggleVisual()
+    if speedEnabled then
+        speedToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+        speedThumb.Position = UDim2.new(1,-18,0.5,-8)
+    else
+        speedToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+        speedThumb.Position = UDim2.new(0,2,0.5,-8)
+    end
+end
+updateSpeedToggleVisual()
+
+speedToggle.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        speedEnabled = not speedEnabled
+        updateSpeedToggleVisual()
+        applySpeed()
+    end
+end)
+
+-- Speed slider bar
+local speedBar = Instance.new("Frame")
+speedBar.Size = UDim2.new(1,-40,0,6)
+speedBar.Position = UDim2.new(0,10,0,40)
+speedBar.BackgroundColor3 = Color3.fromRGB(35,35,42)
+speedBar.BorderSizePixel = 0
+speedBar.ZIndex = 4
+speedBar.Parent = speedCard
+
+local speedBarCorner = Instance.new("UICorner")
+speedBarCorner.CornerRadius = UDim.new(0,6)
+speedBarCorner.Parent = speedBar
+
+local speedFill = Instance.new("Frame")
+speedFill.Size = UDim2.new((speedValue-10)/(100-10),0,1,0)
+speedFill.BackgroundColor3 = Color3.fromRGB(140,200,255)
+speedFill.BorderSizePixel = 0
+speedFill.ZIndex = 5
+speedFill.Parent = speedBar
+
+local speedFillCorner = Instance.new("UICorner")
+speedFillCorner.CornerRadius = UDim.new(0,6)
+speedFillCorner.Parent = speedFill
+
+local speedDragging = false
+local function setSpeedFromX(x)
+    local rel = math.clamp((x - speedBar.AbsolutePosition.X)/speedBar.AbsoluteSize.X,0,1)
+    local val = math.floor(10 + (100-10)*rel + 0.5)
+    speedValue = val
+    speedValueLabel.Text = tostring(val)
+    speedFill.Size = UDim2.new(rel,0,1,0)
+    applySpeed()
+end
+
+speedBar.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        speedDragging = true
+        setSpeedFromX(inp.Position.X)
+    end
+end)
+
+UIS.InputChanged:Connect(function(inp)
+    if speedDragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+        setSpeedFromX(inp.Position.X)
+    end
+end)
+
+UIS.InputEnded:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        speedDragging = false
+    end
+end)
+
+-- Generic slider creator for Jump
 local function createSlider(title,desc,min,max,default,callback)
     local card = createCard(64)
     makeTitle(card,title)
@@ -1563,11 +1658,6 @@ local function createSlider(title,desc,min,max,default,callback)
     if callback then callback(default) end
 end
 
-createSlider("Speed","Choose the speed of your character.",10,100,20,function(val)
-    local hum = getHumanoid()
-    if hum then hum.WalkSpeed = val end
-end)
-
 createSlider("Jump Power","Choose the jump power of your character.",25,150,50,function(val)
     local hum = getHumanoid()
     if hum then
@@ -1633,43 +1723,6 @@ manualKeyButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------------------------------------------------//
--- SLASH OF FURY BURST
----------------------------------------------------------------------//
-local function doSlashOfFuryBurst()
-    -- Only run if toggle is ON
-    if not slashOfFuryOn then return end
-    if not VIM then return end
-
-    local hits = 32  -- force 32 clicks
-
-    task.spawn(function()
-        -- 32 auto hits with LEFT MOUSE
-        for i = 1, hits do
-            pcall(function()
-                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)  -- down
-                task.wait(0.01)
-                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)  -- up
-            end)
-            task.wait(0.01)
-        end
-
-        -- then 1 parry press (E by default, locked)
-        pcall(function()
-            if parryKey then
-                VIM:SendKeyEvent(true,  parryKey, false, game)
-                task.wait(0.02)
-                VIM:SendKeyEvent(false, parryKey, false, game)
-            else
-                -- fallback: extra left click if no parry key
-                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)
-                task.wait(0.02)
-                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-            end
-        end)
-    end)
-end
-
----------------------------------------------------------------------//
 -- INPUT HANDLING
 ---------------------------------------------------------------------//
 UIS.InputBegan:Connect(function(input,gp)
@@ -1706,10 +1759,7 @@ UIS.InputBegan:Connect(function(input,gp)
 
     if gp then return end
 
-    -- Ability (Slash of Fury) burst (locked to Q)
-    if input.KeyCode == abilityKey then
-        doSlashOfFuryBurst()
-    end
+    -- NOTE: Slash of Fury is disabled, so abilityKey (Q) does nothing here
 
     -- Main clicker toggle / hold
     if input.KeyCode == toggleKey then
@@ -1789,8 +1839,9 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------------//
--- START ON HOME + SEND WEBHOOK
+-- START ON HOME + APPLY DEFAULT SPEED + SEND WEBHOOK
 ---------------------------------------------------------------------//
 setActivePage("Home")
 updateStatus()
+applySpeed() -- make sure default 16 & toggle behavior is respected
 sendWebhookLog()
