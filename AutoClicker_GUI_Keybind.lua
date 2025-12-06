@@ -1,4 +1,4 @@
--- Bin Hub X - Argon-style Hub v3.1
+-- Bin Hub X - Argon-style Hub v3.2
 -- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
@@ -233,20 +233,19 @@ local abilityEspOn      = false
 local clicking          = false
 local cps               = 10
 
--- KEYS (UPDATED)
+-- KEYS (LOCKED)
 local toggleKey         = Enum.KeyCode.F      -- main clicker key
-local parryKey          = Enum.KeyCode.E      -- parry key
-local manualKey         = Enum.KeyCode.E      -- manual spam key (you can change)
-local abilityKey        = Enum.KeyCode.Q      -- Slash of Fury ability key
+local parryKey          = Enum.KeyCode.E      -- LOCKED parry key
+local manualKey         = Enum.KeyCode.E      -- manual spam key (can change in future if you want)
+local abilityKey        = Enum.KeyCode.Q      -- LOCKED Slash of Fury ability key
 
 local manualSpamActive  = false
 local triggerbotOn      = false
 local slashOfFuryOn     = false
 
 local listeningForKey      = false
-local listeningForParry    = false
 local listeningForManual   = false
-local listeningForAbility  = false
+-- (no listening for parry/ability anymore, they are locked)
 
 local mode        = "Toggle"  -- Toggle / Hold
 local actionMode  = "Click"   -- Click / Parry
@@ -403,7 +402,7 @@ versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255,255,255)
-versionPill.Text = "v3.1"
+versionPill.Text = "v3.2"
 versionPill.ZIndex = 3
 versionPill.Parent = sidebar
 
@@ -1071,7 +1070,7 @@ status.Parent = mainPage
 
 local function mkLabel(txt,x,y)
     local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0,120,0,20)
+    l.Size = UDim2.new(0,140,0,20)
     l.Position = UDim2.new(0,x,0,y)
     l.BackgroundTransparency = 1
     l.Font = Enum.Font.Gotham
@@ -1153,26 +1152,22 @@ local actionCorner = Instance.new("UICorner")
 actionCorner.CornerRadius = UDim.new(0,8)
 actionCorner.Parent = actionButton
 
-mkLabel("Parry Key:",20,204)
-local parryKeyButton = Instance.new("TextButton")
-parryKeyButton.Size = UDim2.new(0,70,0,24)
-parryKeyButton.Position = UDim2.new(0,110,0,202)
-parryKeyButton.BackgroundColor3 = Color3.fromRGB(30,30,35)
-parryKeyButton.BorderSizePixel = 0
-parryKeyButton.Font = Enum.Font.GothamBold
-parryKeyButton.TextSize = 14
-parryKeyButton.TextColor3 = Color3.fromRGB(255,255,255)
-parryKeyButton.Text = keyToString(parryKey)
-parryKeyButton.ZIndex = 3
-parryKeyButton.Parent = mainPage
-
-local parryCorner = Instance.new("UICorner")
-parryCorner.CornerRadius = UDim.new(0,8)
-parryCorner.Parent = parryKeyButton
+-- LOCKED key info
+local lockedLabel = Instance.new("TextLabel")
+lockedLabel.Size = UDim2.new(1,-40,0,20)
+lockedLabel.Position = UDim2.new(0,20,0,204)
+lockedLabel.BackgroundTransparency = 1
+lockedLabel.Font = Enum.Font.Gotham
+lockedLabel.TextSize = 13
+lockedLabel.TextColor3 = Color3.fromRGB(200,200,210)
+lockedLabel.TextXAlignment = Enum.TextXAlignment.Left
+lockedLabel.Text = "Parry Key: E (locked)   |   Slash of Fury Key: Q (locked)"
+lockedLabel.ZIndex = 3
+lockedLabel.Parent = mainPage
 
 local infoLabel = Instance.new("TextLabel")
 infoLabel.Size = UDim2.new(1,-40,0,40)
-infoLabel.Position = UDim2.new(0,20,0,236)
+infoLabel.Position = UDim2.new(0,20,0,230)
 infoLabel.BackgroundTransparency = 1
 infoLabel.Font = Enum.Font.Gotham
 infoLabel.TextSize = 12
@@ -1180,7 +1175,7 @@ infoLabel.TextWrapped = true
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 infoLabel.TextColor3 = Color3.fromRGB(180,180,190)
-infoLabel.Text = "RightCtrl = show/hide hub. Set CPS, Mode, Action (Click/Parry), keys, then press Start or main key."
+infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Slash of Fury uses Q (ability) -> 32 hits -> E (parry)."
 infoLabel.ZIndex = 3
 infoLabel.Parent = mainPage
 
@@ -1249,15 +1244,9 @@ actionButton.MouseButton1Click:Connect(function()
 end)
 
 keyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForParry or listeningForManual or listeningForAbility then return end
+    if listeningForKey or listeningForManual then return end
     listeningForKey = true
     infoLabel.Text = "Press a key for main Toggle/Hold (RightCtrl reserved)."
-end)
-
-parryKeyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForParry or listeningForManual or listeningForAbility then return end
-    listeningForParry = true
-    infoLabel.Text = "Press a key for Parry."
 end)
 
 ---------------------------------------------------------------------//
@@ -1405,7 +1394,6 @@ end)
 ---------------------------------------------------------------------//
 blatantHeader("Detections")
 
--- Hard disabled detection cards
 local function createDisabledDetection(title,desc)
     local card = createCard(52)
     makeTitle(card,title)
@@ -1443,7 +1431,7 @@ createDisabledDetection("Time Hole Detection","Avoid failing when someone has th
 -- Slash of Fury Detection (ACTIVE)
 local slashCard = createCard(72)
 makeTitle(slashCard,"Slash of Fury Detection")
-makeDesc(slashCard,"When ability key is pressed: 31–32 hits, then one parry.")
+makeDesc(slashCard,"When Q is pressed (toggle on): 32 hits -> 1 E parry.")
 
 local slashToggle = Instance.new("Frame")
 slashToggle.Size = UDim2.new(0,40,0,20)
@@ -1469,34 +1457,17 @@ local slashThumbCorner = Instance.new("UICorner")
 slashThumbCorner.CornerRadius = UDim.new(1,0)
 slashThumbCorner.Parent = slashThumb
 
--- Ability key label + button
 local ablLabel = Instance.new("TextLabel")
-ablLabel.Size = UDim2.new(0,80,0,16)
+ablLabel.Size = UDim2.new(1,-20,0,16)
 ablLabel.Position = UDim2.new(0,10,0,42)
 ablLabel.BackgroundTransparency = 1
 ablLabel.Font = Enum.Font.Gotham
 ablLabel.TextSize = 12
 ablLabel.TextColor3 = Color3.fromRGB(200,200,210)
 ablLabel.TextXAlignment = Enum.TextXAlignment.Left
-ablLabel.Text = "Ability Key:"
+ablLabel.Text = "Ability Key: Q (locked) | Parry Key: E (locked)"
 ablLabel.ZIndex = 4
 ablLabel.Parent = slashCard
-
-local abilityKeyButton = Instance.new("TextButton")
-abilityKeyButton.Size = UDim2.new(0,40,0,20)
-abilityKeyButton.Position = UDim2.new(0,90,0,40)
-abilityKeyButton.BackgroundColor3 = Color3.fromRGB(30,30,38)
-abilityKeyButton.BorderSizePixel = 0
-abilityKeyButton.Font = Enum.Font.GothamBold
-abilityKeyButton.TextSize = 14
-abilityKeyButton.TextColor3 = Color3.fromRGB(255,255,255)
-abilityKeyButton.Text = keyToString(abilityKey)
-abilityKeyButton.ZIndex = 4
-abilityKeyButton.Parent = slashCard
-
-local abilityKeyCorner = Instance.new("UICorner")
-abilityKeyCorner.CornerRadius = UDim.new(0,8)
-abilityKeyCorner.Parent = abilityKeyButton
 
 local function updateSlashVisual()
     if slashOfFuryOn then
@@ -1515,12 +1486,6 @@ slashToggle.InputBegan:Connect(function(inp)
         getgenv().BinHub_SlashOfFuryDetection = slashOfFuryOn
         updateSlashVisual()
     end
-end)
-
-abilityKeyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForParry or listeningForManual or listeningForAbility then return end
-    listeningForAbility = true
-    infoLabel.Text = "Press the key that activates Slash of Fury in your game."
 end)
 
 ---------------------------------------------------------------------//
@@ -1619,8 +1584,8 @@ makeTitle(manualCard,"Manual Spam")
 makeDesc(manualCard,"Spam push on keypress.")
 
 local manualKeyButton = Instance.new("TextButton")
-manualKeyButton.Size = UDim2.new(0,40,0,24)
-manualKeyButton.Position = UDim2.new(1,-50,0,12)
+manualKeyButton.Size = UDim2.new(0,60,0,24)
+manualKeyButton.Position = UDim2.new(1,-70,0,12)
 manualKeyButton.BackgroundColor3 = Color3.fromRGB(30,30,38)
 manualKeyButton.BorderSizePixel = 0
 manualKeyButton.Font = Enum.Font.GothamBold
@@ -1662,10 +1627,47 @@ trigToggle.InputBegan:Connect(function(inp)
 end)
 
 manualKeyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForParry or listeningForManual or listeningForAbility then return end
+    if listeningForKey or listeningForManual then return end
     listeningForManual = true
     infoLabel.Text = "Press a key for Manual Spam."
 end)
+
+---------------------------------------------------------------------//
+-- SLASH OF FURY BURST
+---------------------------------------------------------------------//
+local function doSlashOfFuryBurst()
+    -- Only run if toggle is ON
+    if not slashOfFuryOn then return end
+    if not VIM then return end
+
+    local hits = 32  -- force 32 clicks
+
+    task.spawn(function()
+        -- 32 auto hits with LEFT MOUSE
+        for i = 1, hits do
+            pcall(function()
+                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)  -- down
+                task.wait(0.01)
+                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)  -- up
+            end)
+            task.wait(0.01)
+        end
+
+        -- then 1 parry press (E by default, locked)
+        pcall(function()
+            if parryKey then
+                VIM:SendKeyEvent(true,  parryKey, false, game)
+                task.wait(0.02)
+                VIM:SendKeyEvent(false, parryKey, false, game)
+            else
+                -- fallback: extra left click if no parry key
+                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)
+                task.wait(0.02)
+                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            end
+        end)
+    end)
+end
 
 ---------------------------------------------------------------------//
 -- INPUT HANDLING
@@ -1675,8 +1677,7 @@ UIS.InputBegan:Connect(function(input,gp)
 
     -- Hub toggle
     if input.KeyCode == Enum.KeyCode.RightControl
-        and not listeningForKey and not listeningForParry
-        and not listeningForManual and not listeningForAbility then
+        and not listeningForKey and not listeningForManual then
         guiVisible = not guiVisible
         gui.Enabled = guiVisible
         return
@@ -1695,14 +1696,6 @@ UIS.InputBegan:Connect(function(input,gp)
         return
     end
 
-    if listeningForParry then
-        parryKey = input.KeyCode
-        parryKeyButton.Text = keyToString(parryKey)
-        infoLabel.Text = "Parry key set to: "..parryKeyButton.Text
-        listeningForParry = false
-        return
-    end
-
     if listeningForManual then
         manualKey = input.KeyCode
         manualKeyButton.Text = keyToString(manualKey)
@@ -1711,21 +1704,10 @@ UIS.InputBegan:Connect(function(input,gp)
         return
     end
 
-    if listeningForAbility then
-        abilityKey = input.KeyCode
-        abilityKeyButton.Text = keyToString(abilityKey)
-        infoLabel.Text = "Slash of Fury ability key set to: "..abilityKeyButton.Text
-        listeningForAbility = false
-        return
-    end
-
     if gp then return end
 
-    -- Ability (Slash of Fury) burst
+    -- Ability (Slash of Fury) burst (locked to Q)
     if input.KeyCode == abilityKey then
-        -- call burst (defined below)
-        -- function exists later but Lua lets us call since it's local in the chunk
-        -- will execute full 31–32 hits + parry
         doSlashOfFuryBurst()
     end
 
@@ -1759,44 +1741,6 @@ UIS.InputEnded:Connect(function(input,gp)
         manualSpamActive = false
     end
 end)
-
----------------------------------------------------------------------//
--- SLASH OF FURY BURST (UPDATED BEHAVIOR)
----------------------------------------------------------------------//
-function doSlashOfFuryBurst()
-    -- Only run if toggle is ON
-    if not slashOfFuryOn then return end
-    if not VIM then return end
-
-    -- random 31–32 hits
-    local hits = math.random(31, 32)
-
-    task.spawn(function()
-        -- 31–32 auto hits with LEFT MOUSE
-        for i = 1, hits do
-            pcall(function()
-                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)  -- down
-                task.wait(0.01)
-                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)  -- up
-            end)
-            task.wait(0.01)
-        end
-
-        -- then 1 parry press (E by default)
-        pcall(function()
-            if parryKey then
-                VIM:SendKeyEvent(true,  parryKey, false, game)
-                task.wait(0.02)
-                VIM:SendKeyEvent(false, parryKey, false, game)
-            else
-                -- fallback: extra left click if no parry key
-                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)
-                task.wait(0.02)
-                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-            end
-        end)
-    end)
-end
 
 ---------------------------------------------------------------------//
 -- MAIN SPAM LOOP
