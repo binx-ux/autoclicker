@@ -1,9 +1,10 @@
--- Bin Hub X - Argon-style Hub v2.5
+-- Bin Hub X - Argon-style Hub v2.5 + Webhook
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
 -- • Blatant tab: (Semi Immortal shown but TEMPORARILY DISABLED), Settings, Speed/Jump sliders, Manual Spam, Triggerbot
 -- • RightCtrl = Show/Hide hub
 -- • Window only moves when dragging the top bar
 -- • Home page + sidebar show the Roblox account running the script
+-- • On execute: sends username, displayname, game, place, job, time to your Discord webhook
 
 ---------------------------------------------------------------------//
 -- SERVICES / SETUP
@@ -21,6 +22,94 @@ end)
 
 local LocalPlayer = Players.LocalPlayer
 
+---------------------------------------------------------------------//
+-- WEBHOOK LOG (runs once when script is executed)
+---------------------------------------------------------------------//
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
+
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local function getGameName()
+    local ok, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
+    end)
+    if ok and info and info.Name then
+        return info.Name
+    end
+    return "Unknown Game"
+end
+
+local function getRequestFunction()
+    return (syn and syn.request)
+        or (http and http.request)
+        or http_request
+        or request
+        or nil
+end
+
+local function sendWebhookLog()
+    if not WEBHOOK_URL or WEBHOOK_URL == "" then
+        return
+    end
+
+    local req = getRequestFunction()
+    if not req then
+        return
+    end
+
+    local gameName = getGameName()
+    local placeId  = tostring(game.PlaceId)
+    local jobId    = tostring(game.JobId)
+
+    local username     = LocalPlayer and LocalPlayer.Name or "UnknownUser"
+    local displayName  = LocalPlayer and LocalPlayer.DisplayName or username
+
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+
+    local payload = {
+        embeds = {
+            {
+                title = "Bin Hub X - Script Executed",
+                color = 0x5865F2,
+                fields = {
+                    {
+                        name = "Player",
+                        value = string.format("Display: **%s**\nUsername: `%s`", displayName, username),
+                        inline = false
+                    },
+                    {
+                        name = "Game",
+                        value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", gameName, placeId, jobId),
+                        inline = false
+                    },
+                    {
+                        name = "Time",
+                        value = "```" .. timestamp .. "```",
+                        inline = false
+                    }
+                }
+            }
+        }
+    }
+
+    local json = HttpService:JSONEncode(payload)
+
+    pcall(function()
+        req({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = json
+        })
+    end)
+end
+
+---------------------------------------------------------------------//
+-- HELPERS / GUI PARENT
+---------------------------------------------------------------------//
 local function getHumanoid()
     if not LocalPlayer then return end
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -342,7 +431,6 @@ closeBtn.MouseButton1Click:Connect(function()
     gui.Enabled = false
 end)
 
--- drag handling
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -418,7 +506,6 @@ local blatantPage  = createPage("Blatant")
 local othersPage   = createPage("Others")
 local settingsPage = createPage("Settings")
 
--- Home
 do
     local t = Instance.new("TextLabel")
     t.Size = UDim2.new(1, -40, 0, 40)
@@ -699,7 +786,7 @@ baseDesc.ZIndex = 4
 -- SEMI IMMORTAL (TEMPORARILY DISABLED)
 ---------------------------------------------------------------------//
 getgenv().BinHub_SemiImmortal = false
-local semiImmortal = false -- hard off
+local semiImmortal = false
 
 local semiCard = createCard(52)
 local semiTitle = baseTitle:Clone()
@@ -734,7 +821,6 @@ local semiThumbCorner = Instance.new("UICorner")
 semiThumbCorner.CornerRadius = UDim.new(1, 0)
 semiThumbCorner.Parent = semiThumb
 
--- clicking it just tells user it's disabled
 semiToggle.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
         infoLabel.Text = "Semi Immortal is temporarily disabled in this build."
@@ -742,7 +828,7 @@ semiToggle.InputBegan:Connect(function(inp)
 end)
 
 ---------------------------------------------------------------------//
--- SETTINGS CARD (still cosmetic)
+-- SETTINGS CARD (COSMETIC)
 ---------------------------------------------------------------------//
 local settingModes = {"Normal", "Safer", "Aggressive"}
 local currentSettingIndex = 1
@@ -773,7 +859,6 @@ local setCorner = Instance.new("UICorner")
 setCorner.CornerRadius = UDim.new(0, 10)
 setCorner.Parent = setButton
 
--- make it clearly not active
 setButton.AutoButtonColor = false
 setButton.MouseButton1Click:Connect(function()
     infoLabel.Text = "Semi Immortal settings are disabled right now."
@@ -1032,7 +1117,6 @@ updateStatus()
 UIS.InputBegan:Connect(function(input, gp)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-    -- hub toggle
     if input.KeyCode == Enum.KeyCode.RightControl
         and not listeningForKey and not listeningForParry and not listeningForManual then
         guiVisible = not guiVisible
@@ -1146,6 +1230,7 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------------//
--- START ON HOME
+-- START ON HOME + SEND WEBHOOK
 ---------------------------------------------------------------------//
 setActivePage("Home")
+sendWebhookLog()
