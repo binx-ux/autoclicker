@@ -47,7 +47,7 @@ local function getGameName()
     return "Unknown Game"
 end
 
--- NEW: detect executor / exploit type
+-- detect executor / exploit type
 local function getExecutorInfo()
     local execName = "Unknown"
     local exploitType = "Unknown"
@@ -111,17 +111,51 @@ local function getBasicEmbedFields()
     }
 end
 
+-- FULL LOG: hub / keybind info block
+local function getScriptInfoBlock()
+    local lines = {
+        "Hub: Bin Hub X - Argon-style Hub v3.3",
+        "",
+        "Main Hub:",
+        "  • Main Toggle Key: F (default, rebindable in UI)",
+        "  • Mode: Toggle / Hold (UI controlled)",
+        "  • Action: Click / Parry (UI controlled)",
+        "",
+        "Keybinds:",
+        "  • Parry Key: E (locked)",
+        "  • Manual Spam Key: E (default, rebindable in UI)",
+        "  • Slash of Fury Key: Q (locked / disabled in this build)",
+        "",
+        "Visuals / Extras:",
+        "  • FPS Booster toggle (Others tab)",
+        "  • Player Effects (Korblox + Headless) (Others tab)",
+        "  • Semi Immortal: disabled in this build",
+        "  • Ability ESP: disabled in this build",
+        "",
+        "Player Options:",
+        "  • Speed: slider 10–100 (toggle required to apply, restores original on off)",
+        "  • Jump Power: slider 25–150 (toggle required to apply, restores original on off)",
+        "",
+        "Notes:",
+        "  • RightCtrl = Show/Hide hub",
+        "  • Bug reports from Settings tab go to this same webhook.",
+    }
+
+    return table.concat(lines, "\n")
+end
+
 local function sendWebhookLog()
     if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
     local req = getRequestFunction()
     if not req then return end
 
     local meta = getBasicEmbedFields()
+    local scriptInfo = getScriptInfoBlock()
 
     local payload = {
         embeds = {
             {
-                title = "Bin Hub X - Script Executed",
+                title = "Bin Hub X - Script Executed (Full Log)",
                 color = 0x5865F2,
                 fields = {
                     {
@@ -130,13 +164,18 @@ local function sendWebhookLog()
                         inline = false
                     },
                     {
-                        name = "Game",
+                        name = "Game Session",
                         value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
                         inline = false
                     },
                     {
                         name = "Executor / Exploit",
                         value = string.format("Executor: `%s`\nType: `%s`", meta.executor, meta.exploitType),
+                        inline = false
+                    },
+                    {
+                        name = "Script / Hub Info",
+                        value = "```" .. scriptInfo .. "```",
                         inline = false
                     },
                     {
@@ -370,7 +409,7 @@ local function applyAbilityEsp(on)
     abilityEspOn = false
 end
 
--- NEW: Only touch WalkSpeed when speed is ON
+-- Only touch WalkSpeed when speed is ON
 local function applySpeed()
     if not speedEnabled then return end
     local hum = getHumanoid()
@@ -381,7 +420,7 @@ local function applySpeed()
     hum.WalkSpeed = speedValue
 end
 
--- NEW: Only touch JumpPower when jump is ON
+-- Only touch JumpPower when jump is ON
 local function applyJump()
     if not jumpEnabled then return end
     local hum = getHumanoid()
@@ -1708,8 +1747,10 @@ jumpThumb.ZIndex = 5
 jumpThumb.Parent = jumpToggle
 
 local jumpThumbCorner = Instance.new("UICorner")
-jumpThumbCorner.CornerRadius = UDim.new(1,0)
+jumpThumbCorner.CornerRadius = UDim.New(1,0)
 jumpThumbCorner.Parent = jumpThumb
+-- fix typo: UDim.New -> UDim.new
+jumpThumbCorner.CornerRadius = UDim.new(1,0)
 
 local function updateJumpToggleVisual()
     if jumpEnabled then
