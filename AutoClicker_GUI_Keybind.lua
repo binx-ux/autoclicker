@@ -1,7 +1,13 @@
--- Bin Hub X - Argon-style Hub v2.8
+-- Bin Hub X - Argon-style Hub v2.9
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
--- • Blatant tab: Semi Immortal (TEMP DISABLED), Settings, Player Options sliders,
---   Manual Spam, Triggerbot, and new Detection toggles
+-- • Blatant tab:
+--     - Semi Immortal (TEMP DISABLED)
+--     - Settings (cosmetic)
+--     - Detections:
+--         * Infinity / Death Slash / Time Hole (TEMP DISABLED)
+--         * Slash of Fury Detection (ACTIVE: 32-hit spam on ability key)
+--     - Player Options sliders (Speed / Jump)
+--     - Manual Spam, Triggerbot
 -- • Others tab: Discord invite, FPS Booster, Player Effects, Ability ESP
 -- • Settings tab: Bug report box -> Discord webhook
 -- • Home + sidebar: Roblox account + TikTok
@@ -404,7 +410,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.8"
+versionPill.Text = "v2.9"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -860,7 +866,6 @@ do
     info.ZIndex = 3
     info.Parent = othersPage
 
-    -- Card helper
     local function makeCard(y)
         local card = Instance.new("Frame")
         card.Size = UDim2.new(1, -40, 0, 56)
@@ -877,7 +882,7 @@ do
         return card
     end
 
-    -- Discord card
+    -- Discord
     local discordCard = makeCard(100)
     local dTitle = Instance.new("TextLabel")
     dTitle.Size = UDim2.new(1, -20, 0, 20)
@@ -931,7 +936,7 @@ do
         end
     end)
 
-    -- FPS Booster card
+    -- FPS Booster
     local fpsCard = makeCard(164)
     local fTitle = Instance.new("TextLabel")
     fTitle.Size = UDim2.new(1, -20, 0, 20)
@@ -1003,7 +1008,7 @@ do
         end
     end)
 
-    -- Player Effects card
+    -- Player Effects
     local peCard = makeCard(228)
     local peTitle = Instance.new("TextLabel")
     peTitle.Size = UDim2.new(1, -20, 0, 20)
@@ -1075,7 +1080,7 @@ do
         end
     end)
 
-    -- Ability ESP card
+    -- Ability ESP
     local espCard = makeCard(292)
     local espTitle = Instance.new("TextLabel")
     espTitle.Size = UDim2.new(1, -20, 0, 20)
@@ -1380,6 +1385,7 @@ baseDesc.ZIndex = 4
 -- SEMI IMMORTAL (TEMPORARILY DISABLED)
 ---------------------------------------------------------------------//
 getgenv().BinHub_SemiImmortal = false
+
 local semiCard = createCard(52)
 local semiTitle = baseTitle:Clone()
 semiTitle.Text = "Semi Immortal"
@@ -1461,14 +1467,15 @@ end)
 ---------------------------------------------------------------------//
 blatantHeader("Detections")
 
-local function createDetectionCard(title, desc, globalName)
+-- generic "temp unavailable" card
+local function createDisabledDetection(title, extraDesc)
     local card = createCard(52)
     local t = baseTitle:Clone()
     t.Text = title
     t.Parent = card
 
     local d = baseDesc:Clone()
-    d.Text = desc
+    d.Text = (extraDesc or "") .. " Temporarily unavailable."
     d.Parent = card
 
     local toggleFrame = Instance.new("Frame")
@@ -1495,36 +1502,88 @@ local function createDetectionCard(title, desc, globalName)
     thCorner.CornerRadius = UDim.new(1, 0)
     thCorner.Parent = thumb
 
-    local on = false
-
-    local function update()
-        if on then
-            toggleFrame.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
-            thumb.Position = UDim2.new(1, -18, 0.5, -8)
-        else
-            toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-            thumb.Position = UDim2.new(0, 2, 0.5, -8)
-        end
-    end
-
-    update()
-
     toggleFrame.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            on = not on
-            update()
-            if getgenv then
-                local env = getgenv()
-                env[globalName] = on
-            end
+            infoLabel.Text = title .. " Detection is temporarily unavailable."
         end
     end)
 end
 
-createDetectionCard("Infinity Detection",      "Avoid accidental crashes by having the skill.",            "BinHub_InfinityDetection")
-createDetectionCard("Death Slash Detection",   "Generates the shot when activating the ability.",        "BinHub_DeathSlashDetection")
-createDetectionCard("Time Hole Detection",     "Avoid failing when someone has that skill.",             "BinHub_TimeHoleDetection")
-createDetectionCard("Slash of Fury Detection", "Generates 32 exact locks for your ability.",             "BinHub_SlashOfFuryDetection")
+createDisabledDetection("Infinity Detection",     "Avoid accidental crashes by having the skill.")
+createDisabledDetection("Death Slash Detection",  "Generates the shot when activating the ability.")
+createDisabledDetection("Time Hole Detection",    "Avoid failing when someone has that skill.")
+
+-- Slash of Fury Detection (ACTIVE)
+getgenv().BinHub_SlashOfFuryDetection = false
+local slashOfFuryOn = false
+
+local slashCard = createCard(52)
+local slashTitle = baseTitle:Clone()
+slashTitle.Text = "Slash of Fury Detection"
+slashTitle.Parent = slashCard
+
+local slashDesc = baseDesc:Clone()
+slashDesc.Text = "Generates 32 exact locks for your ability."
+slashDesc.Parent = slashCard
+
+local slashToggle = Instance.new("Frame")
+slashToggle.Size = UDim2.new(0, 40, 0, 20)
+slashToggle.Position = UDim2.new(1, -50, 0, 16)
+slashToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+slashToggle.BorderSizePixel = 0
+slashToggle.ZIndex = 4
+slashToggle.Parent = slashCard
+
+local slashToggleCorner = Instance.new("UICorner")
+slashToggleCorner.CornerRadius = UDim.new(1, 0)
+slashToggleCorner.Parent = slashToggle
+
+local slashThumb = Instance.new("Frame")
+slashThumb.Size = UDim2.new(0, 16, 0, 16)
+slashThumb.Position = UDim2.new(0, 2, 0.5, -8)
+slashThumb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+slashThumb.BorderSizePixel = 0
+slashThumb.ZIndex = 5
+slashThumb.Parent = slashToggle
+
+local slashThumbCorner = Instance.new("UICorner")
+slashThumbCorner.CornerRadius = UDim.new(1, 0)
+slashThumbCorner.Parent = slashThumb
+
+local function updateSlashVisual()
+    if slashOfFuryOn then
+        slashToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+        slashThumb.Position = UDim2.new(1, -18, 0.5, -8)
+    else
+        slashToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+        slashThumb.Position = UDim2.new(0, 2, 0.5, -8)
+    end
+end
+
+updateSlashVisual()
+
+slashToggle.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        slashOfFuryOn = not slashOfFuryOn
+        getgenv().BinHub_SlashOfFuryDetection = slashOfFuryOn
+        updateSlashVisual()
+    end
+end)
+
+-- This function will spam the parry key 32 times when the player uses the ability
+local function doSlashOfFuryBurst(parryKey)
+    if not slashOfFuryOn then return end
+    if not VIM or not parryKey then return end
+
+    task.spawn(function()
+        for i = 1, 32 do
+            VIM:SendKeyEvent(true, parryKey, false, game)
+            task.wait(0.015)
+            VIM:SendKeyEvent(false, parryKey, false, game)
+            task.wait(0.015)
+        end
+    end)
+end
 
 ---------------------------------------------------------------------//
 -- PLAYER OPTIONS (Speed / Jump)
@@ -1779,6 +1838,7 @@ updateStatus()
 UIS.InputBegan:Connect(function(input, gp)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
+    -- Hub toggle
     if input.KeyCode == Enum.KeyCode.RightControl
         and not listeningForKey and not listeningForParry and not listeningForManual then
         guiVisible = not guiVisible
@@ -1786,6 +1846,7 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
+    -- Keybind setup modes
     if listeningForKey then
         if input.KeyCode == Enum.KeyCode.RightControl then
             infoLabel.Text = "RightCtrl is hub toggle only."
@@ -1816,6 +1877,12 @@ UIS.InputBegan:Connect(function(input, gp)
 
     if gp then return end
 
+    -- Slash of Fury 32-hit burst when player uses ability (presses parry key)
+    if input.KeyCode == parryKey then
+        doSlashOfFuryBurst(parryKey)
+    end
+
+    -- Main clicker
     if input.KeyCode == toggleKey then
         if mode == "Toggle" then
             toggleClicker()
@@ -1826,6 +1893,7 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
+    -- Manual spam
     if input.KeyCode == manualKey then
         manualSpamActive = true
     end
