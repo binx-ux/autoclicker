@@ -1,10 +1,11 @@
--- Bin Hub X - Argon-style Hub v2.5 + Webhook
+-- Bin Hub X - Argon-style Hub v2.6 + Webhook + TikTok + Bug Reports
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
 -- • Blatant tab: (Semi Immortal shown but TEMPORARILY DISABLED), Settings, Speed/Jump sliders, Manual Spam, Triggerbot
 -- • RightCtrl = Show/Hide hub
 -- • Window only moves when dragging the top bar
--- • Home page + sidebar show the Roblox account running the script
+-- • Home page + sidebar show the Roblox account + TikTok
 -- • On execute: sends username, displayname, game, place, job, time to your Discord webhook
+-- • Settings tab: Bug report box that sends to the same webhook
 
 ---------------------------------------------------------------------//
 -- SERVICES / SETUP
@@ -22,8 +23,11 @@ end)
 
 local LocalPlayer = Players.LocalPlayer
 
+-- TikTok handle (change this if you want a different @)
+local TIKTOK_HANDLE = "@binxix"
+
 ---------------------------------------------------------------------//
--- WEBHOOK LOG (runs once when script is executed)
+-- WEBHOOK LOG (runs once when script is executed) + BUG REPORTS
 ---------------------------------------------------------------------//
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
 
@@ -48,6 +52,26 @@ local function getRequestFunction()
         or nil
 end
 
+local function getBasicEmbedFields()
+    local gameName = getGameName()
+    local placeId  = tostring(game.PlaceId)
+    local jobId    = tostring(game.JobId)
+
+    local username     = LocalPlayer and LocalPlayer.Name or "UnknownUser"
+    local displayName  = LocalPlayer and LocalPlayer.DisplayName or username
+
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+
+    return {
+        username = username,
+        displayName = displayName,
+        gameName = gameName,
+        placeId = placeId,
+        jobId = jobId,
+        timestamp = timestamp,
+    }
+end
+
 local function sendWebhookLog()
     if not WEBHOOK_URL or WEBHOOK_URL == "" then
         return
@@ -58,14 +82,7 @@ local function sendWebhookLog()
         return
     end
 
-    local gameName = getGameName()
-    local placeId  = tostring(game.PlaceId)
-    local jobId    = tostring(game.JobId)
-
-    local username     = LocalPlayer and LocalPlayer.Name or "UnknownUser"
-    local displayName  = LocalPlayer and LocalPlayer.DisplayName or username
-
-    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+    local meta = getBasicEmbedFields()
 
     local payload = {
         embeds = {
@@ -75,17 +92,17 @@ local function sendWebhookLog()
                 fields = {
                     {
                         name = "Player",
-                        value = string.format("Display: **%s**\nUsername: `%s`", displayName, username),
+                        value = string.format("Display: **%s**\nUsername: `%s`", meta.displayName, meta.username),
                         inline = false
                     },
                     {
                         name = "Game",
-                        value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", gameName, placeId, jobId),
+                        value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
                         inline = false
                     },
                     {
                         name = "Time",
-                        value = "```" .. timestamp .. "```",
+                        value = "```" .. meta.timestamp .. "```",
                         inline = false
                     }
                 }
@@ -105,6 +122,76 @@ local function sendWebhookLog()
             Body = json
         })
     end)
+end
+
+local function sendBugReport(messageText)
+    if not WEBHOOK_URL or WEBHOOK_URL == "" then
+        return false, "No webhook"
+    end
+
+    local req = getRequestFunction()
+    if not req then
+        return false, "No request function"
+    end
+
+    if not messageText or messageText:gsub("%s+", "") == "" then
+        return false, "Empty"
+    end
+
+    local meta = getBasicEmbedFields()
+    local trimmed = messageText
+    if #trimmed > 1000 then
+        trimmed = trimmed:sub(1, 1000) .. "..."
+    end
+
+    local payload = {
+        embeds = {
+            {
+                title = "Bin Hub X - Bug Report",
+                color = 0xFF0000,
+                fields = {
+                    {
+                        name = "Player",
+                        value = string.format("Display: **%s**\nUsername: `%s`", meta.displayName, meta.username),
+                        inline = false
+                    },
+                    {
+                        name = "Game",
+                        value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
+                        inline = false
+                    },
+                    {
+                        name = "Time",
+                        value = "```" .. meta.timestamp .. "```",
+                        inline = false
+                    },
+                    {
+                        name = "Bug Report",
+                        value = "```" .. trimmed .. "```",
+                        inline = false
+                    }
+                }
+            }
+        }
+    }
+
+    local json = HttpService:JSONEncode(payload)
+
+    local ok, err = pcall(function()
+        req({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = json
+        })
+    end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+    return true
 end
 
 ---------------------------------------------------------------------//
@@ -250,7 +337,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.5"
+versionPill.Text = "v2.6"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -353,8 +440,8 @@ sectionLabel("Settings")
 navButton("Settings", "Settings")
 
 local profileFrame = Instance.new("Frame")
-profileFrame.Size = UDim2.new(1, -36, 0, 60)
-profileFrame.Position = UDim2.new(0, 18, 1, -70)
+profileFrame.Size = UDim2.new(1, -36, 0, 76)
+profileFrame.Position = UDim2.new(0, 18, 1, -86)
 profileFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
 profileFrame.BorderSizePixel = 0
 profileFrame.ZIndex = 3
@@ -366,7 +453,7 @@ pfCorner.Parent = profileFrame
 
 local pfName = Instance.new("TextLabel")
 pfName.Size = UDim2.new(1, -10, 0, 22)
-pfName.Position = UDim2.new(0, 10, 0, 8)
+pfName.Position = UDim2.new(0, 10, 0, 6)
 pfName.BackgroundTransparency = 1
 pfName.Font = Enum.Font.GothamBold
 pfName.TextSize = 14
@@ -378,7 +465,7 @@ pfName.Parent = profileFrame
 
 local pfTag = Instance.new("TextLabel")
 pfTag.Size = UDim2.new(1, -10, 0, 18)
-pfTag.Position = UDim2.new(0, 10, 0, 30)
+pfTag.Position = UDim2.new(0, 10, 0, 26)
 pfTag.BackgroundTransparency = 1
 pfTag.Font = Enum.Font.Gotham
 pfTag.TextSize = 12
@@ -387,6 +474,18 @@ pfTag.TextXAlignment = Enum.TextXAlignment.Left
 pfTag.Text = "@" .. userName
 pfTag.ZIndex = 4
 pfTag.Parent = profileFrame
+
+local pfTikTok = Instance.new("TextLabel")
+pfTikTok.Size = UDim2.new(1, -10, 0, 18)
+pfTikTok.Position = UDim2.new(0, 10, 0, 46)
+pfTikTok.BackgroundTransparency = 1
+pfTikTok.Font = Enum.Font.Gotham
+pfTikTok.TextSize = 12
+pfTikTok.TextColor3 = Color3.fromRGB(200, 120, 220)
+pfTikTok.TextXAlignment = Enum.TextXAlignment.Left
+pfTikTok.Text = "TikTok: " .. TIKTOK_HANDLE
+pfTikTok.ZIndex = 4
+pfTikTok.Parent = profileFrame
 
 ---------------------------------------------------------------------//
 -- TOP BAR + DRAGGING (ONLY TOP BAR MOVES HUB)
@@ -506,6 +605,7 @@ local blatantPage  = createPage("Blatant")
 local othersPage   = createPage("Others")
 local settingsPage = createPage("Settings")
 
+-- HOME PAGE
 do
     local t = Instance.new("TextLabel")
     t.Size = UDim2.new(1, -40, 0, 40)
@@ -521,7 +621,7 @@ do
     t.Parent = homePage
 
     local d = Instance.new("TextLabel")
-    d.Size = UDim2.new(1, -40, 0, 80)
+    d.Size = UDim2.new(1, -40, 0, 70)
     d.Position = UDim2.new(0, 20, 0, 60)
     d.BackgroundTransparency = 1
     d.Font = Enum.Font.Gotham
@@ -533,6 +633,19 @@ do
     d.Text = "Account: @" .. userName .. "\nThis hub controls your auto clicker, auto parry spam and player options for your game."
     d.ZIndex = 3
     d.Parent = homePage
+
+    local tk = Instance.new("TextLabel")
+    tk.Size = UDim2.new(1, -40, 0, 24)
+    tk.Position = UDim2.new(0, 20, 0, 140)
+    tk.BackgroundTransparency = 1
+    tk.Font = Enum.Font.GothamSemibold
+    tk.TextSize = 14
+    tk.TextColor3 = Color3.fromRGB(200, 120, 220)
+    tk.TextXAlignment = Enum.TextXAlignment.Left
+    tk.TextYAlignment = Enum.TextYAlignment.Top
+    tk.Text = "TikTok: " .. TIKTOK_HANDLE
+    tk.ZIndex = 3
+    tk.Parent = homePage
 end
 
 local function simpleLabel(parent, txt)
@@ -552,7 +665,120 @@ local function simpleLabel(parent, txt)
 end
 
 simpleLabel(othersPage,   "Others tab placeholder.\nAdd extra tools here later.")
-simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Drag ONLY the top bar to move hub\n• Close button = hide hub")
+
+-- SETTINGS PAGE (bug report)
+local bugStatusLabel -- forward ref
+
+do
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -40, 0, 28)
+    title.Position = UDim2.new(0, 20, 0, 20)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBlack
+    title.TextSize = 20
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Text = "Settings & Bug Reports"
+    title.ZIndex = 3
+    title.Parent = settingsPage
+
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1, -40, 0, 50)
+    info.Position = UDim2.new(0, 20, 0, 52)
+    info.BackgroundTransparency = 1
+    info.Font = Enum.Font.Gotham
+    info.TextSize = 13
+    info.TextColor3 = Color3.fromRGB(200, 200, 210)
+    info.TextWrapped = true
+    info.TextXAlignment = Enum.TextXAlignment.Left
+    info.TextYAlignment = Enum.TextYAlignment.Top
+    info.Text = "• RightCtrl = Show/Hide hub\n• Drag ONLY the top bar to move hub\n• Use the box below to send bug reports straight to the dev webhook."
+    info.ZIndex = 3
+    info.Parent = settingsPage
+
+    local bugLabel = Instance.new("TextLabel")
+    bugLabel.Size = UDim2.new(1, -40, 0, 20)
+    bugLabel.Position = UDim2.new(0, 20, 0, 110)
+    bugLabel.BackgroundTransparency = 1
+    bugLabel.Font = Enum.Font.GothamSemibold
+    bugLabel.TextSize = 14
+    bugLabel.TextColor3 = Color3.fromRGB(230, 230, 235)
+    bugLabel.TextXAlignment = Enum.TextXAlignment.Left
+    bugLabel.Text = "Bug Report:"
+    bugLabel.ZIndex = 3
+    bugLabel.Parent = settingsPage
+
+    local bugBox = Instance.new("TextBox")
+    bugBox.Size = UDim2.new(1, -40, 0, 130)
+    bugBox.Position = UDim2.new(0, 20, 0, 134)
+    bugBox.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    bugBox.BorderSizePixel = 0
+    bugBox.Font = Enum.Font.Gotham
+    bugBox.TextSize = 14
+    bugBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    bugBox.PlaceholderText = "Describe the bug, what happened, and what you were doing..."
+    bugBox.TextWrapped = true
+    bugBox.MultiLine = true
+    bugBox.ClearTextOnFocus = false
+    bugBox.ZIndex = 3
+    bugBox.Parent = settingsPage
+
+    local bugCorner = Instance.new("UICorner")
+    bugCorner.CornerRadius = UDim.new(0, 10)
+    bugCorner.Parent = bugBox
+
+    local bugButton = Instance.new("TextButton")
+    bugButton.Size = UDim2.new(0, 160, 0, 30)
+    bugButton.Position = UDim2.new(0, 20, 0, 274)
+    bugButton.BackgroundColor3 = Color3.fromRGB(70, 90, 160)
+    bugButton.BorderSizePixel = 0
+    bugButton.Font = Enum.Font.GothamBold
+    bugButton.TextSize = 14
+    bugButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    bugButton.Text = "Send Bug Report"
+    bugButton.ZIndex = 3
+    bugButton.Parent = settingsPage
+
+    local bugBtnCorner = Instance.new("UICorner")
+    bugBtnCorner.CornerRadius = UDim.new(0, 10)
+    bugBtnCorner.Parent = bugButton
+
+    bugStatusLabel = Instance.new("TextLabel")
+    bugStatusLabel.Size = UDim2.new(1, -200, 0, 20)
+    bugStatusLabel.Position = UDim2.new(0, 190, 0, 278)
+    bugStatusLabel.BackgroundTransparency = 1
+    bugStatusLabel.Font = Enum.Font.Gotham
+    bugStatusLabel.TextSize = 12
+    bugStatusLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+    bugStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    bugStatusLabel.Text = ""
+    bugStatusLabel.ZIndex = 3
+    bugStatusLabel.Parent = settingsPage
+
+    bugButton.MouseButton1Click:Connect(function()
+        local text = bugBox.Text or ""
+        if text:gsub("%s+", "") == "" then
+            bugStatusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+            bugStatusLabel.Text = "Type something first."
+            return
+        end
+
+        bugStatusLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+        bugStatusLabel.Text = "Sending..."
+
+        task.spawn(function()
+            local ok, err = sendBugReport(text)
+            if ok then
+                bugBox.Text = ""
+                bugStatusLabel.TextColor3 = Color3.fromRGB(120, 220, 120)
+                bugStatusLabel.Text = "Bug sent!"
+            else
+                bugStatusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+                bugStatusLabel.Text = "Failed to send (" .. tostring(err or "unknown") .. ")"
+            end
+        end)
+    end)
+end
 
 ---------------------------------------------------------------------//
 -- MAIN PAGE: AutoClicker + Parry
@@ -828,7 +1054,7 @@ semiToggle.InputBegan:Connect(function(inp)
 end)
 
 ---------------------------------------------------------------------//
--- SETTINGS CARD (COSMETIC)
+-- SETTINGS CARD (COSMETIC FOR BLATANT)
 ---------------------------------------------------------------------//
 local settingModes = {"Normal", "Safer", "Aggressive"}
 local currentSettingIndex = 1
