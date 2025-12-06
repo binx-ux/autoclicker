@@ -1,4 +1,4 @@
--- Bin Hub X - Argon-style Hub v3.3
+-- Bin Hub X - Argon-style Hub v3.4
 -- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
@@ -47,7 +47,7 @@ local function getGameName()
     return "Unknown Game"
 end
 
--- NEW: detect executor / exploit type
+-- detect executor / exploit type
 local function getExecutorInfo()
     local execName = "Unknown"
     local exploitType = "Unknown"
@@ -114,7 +114,7 @@ end
 -- FULL SCRIPT INFO BLOCK FOR LOGGING
 local function getScriptInfoBlock()
     local lines = {
-        "Hub: Bin Hub X - Argon-style Hub v3.3",
+        "Hub: Bin Hub X - Argon-style Hub v3.4",
         "",
         "Main Hub:",
         "  • Main Toggle Key: F (default, rebindable in UI)",
@@ -322,7 +322,7 @@ getgenv().BinHub_SlashOfFuryDetection  = false
 
 local fpsBoostOn        = false
 local playerEffectsOn   = false
-local abilityEspOn      = false -- but unavailable
+local abilityEspOn      = false -- unavailable
 local clicking          = false
 local cps               = 10
 
@@ -350,88 +350,6 @@ local originalWalkSpeed  = nil
 local jumpEnabled        = false
 local jumpValue          = 50
 local originalJumpPower  = nil
-
----------------------------------------------------------------------//
--- FX HELPERS
----------------------------------------------------------------------//
-local function applyFpsBoost(on)
-    fpsBoostOn = on
-    if on then
-        pcall(function()
-            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-        end)
-        pcall(function()
-            Lighting.GlobalShadows = false
-            Lighting.FogEnd = 9e9
-        end)
-    else
-        pcall(function()
-            settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
-        end)
-    end
-end
-
-local function applyPlayerEffects(on)
-    playerEffectsOn = on
-    local char = LocalPlayer and (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
-    if not char then return end
-
-    local function setPart(name, alpha)
-        local p = char:FindFirstChild(name)
-        if p and p:IsA("BasePart") then
-            p.Transparency = alpha
-            for _,d in ipairs(p:GetDescendants()) do
-                if d:IsA("Decal") or d:IsA("Texture") then
-                    d.Transparency = alpha
-                end
-            end
-        end
-    end
-
-    local head = char:FindFirstChild("Head")
-    if head then
-        head.Transparency = on and 1 or 0
-        for _,d in ipairs(head:GetDescendants()) do
-            if d:IsA("Decal") or d:IsA("Texture") then
-                d.Transparency = on and 1 or 0
-            end
-        end
-    end
-
-    for _,n in ipairs({"RightUpperLeg","RightLowerLeg","RightFoot"}) do
-        setPart(n, on and 1 or 0)
-    end
-end
-
-local function applyAbilityEsp(on)
-    -- Unavailable (do nothing)
-    abilityEspOn = false
-end
-
--- NEW: Only touch WalkSpeed when speed is ON
-local function applySpeed()
-    if not speedEnabled then return end
-    local hum = getHumanoid()
-    if not hum then return end
-    if not originalWalkSpeed then
-        originalWalkSpeed = hum.WalkSpeed
-    end
-    hum.WalkSpeed = speedValue
-end
-
--- NEW: Only touch JumpPower when jump is ON
-local function applyJump()
-    if not jumpEnabled then return end
-    local hum = getHumanoid()
-    if not hum then return end
-    if hum.UseJumpPower ~= nil then
-        hum.UseJumpPower = true
-    end
-    if not originalJumpPower then
-        originalJumpPower = hum.JumpPower
-    end
-    hum.JumpPower = jumpValue
-end
 
 ---------------------------------------------------------------------//
 -- ROOT + PARTICLES
@@ -528,7 +446,7 @@ versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255,255,255)
-versionPill.Text = "v3.3"
+versionPill.Text = "v3.4"
 versionPill.ZIndex = 3
 versionPill.Parent = sidebar
 
@@ -569,64 +487,6 @@ navLayout.Parent = navHolder
 local pages      = {}
 local navButtons = {}
 local currentPage
-
-local function setActivePage(name)
-    for n,f in pairs(pages) do
-        f.Visible = (n == name)
-    end
-    for n,b in pairs(navButtons) do
-        b.BackgroundColor3 = (n == name) and Color3.fromRGB(55,55,65) or Color3.fromRGB(25,25,32)
-    end
-    currentPage = name
-end
-
-local function sectionLabel(text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1,0,0,18)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 12
-    lbl.TextColor3 = Color3.fromRGB(150,150,165)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = text
-    lbl.ZIndex = 3
-    lbl.Parent = navHolder
-end
-
-local function navButton(name,text)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1,0,0,30)
-    btn.BackgroundColor3 = Color3.fromRGB(25,25,32)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.TextColor3 = Color3.fromRGB(235,235,240)
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Text = text
-    btn.ZIndex = 3
-    btn.Parent = navHolder
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,10)
-    c.Parent = btn
-
-    btn.MouseButton1Click:Connect(function()
-        setActivePage(name)
-    end)
-
-    navButtons[name] = btn
-end
-
-sectionLabel("Home")
-navButton("Home",".Home")
-
-sectionLabel("Main")
-navButton("Main","Main")
-navButton("Blatant","Blatant")
-navButton("Others","Others")
-
-sectionLabel("Settings")
-navButton("Settings","Settings")
 
 local profileFrame = Instance.new("Frame")
 profileFrame.Size = UDim2.new(1,-36,0,76)
@@ -754,6 +614,61 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 ---------------------------------------------------------------------//
+-- THEMES
+---------------------------------------------------------------------//
+local ThemeConfig = {
+    Default = {
+        Accent       = Color3.fromRGB(220,60,60),
+        AccentOn     = Color3.fromRGB(80,200,120),
+        AccentText   = Color3.fromRGB(200,120,220),
+        RootTop      = Color3.fromRGB(20,20,26),
+        RootBottom   = Color3.fromRGB(5,5,10),
+        Sidebar      = Color3.fromRGB(10,10,12),
+        TopTitle     = Color3.fromRGB(235,235,240),
+    },
+    Purple = {
+        Accent       = Color3.fromRGB(180,80,255),
+        AccentOn     = Color3.fromRGB(160,120,255),
+        AccentText   = Color3.fromRGB(210,170,255),
+        RootTop      = Color3.fromRGB(30,10,40),
+        RootBottom   = Color3.fromRGB(8,0,18),
+        Sidebar      = Color3.fromRGB(12,8,24),
+        TopTitle     = Color3.fromRGB(235,220,255),
+    },
+    Aqua = {
+        Accent       = Color3.fromRGB(40,180,220),
+        AccentOn     = Color3.fromRGB(80,210,230),
+        AccentText   = Color3.fromRGB(140,220,255),
+        RootTop      = Color3.fromRGB(10,25,30),
+        RootBottom   = Color3.fromRGB(2,8,12),
+        Sidebar      = Color3.fromRGB(8,16,20),
+        TopTitle     = Color3.fromRGB(220,240,245),
+    },
+}
+
+local currentTheme = "Default"
+local ThemeAccentOn = ThemeConfig[currentTheme].AccentOn
+
+local function applyTheme(name)
+    local th = ThemeConfig[name] or ThemeConfig["Default"]
+    currentTheme = name
+    ThemeAccentOn = th.AccentOn
+
+    rootGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, th.RootTop),
+        ColorSequenceKeypoint.new(1, th.RootBottom)
+    }
+
+    sidebar.BackgroundColor3 = th.Sidebar
+    versionPill.BackgroundColor3 = th.Accent
+    pfTikTok.TextColor3 = th.AccentText
+    titleBar.TextColor3 = Color3.fromRGB(255,255,255)
+    topTitle.TextColor3 = th.TopTitle
+end
+
+applyTheme("Default")
+
+---------------------------------------------------------------------//
 -- PAGES CONTAINER
 ---------------------------------------------------------------------//
 local contentHolder = Instance.new("Frame")
@@ -794,6 +709,67 @@ local othersPage   = createPage("Others")
 local settingsPage = createPage("Settings")
 
 ---------------------------------------------------------------------//
+-- NAV HELPERS
+---------------------------------------------------------------------//
+local function setActivePage(name)
+    for n,f in pairs(pages) do
+        f.Visible = (n == name)
+    end
+    for n,b in pairs(navButtons) do
+        b.BackgroundColor3 = (n == name) and Color3.fromRGB(55,55,65) or Color3.fromRGB(25,25,32)
+    end
+    currentPage = name
+end
+
+local function sectionLabel(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,0,0,18)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 12
+    lbl.TextColor3 = Color3.fromRGB(150,150,165)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 3
+    lbl.Parent = navHolder
+end
+
+local function navButton(name,text)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1,0,0,30)
+    btn.BackgroundColor3 = Color3.fromRGB(25,25,32)
+    btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.TextColor3 = Color3.fromRGB(235,235,240)
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Text = text
+    btn.ZIndex = 3
+    btn.Parent = navHolder
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,10)
+    c.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        setActivePage(name)
+    end)
+
+    navButtons[name] = btn
+end
+
+sectionLabel("Home")
+navButton("Home",".Home")
+
+sectionLabel("Main")
+navButton("Main","Main")
+navButton("Blatant","Blatant")
+navButton("Others","Others")
+
+sectionLabel("Settings")
+navButton("Settings","Settings")
+
+---------------------------------------------------------------------//
 -- HOME
 ---------------------------------------------------------------------//
 do
@@ -830,7 +806,7 @@ do
     tk.BackgroundTransparency = 1
     tk.Font = Enum.Font.GothamSemibold
     tk.TextSize = 14
-    tk.TextColor3 = Color3.fromRGB(200,120,220)
+    tk.TextColor3 = ThemeConfig[currentTheme].AccentText
     tk.TextXAlignment = Enum.TextXAlignment.Left
     tk.Text = "TikTok: "..TIKTOK_HANDLE
     tk.ZIndex = 3
@@ -838,7 +814,7 @@ do
 end
 
 ---------------------------------------------------------------------//
--- SETTINGS PAGE (BUG REPORT)
+-- SETTINGS PAGE (BUG REPORT + THEMES)
 ---------------------------------------------------------------------//
 local bugStatusLabel
 do
@@ -902,7 +878,7 @@ do
     local bugButton = Instance.new("TextButton")
     bugButton.Size = UDim2.new(0,160,0,30)
     bugButton.Position = UDim2.new(0,20,0,274)
-    bugButton.BackgroundColor3 = Color3.fromRGB(70,90,160)
+    bugButton.BackgroundColor3 = ThemeAccentOn
     bugButton.BorderSizePixel = 0
     bugButton.Font = Enum.Font.GothamBold
     bugButton.TextSize = 14
@@ -950,6 +926,46 @@ do
             end
         end)
     end)
+
+    -- THEME SELECTOR
+    local themeLabel = Instance.new("TextLabel")
+    themeLabel.Size = UDim2.new(1,-40,0,20)
+    themeLabel.Position = UDim2.new(0,20,0,310)
+    themeLabel.BackgroundTransparency = 1
+    themeLabel.Font = Enum.Font.GothamSemibold
+    themeLabel.TextSize = 14
+    themeLabel.TextColor3 = Color3.fromRGB(230,230,235)
+    themeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    themeLabel.Text = "Theme:"
+    themeLabel.ZIndex = 3
+    themeLabel.Parent = settingsPage
+
+    local function makeThemeButton(txt, xOffset, themeName)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0,80,0,24)
+        btn.Position = UDim2.new(0,xOffset,0,336)
+        btn.BackgroundColor3 = Color3.fromRGB(30,30,40)
+        btn.BorderSizePixel = 0
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        btn.TextColor3 = Color3.fromRGB(220,220,230)
+        btn.Text = txt
+        btn.ZIndex = 3
+        btn.Parent = settingsPage
+
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0,10)
+        c.Parent = btn
+
+        btn.MouseButton1Click:Connect(function()
+            applyTheme(themeName)
+            bugButton.BackgroundColor3 = ThemeAccentOn
+        end)
+    end
+
+    makeThemeButton("Default", 20, "Default")
+    makeThemeButton("Purple", 110, "Purple")
+    makeThemeButton("Aqua",   200, "Aqua")
 end
 
 ---------------------------------------------------------------------//
@@ -1088,7 +1104,7 @@ do
 
     local function updateFpsVisual()
         if fpsBoostOn then
-            fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(80,200,120)
+            fpsToggleFrame.BackgroundColor3 = ThemeAccentOn
             fpsThumb.Position = UDim2.new(1,-18,0.5,-8)
         else
             fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
@@ -1122,7 +1138,7 @@ do
 
     local function updatePeVisual()
         if playerEffectsOn then
-            peToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+            peToggle.BackgroundColor3 = ThemeAccentOn
             peThumb.Position = UDim2.new(1,-18,0.5,-8)
         else
             peToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
@@ -1175,7 +1191,7 @@ do
 end
 
 ---------------------------------------------------------------------//
--- MAIN PAGE (Auto Click / Parry)
+-- MAIN PAGE (Auto Click / Parry + LIVE STATUS PANEL)
 ---------------------------------------------------------------------//
 local function keyToString(keycode)
     local s = tostring(keycode)
@@ -1320,6 +1336,155 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0,10)
 toggleCorner.Parent = toggleBtn
 
+---------------------------------------------------------------------//
+-- LIVE STATUS PANEL (FPS / PING / WALKSPEED / JUMPPOWER)
+---------------------------------------------------------------------//
+local livePanel = Instance.new("Frame")
+livePanel.Size = UDim2.new(0,220,0,96)
+livePanel.Position = UDim2.new(1,-240,0,20)
+livePanel.BackgroundColor3 = Color3.fromRGB(20,20,26)
+livePanel.BorderSizePixel = 0
+livePanel.ZIndex = 3
+livePanel.Parent = mainPage
+
+local lpCorner = Instance.new("UICorner")
+lpCorner.CornerRadius = UDim.new(0,12)
+lpCorner.Parent = livePanel
+
+local lpStroke = Instance.new("UIStroke")
+lpStroke.Thickness = 1
+lpStroke.Color = Color3.fromRGB(40,40,50)
+lpStroke.Parent = livePanel
+
+local lpTitle = Instance.new("TextLabel")
+lpTitle.Size = UDim2.new(1,-10,0,20)
+lpTitle.Position = UDim2.new(0,8,0,6)
+lpTitle.BackgroundTransparency = 1
+lpTitle.Font = Enum.Font.GothamSemibold
+lpTitle.TextSize = 14
+lpTitle.TextColor3 = Color3.fromRGB(255,255,255)
+lpTitle.TextXAlignment = Enum.TextXAlignment.Left
+lpTitle.Text = "📊 Live Status"
+lpTitle.ZIndex = 4
+lpTitle.Parent = livePanel
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(1,-16,0,16)
+fpsLabel.Position = UDim2.new(0,8,0,28)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Font = Enum.Font.Gotham
+fpsLabel.TextSize = 12
+fpsLabel.TextColor3 = Color3.fromRGB(210,210,220)
+fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+fpsLabel.Text = "FPS: --"
+fpsLabel.ZIndex = 4
+fpsLabel.Parent = livePanel
+
+local pingLabel = Instance.new("TextLabel")
+pingLabel.Size = UDim2.new(1,-16,0,16)
+pingLabel.Position = UDim2.new(0,8,0,44)
+pingLabel.BackgroundTransparency = 1
+pingLabel.Font = Enum.Font.Gotham
+pingLabel.TextSize = 12
+pingLabel.TextColor3 = Color3.fromRGB(210,210,220)
+pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+pingLabel.Text = "Ping: -- ms"
+pingLabel.ZIndex = 4
+pingLabel.Parent = livePanel
+
+local wsLabel = Instance.new("TextLabel")
+wsLabel.Size = UDim2.new(1,-16,0,16)
+wsLabel.Position = UDim2.new(0,8,0,60)
+wsLabel.BackgroundTransparency = 1
+wsLabel.Font = Enum.Font.Gotham
+wsLabel.TextSize = 12
+wsLabel.TextColor3 = Color3.fromRGB(210,210,220)
+wsLabel.TextXAlignment = Enum.TextXAlignment.Left
+wsLabel.Text = "WalkSpeed: --"
+wsLabel.ZIndex = 4
+wsLabel.Parent = livePanel
+
+local jpLabel = Instance.new("TextLabel")
+jpLabel.Size = UDim2.new(1,-16,0,16)
+jpLabel.Position = UDim2.new(0,8,0,76)
+jpLabel.BackgroundTransparency = 1
+jpLabel.Font = Enum.Font.Gotham
+jpLabel.TextSize = 12
+jpLabel.TextColor3 = Color3.fromRGB(210,210,220)
+jpLabel.TextXAlignment = Enum.TextXAlignment.Left
+jpLabel.Text = "JumpPower: --"
+jpLabel.ZIndex = 4
+jpLabel.Parent = livePanel
+
+-- FPS tracking
+local lastFps = 0
+RunService.RenderStepped:Connect(function(dt)
+    if dt > 0 then
+        local current = math.floor(1/dt + 0.5)
+        lastFps = current
+    end
+end)
+
+local function getPingMs()
+    -- Try GetNetworkPing first
+    local ok, ping = pcall(function()
+        if LocalPlayer and LocalPlayer.GetNetworkPing then
+            return LocalPlayer:GetNetworkPing()
+        end
+    end)
+    if ok and ping then
+        return math.floor(ping * 1000 + 0.5)
+    end
+
+    -- Fallback via Stats service
+    local Stats = game:FindService("Stats") or game:GetService("Stats")
+    local success, ms = pcall(function()
+        local net = Stats.Network
+        local si = net:FindFirstChild("ServerStatsItem")
+        if si then
+            local dp = si:FindFirstChild("Data Ping") or si:FindFirstChild("Ping")
+            if dp then
+                local str = dp:GetValueString()
+                local n = tonumber(str:match("(%d+)%s*ms"))
+                return n
+            end
+        end
+    end)
+    if success and ms then return ms end
+    return nil
+end
+
+task.spawn(function()
+    while true do
+        local hum = getHumanoid()
+        local ws = 0
+        local jp = 0
+
+        if hum then
+            ws = hum.WalkSpeed or 0
+            if hum.UseJumpPower ~= nil then
+                jp = hum.JumpPower or 0
+            end
+        end
+
+        local pingMs = getPingMs()
+
+        fpsLabel.Text = "FPS: "..tostring(lastFps)
+        if pingMs then
+            pingLabel.Text = "Ping: "..pingMs.." ms"
+        else
+            pingLabel.Text = "Ping: N/A"
+        end
+        wsLabel.Text = string.format("WalkSpeed: %.1f", ws)
+        jpLabel.Text = string.format("JumpPower: %.1f", jp)
+
+        task.wait(0.1)
+    end
+end)
+
+---------------------------------------------------------------------//
+-- MAIN PAGE LOGIC
+---------------------------------------------------------------------//
 local function getCPS()
     local n = tonumber(cpsBox.Text)
     if not n or n <= 0 then
@@ -1346,7 +1511,7 @@ local function toggleClicker()
     updateStatus()
     if clicking then
         toggleBtn.Text = "Stop"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(70,140,70)
+        toggleBtn.BackgroundColor3 = ThemeAccentOn
     else
         toggleBtn.Text = "Start"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(60,60,70)
@@ -1629,7 +1794,7 @@ speedThumbCorner.Parent = speedThumb
 
 local function updateSpeedToggleVisual()
     if speedEnabled then
-        speedToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+        speedToggle.BackgroundColor3 = ThemeAccentOn
         speedThumb.Position = UDim2.new(1,-18,0.5,-8)
     else
         speedToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
@@ -1751,7 +1916,7 @@ jumpThumbCorner.Parent = jumpThumb
 
 local function updateJumpToggleVisual()
     if jumpEnabled then
-        jumpToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+        jumpToggle.BackgroundColor3 = ThemeAccentOn
         jumpThumb.Position = UDim2.new(1,-18,0.5,-8)
     else
         jumpToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
@@ -1865,7 +2030,7 @@ local trigThumb = trigToggle:FindFirstChildOfClass("Frame")
 
 local function updateTriggerVisual()
     if triggerbotOn then
-        trigToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+        trigToggle.BackgroundColor3 = ThemeAccentOn
         trigThumb.Position = UDim2.new(1,-18,0.5,-8)
     else
         trigToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
@@ -1950,6 +2115,88 @@ UIS.InputEnded:Connect(function(input,gp)
         manualSpamActive = false
     end
 end)
+
+---------------------------------------------------------------------//
+-- FX HELPERS (AFTER UI SO THEME CAN APPLY)
+---------------------------------------------------------------------//
+function applyFpsBoost(on)
+    fpsBoostOn = on
+    if on then
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+        pcall(function()
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+        end)
+    else
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+        end)
+    end
+end
+
+function applyPlayerEffects(on)
+    playerEffectsOn = on
+    local char = LocalPlayer and (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+    if not char then return end
+
+    local function setPart(name, alpha)
+        local p = char:FindFirstChild(name)
+        if p and p:IsA("BasePart") then
+            p.Transparency = alpha
+            for _,d in ipairs(p:GetDescendants()) do
+                if d:IsA("Decal") or d:IsA("Texture") then
+                    d.Transparency = alpha
+                end
+            end
+        end
+    end
+
+    local head = char:FindFirstChild("Head")
+    if head then
+        head.Transparency = on and 1 or 0
+        for _,d in ipairs(head:GetDescendants()) do
+            if d:IsA("Decal") or d:IsA("Texture") then
+                d.Transparency = on and 1 or 0
+            end
+        end
+    end
+
+    for _,n in ipairs({"RightUpperLeg","RightLowerLeg","RightFoot"}) do
+        setPart(n, on and 1 or 0)
+    end
+end
+
+function applyAbilityEsp(on)
+    -- Unavailable (do nothing)
+    abilityEspOn = false
+end
+
+-- Only touch WalkSpeed when speed is ON
+function applySpeed()
+    if not speedEnabled then return end
+    local hum = getHumanoid()
+    if not hum then return end
+    if not originalWalkSpeed then
+        originalWalkSpeed = hum.WalkSpeed
+    end
+    hum.WalkSpeed = speedValue
+end
+
+-- Only touch JumpPower when jump is ON
+function applyJump()
+    if not jumpEnabled then return end
+    local hum = getHumanoid()
+    if not hum then return end
+    if hum.UseJumpPower ~= nil then
+        hum.UseJumpPower = true
+    end
+    if not originalJumpPower then
+        originalJumpPower = hum.JumpPower
+    end
+    hum.JumpPower = jumpValue
+end
 
 ---------------------------------------------------------------------//
 -- MAIN SPAM LOOP
