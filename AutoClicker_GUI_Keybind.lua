@@ -1,6 +1,7 @@
--- Bin Hub X - Argon-style Hub v2.6 + Webhook + TikTok + Bug Reports
+-- Bin Hub X - Argon-style Hub v2.7 + Webhook + TikTok + Bug Reports + Discord + FPS Booster
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
 -- • Blatant tab: (Semi Immortal shown but TEMPORARILY DISABLED), Settings, Speed/Jump sliders, Manual Spam, Triggerbot
+-- • Others tab: Discord invite + FPS Booster toggle
 -- • RightCtrl = Show/Hide hub
 -- • Window only moves when dragging the top bar
 -- • Home page + sidebar show the Roblox account + TikTok
@@ -239,6 +240,31 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 local guiVisible = true
 
 ---------------------------------------------------------------------//
+-- FPS BOOSTER STATE
+---------------------------------------------------------------------//
+local fpsBoostOn = false
+local Lighting = game:GetService("Lighting")
+
+local function applyFpsBoost(on)
+    fpsBoostOn = on
+
+    if on then
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+        pcall(function()
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+        end)
+    else
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+        end)
+        -- don't try to fully restore everything, games often manage lighting themselves
+    end
+end
+
+---------------------------------------------------------------------//
 -- ROOT WINDOW + PARTICLES
 ---------------------------------------------------------------------//
 local root = Instance.new("Frame")
@@ -337,7 +363,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.6"
+versionPill.Text = "v2.7"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -648,27 +674,10 @@ do
     tk.Parent = homePage
 end
 
-local function simpleLabel(parent, txt)
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(1, -40, 1, -40)
-    l.Position = UDim2.new(0, 20, 0, 20)
-    l.BackgroundTransparency = 1
-    l.Font = Enum.Font.Gotham
-    l.TextSize = 16
-    l.TextWrapped = true
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.TextYAlignment = Enum.TextYAlignment.Top
-    l.TextColor3 = Color3.fromRGB(230, 230, 235)
-    l.Text = txt
-    l.ZIndex = 3
-    l.Parent = parent
-end
-
-simpleLabel(othersPage,   "Others tab placeholder.\nAdd extra tools here later.")
-
+---------------------------------------------------------------------//
 -- SETTINGS PAGE (bug report)
+---------------------------------------------------------------------//
 local bugStatusLabel -- forward ref
-
 do
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -40, 0, 28)
@@ -777,6 +786,188 @@ do
                 bugStatusLabel.Text = "Failed to send (" .. tostring(err or "unknown") .. ")"
             end
         end)
+    end)
+end
+
+---------------------------------------------------------------------//
+-- OTHERS PAGE: DISCORD + FPS BOOST
+---------------------------------------------------------------------//
+local fpsToggleFrame -- forward
+local fpsToggleThumb
+
+do
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -40, 0, 28)
+    title.Position = UDim2.new(0, 20, 0, 20)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBlack
+    title.TextSize = 20
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Text = "Others"
+    title.ZIndex = 3
+    title.Parent = othersPage
+
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1, -40, 0, 40)
+    info.Position = UDim2.new(0, 20, 0, 52)
+    info.BackgroundTransparency = 1
+    info.Font = Enum.Font.Gotham
+    info.TextSize = 13
+    info.TextColor3 = Color3.fromRGB(200, 200, 210)
+    info.TextWrapped = true
+    info.TextXAlignment = Enum.TextXAlignment.Left
+    info.TextYAlignment = Enum.TextYAlignment.Top
+    info.Text = "Extra stuff: Discord invite + FPS booster."
+    info.ZIndex = 3
+    info.Parent = othersPage
+
+    -- Discord card
+    local discordCard = Instance.new("Frame")
+    discordCard.Size = UDim2.new(1, -40, 0, 80)
+    discordCard.Position = UDim2.new(0, 20, 0, 100)
+    discordCard.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    discordCard.BorderSizePixel = 0
+    discordCard.ZIndex = 3
+    discordCard.Parent = othersPage
+
+    local dCorner = Instance.new("UICorner")
+    dCorner.CornerRadius = UDim.new(0, 12)
+    dCorner.Parent = discordCard
+
+    local dTitle = Instance.new("TextLabel")
+    dTitle.Size = UDim2.new(1, -20, 0, 20)
+    dTitle.Position = UDim2.new(0, 10, 0, 8)
+    dTitle.BackgroundTransparency = 1
+    dTitle.Font = Enum.Font.GothamSemibold
+    dTitle.TextSize = 14
+    dTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dTitle.TextXAlignment = Enum.TextXAlignment.Left
+    dTitle.Text = "Discord"
+    dTitle.ZIndex = 4
+    dTitle.Parent = discordCard
+
+    local dDesc = Instance.new("TextLabel")
+    dDesc.Size = UDim2.new(1, -20, 0, 24)
+    dDesc.Position = UDim2.new(0, 10, 0, 30)
+    dDesc.BackgroundTransparency = 1
+    dDesc.Font = Enum.Font.Gotham
+    dDesc.TextSize = 12
+    dDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
+    dDesc.TextXAlignment = Enum.TextXAlignment.Left
+    dDesc.TextYAlignment = Enum.TextYAlignment.Top
+    dDesc.TextWrapped = true
+    dDesc.Text = "Join the Discord:\n`discord.gg/S4nPV2Rx7F`"
+    dDesc.ZIndex = 4
+    dDesc.Parent = discordCard
+
+    local copyBtn = Instance.new("TextButton")
+    copyBtn.Size = UDim2.new(0, 130, 0, 26)
+    copyBtn.Position = UDim2.new(1, -140, 0, 44)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 140)
+    copyBtn.BorderSizePixel = 0
+    copyBtn.Font = Enum.Font.GothamBold
+    copyBtn.TextSize = 13
+    copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copyBtn.Text = "Copy Invite"
+    copyBtn.ZIndex = 4
+    copyBtn.Parent = discordCard
+
+    local copyCorner = Instance.new("UICorner")
+    copyCorner.CornerRadius = UDim.new(0, 10)
+    copyCorner.Parent = copyBtn
+
+    copyBtn.MouseButton1Click:Connect(function()
+        local invite = "https://discord.gg/S4nPV2Rx7F"
+        if setclipboard then
+            setclipboard(invite)
+            dDesc.Text = "Join the Discord:\n`discord.gg/S4nPV2Rx7F`\n(Copied!)"
+        else
+            dDesc.Text = "Join the Discord:\n`discord.gg/S4nPV2Rx7F`\n(Can't copy: no clipboard in this executor.)"
+        end
+    end)
+
+    -- FPS card
+    local fpsCard = Instance.new("Frame")
+    fpsCard.Size = UDim2.new(1, -40, 0, 80)
+    fpsCard.Position = UDim2.new(0, 20, 0, 190)
+    fpsCard.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    fpsCard.BorderSizePixel = 0
+    fpsCard.ZIndex = 3
+    fpsCard.Parent = othersPage
+
+    local fCorner = Instance.new("UICorner")
+    fCorner.CornerRadius = UDim.new(0, 12)
+    fCorner.Parent = fpsCard
+
+    local fTitle = Instance.new("TextLabel")
+    fTitle.Size = UDim2.new(1, -20, 0, 20)
+    fTitle.Position = UDim2.new(0, 10, 0, 8)
+    fTitle.BackgroundTransparency = 1
+    fTitle.Font = Enum.Font.GothamSemibold
+    fTitle.TextSize = 14
+    fTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fTitle.TextXAlignment = Enum.TextXAlignment.Left
+    fTitle.Text = "FPS Booster"
+    fTitle.ZIndex = 4
+    fTitle.Parent = fpsCard
+
+    local fDesc = Instance.new("TextLabel")
+    fDesc.Size = UDim2.new(1, -80, 0, 40)
+    fDesc.Position = UDim2.new(0, 10, 0, 28)
+    fDesc.BackgroundTransparency = 1
+    fDesc.Font = Enum.Font.Gotham
+    fDesc.TextSize = 12
+    fDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
+    fDesc.TextXAlignment = Enum.TextXAlignment.Left
+    fDesc.TextYAlignment = Enum.TextYAlignment.Top
+    fDesc.TextWrapped = true
+    fDesc.Text = "Turn graphics low + remove shadows to help FPS.\nClient-side only."
+    fDesc.ZIndex = 4
+    fDesc.Parent = fpsCard
+
+    fpsToggleFrame = Instance.new("Frame")
+    fpsToggleFrame.Size = UDim2.new(0, 40, 0, 20)
+    fpsToggleFrame.Position = UDim2.new(1, -50, 0, 30)
+    fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    fpsToggleFrame.BorderSizePixel = 0
+    fpsToggleFrame.ZIndex = 4
+    fpsToggleFrame.Parent = fpsCard
+
+    local fpsToggleCorner = Instance.new("UICorner")
+    fpsToggleCorner.CornerRadius = UDim.new(1, 0)
+    fpsToggleCorner.Parent = fpsToggleFrame
+
+    fpsToggleThumb = Instance.new("Frame")
+    fpsToggleThumb.Size = UDim2.new(0, 16, 0, 16)
+    fpsToggleThumb.Position = UDim2.new(0, 2, 0.5, -8)
+    fpsToggleThumb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    fpsToggleThumb.BorderSizePixel = 0
+    fpsToggleThumb.ZIndex = 5
+    fpsToggleThumb.Parent = fpsToggleFrame
+
+    local fpsThumbCorner = Instance.new("UICorner")
+    fpsThumbCorner.CornerRadius = UDim.new(1, 0)
+    fpsThumbCorner.Parent = fpsToggleThumb
+
+    local function updateFpsToggleVisual()
+        if fpsBoostOn then
+            fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+            fpsToggleThumb.Position = UDim2.new(1, -18, 0.5, -8)
+        else
+            fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+            fpsToggleThumb.Position = UDim2.new(0, 2, 0.5, -8)
+        end
+    end
+
+    updateFpsToggleVisual()
+
+    fpsToggleFrame.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            fpsBoostOn = not fpsBoostOn
+            applyFpsBoost(fpsBoostOn)
+            updateFpsToggleVisual()
+        end
     end)
 end
 
