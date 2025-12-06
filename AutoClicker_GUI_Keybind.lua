@@ -47,6 +47,53 @@ local function getGameName()
     return "Unknown Game"
 end
 
+-- NEW: detect executor / exploit type
+local function getExecutorInfo()
+    local execName = "Unknown"
+    local exploitType = "Unknown"
+
+    local function tryCall(fn)
+        local ok, res = pcall(fn)
+        if ok and res ~= nil then
+            return tostring(res)
+        end
+    end
+
+    -- Most modern executors
+    if typeof(getexecutorname) == "function" then
+        execName = tryCall(getexecutorname) or execName
+    elseif typeof(identifyexecutor) == "function" then
+        -- some return 1 value, some 2
+        local ok, n1, n2 = pcall(identifyexecutor)
+        if ok then
+            if n2 ~= nil then
+                execName = tostring(n1) .. " " .. tostring(n2)
+            elseif n1 ~= nil then
+                execName = tostring(n1)
+            end
+        end
+    end
+
+    -- Try guess exploit type off globals
+    if syn ~= nil then
+        exploitType = "Synapse Environment"
+    elseif getgenv and islclosure and not syn then
+        exploitType = "Generic Executor"
+    elseif KRNL_LOADED or iskrnlclosure then
+        exploitType = "KRNL Environment"
+    elseif fluxus or isfluxusclosure then
+        exploitType = "Fluxus Environment"
+    elseif sentinel then
+        exploitType = "Sentinel Environment"
+    else
+        if execName ~= "Unknown" then
+            exploitType = execName .. " Environment"
+        end
+    end
+
+    return execName, exploitType
+end
+
 local function getBasicEmbedFields()
     local gameName = getGameName()
     local placeId  = tostring(game.PlaceId)
@@ -55,13 +102,17 @@ local function getBasicEmbedFields()
     local dName       = displayName
     local timestamp   = os.date("%Y-%m-%d %H:%M:%S")
 
+    local execName, exploitType = getExecutorInfo()
+
     return {
-        username = username,
+        username    = username,
         displayName = dName,
-        gameName = gameName,
-        placeId = placeId,
-        jobId = jobId,
-        timestamp = timestamp,
+        gameName    = gameName,
+        placeId     = placeId,
+        jobId       = jobId,
+        timestamp   = timestamp,
+        executor    = execName,
+        exploitType = exploitType,
     }
 end
 
@@ -86,6 +137,11 @@ local function sendWebhookLog()
                     {
                         name = "Game",
                         value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
+                        inline = false
+                    },
+                    {
+                        name = "Executor / Exploit",
+                        value = string.format("Executor: `%s`\nType: `%s`", meta.executor, meta.exploitType),
                         inline = false
                     },
                     {
@@ -142,6 +198,11 @@ local function sendBugReport(messageText)
                     {
                         name = "Game",
                         value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
+                        inline = false
+                    },
+                    {
+                        name = "Executor / Exploit",
+                        value = string.format("Executor: `%s`\nType: `%s`", meta.executor, meta.exploitType),
                         inline = false
                     },
                     {
@@ -1613,7 +1674,7 @@ local function createSlider(title,desc,min,max,default,callback)
     bar.Parent = card
 
     local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim2.new(0,6)
+    barCorner.CornerRadius = UDim.new(0,6)
     barCorner.Parent = bar
 
     local fill = Instance.new("Frame")
@@ -1624,7 +1685,7 @@ local function createSlider(title,desc,min,max,default,callback)
     fill.Parent = bar
 
     local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim2.new(0,6)
+    fillCorner.CornerRadius = UDim.new(0,6)
     fillCorner.Parent = fill
 
     local dragging = false
@@ -1758,8 +1819,6 @@ UIS.InputBegan:Connect(function(input,gp)
     end
 
     if gp then return end
-
-    -- NOTE: Slash of Fury is disabled, so abilityKey (Q) does nothing here
 
     -- Main clicker toggle / hold
     if input.KeyCode == toggleKey then
