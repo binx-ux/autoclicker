@@ -1057,7 +1057,7 @@ do
     espThumb.Parent = espToggle
 
     local espThumbCorner = Instance.new("UICorner")
-    espThumbCorner.CornerRadius = UDim.New(1,0)
+    espThumbCorner.CornerRadius = UDim.new(1,0)
     espThumbCorner.Parent = espThumb
 end
 
@@ -1613,7 +1613,7 @@ local function createSlider(title,desc,min,max,default,callback)
     bar.Parent = card
 
     local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim.new(0,6)
+    barCorner.CornerRadius = UDim2.new(0,6)
     barCorner.Parent = bar
 
     local fill = Instance.new("Frame")
@@ -1624,7 +1624,7 @@ local function createSlider(title,desc,min,max,default,callback)
     fill.Parent = bar
 
     local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0,6)
+    fillCorner.CornerRadius = UDim2.new(0,6)
     fillCorner.Parent = fill
 
     local dragging = false
