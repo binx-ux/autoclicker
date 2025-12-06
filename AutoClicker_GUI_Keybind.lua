@@ -1,4 +1,4 @@
--- Bin Hub X - Argon-style Hub v3.0
+-- Bin Hub X - Argon-style Hub v3.1
 -- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
@@ -233,10 +233,11 @@ local abilityEspOn      = false
 local clicking          = false
 local cps               = 10
 
-local toggleKey         = Enum.KeyCode.F
-local parryKey          = Enum.KeyCode.Q
-local manualKey         = Enum.KeyCode.E
-local abilityKey        = Enum.KeyCode.E  -- Slash of Fury ability key
+-- KEYS (UPDATED)
+local toggleKey         = Enum.KeyCode.F      -- main clicker key
+local parryKey          = Enum.KeyCode.E      -- parry key
+local manualKey         = Enum.KeyCode.E      -- manual spam key (you can change)
+local abilityKey        = Enum.KeyCode.Q      -- Slash of Fury ability key
 
 local manualSpamActive  = false
 local triggerbotOn      = false
@@ -402,7 +403,7 @@ versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255,255,255)
-versionPill.Text = "v3.0"
+versionPill.Text = "v3.1"
 versionPill.ZIndex = 3
 versionPill.Parent = sidebar
 
@@ -1370,8 +1371,6 @@ local semiThumbCorner = Instance.new("UICorner")
 semiThumbCorner.CornerRadius = UDim.new(1,0)
 semiThumbCorner.Parent = semiThumb
 
--- hard-locked: no InputBegan connected
-
 ---------------------------------------------------------------------//
 -- SETTINGS (BLATANT, cosmetic only)
 ---------------------------------------------------------------------//
@@ -1435,8 +1434,6 @@ local function createDisabledDetection(title,desc)
     local thCorner = Instance.new("UICorner")
     thCorner.CornerRadius = UDim.new(1,0)
     thCorner.Parent = thumb
-
-    -- NO InputBegan => can't toggle
 end
 
 createDisabledDetection("Infinity Detection","Avoid accidental crashes by having the skill.")
@@ -1446,7 +1443,7 @@ createDisabledDetection("Time Hole Detection","Avoid failing when someone has th
 -- Slash of Fury Detection (ACTIVE)
 local slashCard = createCard(72)
 makeTitle(slashCard,"Slash of Fury Detection")
-makeDesc(slashCard,"Generates 32 exact locks for your ability key, then stops.")
+makeDesc(slashCard,"When ability key is pressed: 31–32 hits, then one parry.")
 
 local slashToggle = Instance.new("Frame")
 slashToggle.Size = UDim2.new(0,40,0,20)
@@ -1525,20 +1522,6 @@ abilityKeyButton.MouseButton1Click:Connect(function()
     listeningForAbility = true
     infoLabel.Text = "Press the key that activates Slash of Fury in your game."
 end)
-
-local function doSlashOfFuryBurst()
-    if not slashOfFuryOn then return end
-    if not VIM or not abilityKey then return end
-
-    task.spawn(function()
-        for i = 1, 32 do
-            VIM:SendKeyEvent(true, abilityKey, false, game)
-            task.wait(0.015)
-            VIM:SendKeyEvent(false, abilityKey, false, game)
-            task.wait(0.015)
-        end
-    end)
-end
 
 ---------------------------------------------------------------------//
 -- PLAYER OPTIONS (SCROLL SAFE)
@@ -1740,6 +1723,9 @@ UIS.InputBegan:Connect(function(input,gp)
 
     -- Ability (Slash of Fury) burst
     if input.KeyCode == abilityKey then
+        -- call burst (defined below)
+        -- function exists later but Lua lets us call since it's local in the chunk
+        -- will execute full 31–32 hits + parry
         doSlashOfFuryBurst()
     end
 
@@ -1773,6 +1759,44 @@ UIS.InputEnded:Connect(function(input,gp)
         manualSpamActive = false
     end
 end)
+
+---------------------------------------------------------------------//
+-- SLASH OF FURY BURST (UPDATED BEHAVIOR)
+---------------------------------------------------------------------//
+function doSlashOfFuryBurst()
+    -- Only run if toggle is ON
+    if not slashOfFuryOn then return end
+    if not VIM then return end
+
+    -- random 31–32 hits
+    local hits = math.random(31, 32)
+
+    task.spawn(function()
+        -- 31–32 auto hits with LEFT MOUSE
+        for i = 1, hits do
+            pcall(function()
+                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)  -- down
+                task.wait(0.01)
+                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)  -- up
+            end)
+            task.wait(0.01)
+        end
+
+        -- then 1 parry press (E by default)
+        pcall(function()
+            if parryKey then
+                VIM:SendKeyEvent(true,  parryKey, false, game)
+                task.wait(0.02)
+                VIM:SendKeyEvent(false, parryKey, false, game)
+            else
+                -- fallback: extra left click if no parry key
+                VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 0)
+                task.wait(0.02)
+                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            end
+        end)
+    end)
+end
 
 ---------------------------------------------------------------------//
 -- MAIN SPAM LOOP
@@ -1826,4 +1850,3 @@ end)
 setActivePage("Home")
 updateStatus()
 sendWebhookLog()
-
