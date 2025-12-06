@@ -1,12 +1,12 @@
--- Bin Hub X - Argon-style Hub v2.7 + Webhook + TikTok + Bug Reports + Discord + FPS Booster
+-- Bin Hub X - Argon-style Hub v2.8
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
--- • Blatant tab: (Semi Immortal shown but TEMPORARILY DISABLED), Settings, Speed/Jump sliders, Manual Spam, Triggerbot
--- • Others tab: Discord invite + FPS Booster toggle
+-- • Blatant tab: Semi Immortal (TEMP DISABLED), Settings, Player Options sliders,
+--   Manual Spam, Triggerbot, and new Detection toggles
+-- • Others tab: Discord invite, FPS Booster, Player Effects, Ability ESP
+-- • Settings tab: Bug report box -> Discord webhook
+-- • Home + sidebar: Roblox account + TikTok
+-- • On execute: sends username/displayname/game/place/job/time to webhook
 -- • RightCtrl = Show/Hide hub
--- • Window only moves when dragging the top bar
--- • Home page + sidebar show the Roblox account + TikTok
--- • On execute: sends username, displayname, game, place, job, time to your Discord webhook
--- • Settings tab: Bug report box that sends to the same webhook
 
 ---------------------------------------------------------------------//
 -- SERVICES / SETUP
@@ -240,9 +240,12 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 local guiVisible = true
 
 ---------------------------------------------------------------------//
--- FPS BOOSTER STATE
+-- FPS BOOSTER + FX STATE
 ---------------------------------------------------------------------//
 local fpsBoostOn = false
+local playerEffectsOn = false
+local abilityEspOn = false
+
 local Lighting = game:GetService("Lighting")
 
 local function applyFpsBoost(on)
@@ -260,8 +263,46 @@ local function applyFpsBoost(on)
         pcall(function()
             settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
         end)
-        -- don't try to fully restore everything, games often manage lighting themselves
     end
+end
+
+local function applyPlayerEffects(on)
+    playerEffectsOn = on
+    local char = LocalPlayer and (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+    if not char then return end
+
+    local function setPartTransparency(name, alpha)
+        local p = char:FindFirstChild(name)
+        if p and p:IsA("BasePart") then
+            p.Transparency = alpha
+            for _, d in ipairs(p:GetDescendants()) do
+                if d:IsA("Decal") or d:IsA("Texture") then
+                    d.Transparency = alpha
+                end
+            end
+        end
+    end
+
+    local head = char:FindFirstChild("Head")
+    if head then
+        head.Transparency = on and 1 or 0
+        for _, d in ipairs(head:GetDescendants()) do
+            if d:IsA("Decal") or d:IsA("Texture") then
+                d.Transparency = on and 1 or 0
+            end
+        end
+    end
+
+    -- Simple "korblox"-style: hide right leg R15 parts
+    local legParts = {"RightUpperLeg","RightLowerLeg","RightFoot"}
+    for _, n in ipairs(legParts) do
+        setPartTransparency(n, on and 1 or 0)
+    end
+end
+
+local function applyAbilityEsp(on)
+    abilityEspOn = on
+    -- Hook your own ESP logic here (draw skill names, etc.)
 end
 
 ---------------------------------------------------------------------//
@@ -363,7 +404,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.7"
+versionPill.Text = "v2.8"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -677,7 +718,7 @@ end
 ---------------------------------------------------------------------//
 -- SETTINGS PAGE (bug report)
 ---------------------------------------------------------------------//
-local bugStatusLabel -- forward ref
+local bugStatusLabel
 do
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -40, 0, 28)
@@ -790,11 +831,8 @@ do
 end
 
 ---------------------------------------------------------------------//
--- OTHERS PAGE: DISCORD + FPS BOOST
+-- OTHERS PAGE: DISCORD + FPS BOOST + PLAYER EFFECTS + ABILITY ESP
 ---------------------------------------------------------------------//
-local fpsToggleFrame -- forward
-local fpsToggleThumb
-
 do
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -40, 0, 28)
@@ -818,26 +856,32 @@ do
     info.TextWrapped = true
     info.TextXAlignment = Enum.TextXAlignment.Left
     info.TextYAlignment = Enum.TextYAlignment.Top
-    info.Text = "Extra stuff: Discord invite + FPS booster."
+    info.Text = "Extra stuff: Discord invite, FPS booster, player effects and ability ESP."
     info.ZIndex = 3
     info.Parent = othersPage
 
+    -- Card helper
+    local function makeCard(y)
+        local card = Instance.new("Frame")
+        card.Size = UDim2.new(1, -40, 0, 56)
+        card.Position = UDim2.new(0, 20, 0, y)
+        card.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        card.BorderSizePixel = 0
+        card.ZIndex = 3
+        card.Parent = othersPage
+
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 12)
+        c.Parent = card
+
+        return card
+    end
+
     -- Discord card
-    local discordCard = Instance.new("Frame")
-    discordCard.Size = UDim2.new(1, -40, 0, 80)
-    discordCard.Position = UDim2.new(0, 20, 0, 100)
-    discordCard.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-    discordCard.BorderSizePixel = 0
-    discordCard.ZIndex = 3
-    discordCard.Parent = othersPage
-
-    local dCorner = Instance.new("UICorner")
-    dCorner.CornerRadius = UDim.new(0, 12)
-    dCorner.Parent = discordCard
-
+    local discordCard = makeCard(100)
     local dTitle = Instance.new("TextLabel")
     dTitle.Size = UDim2.new(1, -20, 0, 20)
-    dTitle.Position = UDim2.new(0, 10, 0, 8)
+    dTitle.Position = UDim2.new(0, 10, 0, 6)
     dTitle.BackgroundTransparency = 1
     dTitle.Font = Enum.Font.GothamSemibold
     dTitle.TextSize = 14
@@ -849,7 +893,7 @@ do
 
     local dDesc = Instance.new("TextLabel")
     dDesc.Size = UDim2.new(1, -20, 0, 24)
-    dDesc.Position = UDim2.new(0, 10, 0, 30)
+    dDesc.Position = UDim2.new(0, 10, 0, 26)
     dDesc.BackgroundTransparency = 1
     dDesc.Font = Enum.Font.Gotham
     dDesc.TextSize = 12
@@ -857,13 +901,13 @@ do
     dDesc.TextXAlignment = Enum.TextXAlignment.Left
     dDesc.TextYAlignment = Enum.TextYAlignment.Top
     dDesc.TextWrapped = true
-    dDesc.Text = "Join the Discord:\n`discord.gg/S4nPV2Rx7F`"
+    dDesc.Text = "Join the Discord:  discord.gg/S4nPV2Rx7F"
     dDesc.ZIndex = 4
     dDesc.Parent = discordCard
 
     local copyBtn = Instance.new("TextButton")
-    copyBtn.Size = UDim2.new(0, 130, 0, 26)
-    copyBtn.Position = UDim2.new(1, -140, 0, 44)
+    copyBtn.Size = UDim2.new(0, 120, 0, 24)
+    copyBtn.Position = UDim2.new(1, -130, 0, 30)
     copyBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 140)
     copyBtn.BorderSizePixel = 0
     copyBtn.Font = Enum.Font.GothamBold
@@ -881,28 +925,17 @@ do
         local invite = "https://discord.gg/S4nPV2Rx7F"
         if setclipboard then
             setclipboard(invite)
-            dDesc.Text = "Join the Discord:\n`discord.gg/S4nPV2Rx7F`\n(Copied!)"
+            dDesc.Text = "Join the Discord:  discord.gg/S4nPV2Rx7F (Copied!)"
         else
-            dDesc.Text = "Join the Discord:\n`discord.gg/S4nPV2Rx7F`\n(Can't copy: no clipboard in this executor.)"
+            dDesc.Text = "Join the Discord:  discord.gg/S4nPV2Rx7F (Clipboard not supported.)"
         end
     end)
 
-    -- FPS card
-    local fpsCard = Instance.new("Frame")
-    fpsCard.Size = UDim2.new(1, -40, 0, 80)
-    fpsCard.Position = UDim2.new(0, 20, 0, 190)
-    fpsCard.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-    fpsCard.BorderSizePixel = 0
-    fpsCard.ZIndex = 3
-    fpsCard.Parent = othersPage
-
-    local fCorner = Instance.new("UICorner")
-    fCorner.CornerRadius = UDim.new(0, 12)
-    fCorner.Parent = fpsCard
-
+    -- FPS Booster card
+    local fpsCard = makeCard(164)
     local fTitle = Instance.new("TextLabel")
     fTitle.Size = UDim2.new(1, -20, 0, 20)
-    fTitle.Position = UDim2.new(0, 10, 0, 8)
+    fTitle.Position = UDim2.new(0, 10, 0, 6)
     fTitle.BackgroundTransparency = 1
     fTitle.Font = Enum.Font.GothamSemibold
     fTitle.TextSize = 14
@@ -913,8 +946,8 @@ do
     fTitle.Parent = fpsCard
 
     local fDesc = Instance.new("TextLabel")
-    fDesc.Size = UDim2.new(1, -80, 0, 40)
-    fDesc.Position = UDim2.new(0, 10, 0, 28)
+    fDesc.Size = UDim2.new(1, -80, 0, 24)
+    fDesc.Position = UDim2.new(0, 10, 0, 26)
     fDesc.BackgroundTransparency = 1
     fDesc.Font = Enum.Font.Gotham
     fDesc.TextSize = 12
@@ -922,13 +955,13 @@ do
     fDesc.TextXAlignment = Enum.TextXAlignment.Left
     fDesc.TextYAlignment = Enum.TextYAlignment.Top
     fDesc.TextWrapped = true
-    fDesc.Text = "Turn graphics low + remove shadows to help FPS.\nClient-side only."
+    fDesc.Text = "Turn graphics low + remove shadows to help FPS (client-side)."
     fDesc.ZIndex = 4
     fDesc.Parent = fpsCard
 
-    fpsToggleFrame = Instance.new("Frame")
+    local fpsToggleFrame = Instance.new("Frame")
     fpsToggleFrame.Size = UDim2.new(0, 40, 0, 20)
-    fpsToggleFrame.Position = UDim2.new(1, -50, 0, 30)
+    fpsToggleFrame.Position = UDim2.new(1, -50, 0, 18)
     fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
     fpsToggleFrame.BorderSizePixel = 0
     fpsToggleFrame.ZIndex = 4
@@ -938,7 +971,7 @@ do
     fpsToggleCorner.CornerRadius = UDim.new(1, 0)
     fpsToggleCorner.Parent = fpsToggleFrame
 
-    fpsToggleThumb = Instance.new("Frame")
+    local fpsToggleThumb = Instance.new("Frame")
     fpsToggleThumb.Size = UDim2.new(0, 16, 0, 16)
     fpsToggleThumb.Position = UDim2.new(0, 2, 0.5, -8)
     fpsToggleThumb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
@@ -967,6 +1000,150 @@ do
             fpsBoostOn = not fpsBoostOn
             applyFpsBoost(fpsBoostOn)
             updateFpsToggleVisual()
+        end
+    end)
+
+    -- Player Effects card
+    local peCard = makeCard(228)
+    local peTitle = Instance.new("TextLabel")
+    peTitle.Size = UDim2.new(1, -20, 0, 20)
+    peTitle.Position = UDim2.new(0, 10, 0, 6)
+    peTitle.BackgroundTransparency = 1
+    peTitle.Font = Enum.Font.GothamSemibold
+    peTitle.TextSize = 14
+    peTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    peTitle.TextXAlignment = Enum.TextXAlignment.Left
+    peTitle.Text = "Player Effects"
+    peTitle.ZIndex = 4
+    peTitle.Parent = peCard
+
+    local peDesc = Instance.new("TextLabel")
+    peDesc.Size = UDim2.new(1, -80, 0, 24)
+    peDesc.Position = UDim2.new(0, 10, 0, 26)
+    peDesc.BackgroundTransparency = 1
+    peDesc.Font = Enum.Font.Gotham
+    peDesc.TextSize = 12
+    peDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
+    peDesc.TextXAlignment = Enum.TextXAlignment.Left
+    peDesc.TextYAlignment = Enum.TextYAlignment.Top
+    peDesc.TextWrapped = true
+    peDesc.Text = "Activates korblox and headless effects (local visual)."
+    peDesc.ZIndex = 4
+    peDesc.Parent = peCard
+
+    local peToggle = Instance.new("Frame")
+    peToggle.Size = UDim2.new(0, 40, 0, 20)
+    peToggle.Position = UDim2.new(1, -50, 0, 18)
+    peToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    peToggle.BorderSizePixel = 0
+    peToggle.ZIndex = 4
+    peToggle.Parent = peCard
+
+    local peToggleCorner = Instance.new("UICorner")
+    peToggleCorner.CornerRadius = UDim.new(1, 0)
+    peToggleCorner.Parent = peToggle
+
+    local peThumb = Instance.new("Frame")
+    peThumb.Size = UDim2.new(0, 16, 0, 16)
+    peThumb.Position = UDim2.new(0, 2, 0.5, -8)
+    peThumb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    peThumb.BorderSizePixel = 0
+    peThumb.ZIndex = 5
+    peThumb.Parent = peToggle
+
+    local peThumbCorner = Instance.new("UICorner")
+    peThumbCorner.CornerRadius = UDim.new(1, 0)
+    peThumbCorner.Parent = peThumb
+
+    local function updatePeVisual()
+        if playerEffectsOn then
+            peToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+            peThumb.Position = UDim2.new(1, -18, 0.5, -8)
+        else
+            peToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+            peThumb.Position = UDim2.new(0, 2, 0.5, -8)
+        end
+    end
+
+    updatePeVisual()
+
+    peToggle.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            playerEffectsOn = not playerEffectsOn
+            applyPlayerEffects(playerEffectsOn)
+            updatePeVisual()
+        end
+    end)
+
+    -- Ability ESP card
+    local espCard = makeCard(292)
+    local espTitle = Instance.new("TextLabel")
+    espTitle.Size = UDim2.new(1, -20, 0, 20)
+    espTitle.Position = UDim2.new(0, 10, 0, 6)
+    espTitle.BackgroundTransparency = 1
+    espTitle.Font = Enum.Font.GothamSemibold
+    espTitle.TextSize = 14
+    espTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    espTitle.TextXAlignment = Enum.TextXAlignment.Left
+    espTitle.Text = "Ability ESP"
+    espTitle.ZIndex = 4
+    espTitle.Parent = espCard
+
+    local espDesc = Instance.new("TextLabel")
+    espDesc.Size = UDim2.new(1, -80, 0, 24)
+    espDesc.Position = UDim2.new(0, 10, 0, 26)
+    espDesc.BackgroundTransparency = 1
+    espDesc.Font = Enum.Font.Gotham
+    espDesc.TextSize = 12
+    espDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
+    espDesc.TextXAlignment = Enum.TextXAlignment.Left
+    espDesc.TextYAlignment = Enum.TextYAlignment.Top
+    espDesc.TextWrapped = true
+    espDesc.Text = "Displays the name of the player's skills (hook in your game)."
+    espDesc.ZIndex = 4
+    espDesc.Parent = espCard
+
+    local espToggle = Instance.new("Frame")
+    espToggle.Size = UDim2.new(0, 40, 0, 20)
+    espToggle.Position = UDim2.new(1, -50, 0, 18)
+    espToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    espToggle.BorderSizePixel = 0
+    espToggle.ZIndex = 4
+    espToggle.Parent = espCard
+
+    local espToggleCorner = Instance.new("UICorner")
+    espToggleCorner.CornerRadius = UDim.new(1, 0)
+    espToggleCorner.Parent = espToggle
+
+    local espThumb = Instance.new("Frame")
+    espThumb.Size = UDim2.new(0, 16, 0, 16)
+    espThumb.Position = UDim2.new(0, 2, 0.5, -8)
+    espThumb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    espThumb.BorderSizePixel = 0
+    espThumb.ZIndex = 5
+    espThumb.Parent = espToggle
+
+    local espThumbCorner = Instance.new("UICorner")
+    espThumbCorner.CornerRadius = UDim.new(1, 0)
+    espThumbCorner.Parent = espThumb
+
+    local function updateEspVisual()
+        if abilityEspOn then
+            espToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+            espThumb.Position = UDim2.new(1, -18, 0.5, -8)
+        else
+            espToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+            espThumb.Position = UDim2.new(0, 2, 0.5, -8)
+        end
+    end
+
+    updateEspVisual()
+
+    espToggle.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            abilityEspOn = not abilityEspOn
+            applyAbilityEsp(abilityEspOn)
+            updateEspVisual()
         end
     end)
 end
@@ -1203,8 +1380,6 @@ baseDesc.ZIndex = 4
 -- SEMI IMMORTAL (TEMPORARILY DISABLED)
 ---------------------------------------------------------------------//
 getgenv().BinHub_SemiImmortal = false
-local semiImmortal = false
-
 local semiCard = createCard(52)
 local semiTitle = baseTitle:Clone()
 semiTitle.Text = "Semi Immortal"
@@ -1245,7 +1420,7 @@ semiToggle.InputBegan:Connect(function(inp)
 end)
 
 ---------------------------------------------------------------------//
--- SETTINGS CARD (COSMETIC FOR BLATANT)
+-- SETTINGS (BLATANT) COSMETIC
 ---------------------------------------------------------------------//
 local settingModes = {"Normal", "Safer", "Aggressive"}
 local currentSettingIndex = 1
@@ -1280,6 +1455,76 @@ setButton.AutoButtonColor = false
 setButton.MouseButton1Click:Connect(function()
     infoLabel.Text = "Semi Immortal settings are disabled right now."
 end)
+
+---------------------------------------------------------------------//
+-- DETECTIONS
+---------------------------------------------------------------------//
+blatantHeader("Detections")
+
+local function createDetectionCard(title, desc, globalName)
+    local card = createCard(52)
+    local t = baseTitle:Clone()
+    t.Text = title
+    t.Parent = card
+
+    local d = baseDesc:Clone()
+    d.Text = desc
+    d.Parent = card
+
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(0, 40, 0, 20)
+    toggleFrame.Position = UDim2.new(1, -50, 0, 16)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.ZIndex = 4
+    toggleFrame.Parent = card
+
+    local tfCorner = Instance.new("UICorner")
+    tfCorner.CornerRadius = UDim.new(1, 0)
+    tfCorner.Parent = toggleFrame
+
+    local thumb = Instance.new("Frame")
+    thumb.Size = UDim2.new(0, 16, 0, 16)
+    thumb.Position = UDim2.new(0, 2, 0.5, -8)
+    thumb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    thumb.BorderSizePixel = 0
+    thumb.ZIndex = 5
+    thumb.Parent = toggleFrame
+
+    local thCorner = Instance.new("UICorner")
+    thCorner.CornerRadius = UDim.new(1, 0)
+    thCorner.Parent = thumb
+
+    local on = false
+
+    local function update()
+        if on then
+            toggleFrame.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+            thumb.Position = UDim2.new(1, -18, 0.5, -8)
+        else
+            toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+            thumb.Position = UDim2.new(0, 2, 0.5, -8)
+        end
+    end
+
+    update()
+
+    toggleFrame.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            on = not on
+            update()
+            if getgenv then
+                local env = getgenv()
+                env[globalName] = on
+            end
+        end
+    end)
+end
+
+createDetectionCard("Infinity Detection",      "Avoid accidental crashes by having the skill.",            "BinHub_InfinityDetection")
+createDetectionCard("Death Slash Detection",   "Generates the shot when activating the ability.",        "BinHub_DeathSlashDetection")
+createDetectionCard("Time Hole Detection",     "Avoid failing when someone has that skill.",             "BinHub_TimeHoleDetection")
+createDetectionCard("Slash of Fury Detection", "Generates 32 exact locks for your ability.",             "BinHub_SlashOfFuryDetection")
 
 ---------------------------------------------------------------------//
 -- PLAYER OPTIONS (Speed / Jump)
