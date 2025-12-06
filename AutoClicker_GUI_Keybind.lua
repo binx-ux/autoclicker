@@ -1,9 +1,9 @@
--- Bin Hub X - Argon-style Hub v2.3
+-- Bin Hub X - Argon-style Hub v2.4
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
 -- • Blatant tab: Semi Immortal, Settings, Speed/Jump sliders, Manual Spam, Triggerbot
 -- • RightCtrl = Show/Hide hub
 -- • Window only moves when dragging the top bar
--- • Semi Immortal: bounces character up/down but keeps camera still
+-- • Semi Immortal: bounces character up/down while camera is FULLY frozen
 -- • Home page + sidebar show the Roblox account running the script
 
 ---------------------------------------------------------------------//
@@ -13,6 +13,7 @@ local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local CoreGui      = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
+local RunService   = game:GetService("RunService")
 
 local VIM
 pcall(function()
@@ -161,7 +162,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.3"
+versionPill.Text = "v2.4"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -342,7 +343,7 @@ closeBtn.MouseButton1Click:Connect(function()
     gui.Enabled = false
 end)
 
--- manual drag logic
+-- drag handling
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -418,7 +419,7 @@ local blatantPage  = createPage("Blatant")
 local othersPage   = createPage("Others")
 local settingsPage = createPage("Settings")
 
--- Home content (shows current account)
+-- Home
 do
     local t = Instance.new("TextLabel")
     t.Size = UDim2.new(1, -40, 0, 40)
@@ -464,13 +465,8 @@ local function simpleLabel(parent, txt)
     l.Parent = parent
 end
 
-simpleLabel(othersPage,
-    "Others tab placeholder.\nAdd extra tools here later."
-)
-
-simpleLabel(settingsPage,
-    "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Drag ONLY the top bar to move hub\n• Close button = hide hub"
-)
+simpleLabel(othersPage,   "Others tab placeholder.\nAdd extra tools here later.")
+simpleLabel(settingsPage, "Settings tab.\n\n• RightCtrl = Show/Hide hub\n• Drag ONLY the top bar to move hub\n• Close button = hide hub")
 
 ---------------------------------------------------------------------//
 -- MAIN PAGE: AutoClicker + Parry
@@ -700,9 +696,46 @@ baseDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
 baseDesc.TextXAlignment = Enum.TextXAlignment.Left
 baseDesc.ZIndex = 4
 
--- Semi Immortal (global flag + movement)
+-- Semi Immortal state
 getgenv().BinHub_SemiImmortal = getgenv().BinHub_SemiImmortal or false
 local semiImmortal = getgenv().BinHub_SemiImmortal
+
+-- camera freeze state for semi immortal
+local cameraFrozen = false
+local frozenCF
+local origCamType
+local origCamSubject
+local camConn
+
+local function freezeCamera()
+    local cam = workspace.CurrentCamera
+    if not cam or cameraFrozen then return end
+    cameraFrozen = true
+    origCamType    = cam.CameraType
+    origCamSubject = cam.CameraSubject
+    frozenCF       = cam.CFrame
+    cam.CameraType = Enum.CameraType.Scriptable
+    camConn = RunService.RenderStepped:Connect(function()
+        cam.CFrame = frozenCF
+    end)
+end
+
+local function unfreezeCamera()
+    local cam = workspace.CurrentCamera
+    cameraFrozen = false
+    if camConn then
+        camConn:Disconnect()
+        camConn = nil
+    end
+    if cam then
+        if origCamType then
+            cam.CameraType = origCamType
+        end
+        if origCamSubject then
+            cam.CameraSubject = origCamSubject
+        end
+    end
+end
 
 local semiCard = createCard(52)
 local semiTitle = baseTitle:Clone()
@@ -710,7 +743,7 @@ semiTitle.Text = "Semi Immortal"
 semiTitle.Parent = semiCard
 
 local semiDesc = baseDesc:Clone()
-semiDesc.Text = "Prevents the ball from killing you by bouncing you up/down (camera stays still)."
+semiDesc.Text = "Prevents the ball from killing you by bouncing you up/down (camera fully frozen)."
 semiDesc.Parent = semiCard
 
 local semiToggle = Instance.new("Frame")
@@ -742,9 +775,11 @@ local function refreshSemi()
     if semiImmortal then
         semiToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
         semiThumb.Position = UDim2.new(1, -18, 0.5, -8)
+        freezeCamera()
     else
         semiToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
         semiThumb.Position = UDim2.new(0, 2, 0.5, -8)
+        unfreezeCamera()
     end
 end
 
@@ -792,7 +827,7 @@ setButton.MouseButton1Click:Connect(function()
     setButton.Text = settingModes[currentSettingIndex]
 end)
 
--- Player Options
+-- Player options
 blatantHeader("Player Options")
 
 local function createSlider(title, desc, min, max, default, callback)
@@ -1109,25 +1144,20 @@ UIS.InputEnded:Connect(function(input, gp)
 end)
 
 ---------------------------------------------------------------------//
--- SEMI IMMORTAL MOVEMENT LOOP (BOUNCE, CAMERA STAYS STILL)
+-- SEMI IMMORTAL MOVEMENT LOOP (BOUNCE, CAMERA FROZEN)
 ---------------------------------------------------------------------//
 task.spawn(function()
     local dir = 1
-    local bounceAmount = 25 -- how far up/down you bounce
+    local bounceAmount = 25
     while true do
         if getgenv().BinHub_SemiImmortal then
             local char = LocalPlayer.Character
             local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            local cam  = workspace.CurrentCamera
-
-            if hrp and cam then
-                local oldCF = cam.CFrame  -- keep camera in place
-                local pos   = hrp.Position
+            if hrp then
+                local pos = hrp.Position
                 dir = -dir
                 hrp.CFrame = CFrame.new(pos.X, pos.Y + dir * bounceAmount, pos.Z)
-                cam.CFrame = oldCF
             end
-
             task.wait(0.12)
         else
             task.wait(0.2)
