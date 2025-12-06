@@ -1,9 +1,8 @@
--- Bin Hub X - Argon-style Hub v2.4
+-- Bin Hub X - Argon-style Hub v2.5
 -- • Auto Click / Auto Parry (CPS, Toggle/Hold, keybinds)
--- • Blatant tab: Semi Immortal, Settings, Speed/Jump sliders, Manual Spam, Triggerbot
+-- • Blatant tab: (Semi Immortal shown but TEMPORARILY DISABLED), Settings, Speed/Jump sliders, Manual Spam, Triggerbot
 -- • RightCtrl = Show/Hide hub
 -- • Window only moves when dragging the top bar
--- • Semi Immortal: bounces character up/down while camera is FULLY frozen
 -- • Home page + sidebar show the Roblox account running the script
 
 ---------------------------------------------------------------------//
@@ -162,7 +161,7 @@ versionPill.Position = UDim2.new(1, -72, 0, 14)
 versionPill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
-versionPill.Text = "v2.4"
+versionPill.Text = "v2.5"
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255, 255, 255)
 versionPill.ZIndex = 3
@@ -696,46 +695,11 @@ baseDesc.TextColor3 = Color3.fromRGB(200, 200, 210)
 baseDesc.TextXAlignment = Enum.TextXAlignment.Left
 baseDesc.ZIndex = 4
 
--- Semi Immortal state
-getgenv().BinHub_SemiImmortal = getgenv().BinHub_SemiImmortal or false
-local semiImmortal = getgenv().BinHub_SemiImmortal
-
--- camera freeze state for semi immortal
-local cameraFrozen = false
-local frozenCF
-local origCamType
-local origCamSubject
-local camConn
-
-local function freezeCamera()
-    local cam = workspace.CurrentCamera
-    if not cam or cameraFrozen then return end
-    cameraFrozen = true
-    origCamType    = cam.CameraType
-    origCamSubject = cam.CameraSubject
-    frozenCF       = cam.CFrame
-    cam.CameraType = Enum.CameraType.Scriptable
-    camConn = RunService.RenderStepped:Connect(function()
-        cam.CFrame = frozenCF
-    end)
-end
-
-local function unfreezeCamera()
-    local cam = workspace.CurrentCamera
-    cameraFrozen = false
-    if camConn then
-        camConn:Disconnect()
-        camConn = nil
-    end
-    if cam then
-        if origCamType then
-            cam.CameraType = origCamType
-        end
-        if origCamSubject then
-            cam.CameraSubject = origCamSubject
-        end
-    end
-end
+---------------------------------------------------------------------//
+-- SEMI IMMORTAL (TEMPORARILY DISABLED)
+---------------------------------------------------------------------//
+getgenv().BinHub_SemiImmortal = false
+local semiImmortal = false -- hard off
 
 local semiCard = createCard(52)
 local semiTitle = baseTitle:Clone()
@@ -743,7 +707,7 @@ semiTitle.Text = "Semi Immortal"
 semiTitle.Parent = semiCard
 
 local semiDesc = baseDesc:Clone()
-semiDesc.Text = "Prevents the ball from killing you by bouncing you up/down (camera fully frozen)."
+semiDesc.Text = "Temporarily unavailable."
 semiDesc.Parent = semiCard
 
 local semiToggle = Instance.new("Frame")
@@ -761,7 +725,7 @@ semiToggleCorner.Parent = semiToggle
 local semiThumb = Instance.new("Frame")
 semiThumb.Size = UDim2.new(0, 16, 0, 16)
 semiThumb.Position = UDim2.new(0, 2, 0.5, -8)
-semiThumb.BackgroundColor3 = Color3.fromRGB(180, 180, 190)
+semiThumb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 semiThumb.BorderSizePixel = 0
 semiThumb.ZIndex = 5
 semiThumb.Parent = semiToggle
@@ -770,29 +734,16 @@ local semiThumbCorner = Instance.new("UICorner")
 semiThumbCorner.CornerRadius = UDim.new(1, 0)
 semiThumbCorner.Parent = semiThumb
 
-local function refreshSemi()
-    getgenv().BinHub_SemiImmortal = semiImmortal
-    if semiImmortal then
-        semiToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
-        semiThumb.Position = UDim2.new(1, -18, 0.5, -8)
-        freezeCamera()
-    else
-        semiToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-        semiThumb.Position = UDim2.new(0, 2, 0.5, -8)
-        unfreezeCamera()
-    end
-end
-
+-- clicking it just tells user it's disabled
 semiToggle.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        semiImmortal = not semiImmortal
-        refreshSemi()
+        infoLabel.Text = "Semi Immortal is temporarily disabled in this build."
     end
 end)
 
-refreshSemi()
-
--- Settings card
+---------------------------------------------------------------------//
+-- SETTINGS CARD (still cosmetic)
+---------------------------------------------------------------------//
 local settingModes = {"Normal", "Safer", "Aggressive"}
 local currentSettingIndex = 1
 
@@ -802,7 +753,7 @@ setTitle.Text = "Settings"
 setTitle.Parent = setCard
 
 local setDesc = baseDesc:Clone()
-setDesc.Text = "Select the Semi-Immortal configuration."
+setDesc.Text = "Semi-Immortal modes (currently disabled)."
 setDesc.Parent = setCard
 
 local setButton = Instance.new("TextButton")
@@ -812,7 +763,7 @@ setButton.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 setButton.BorderSizePixel = 0
 setButton.Font = Enum.Font.Gotham
 setButton.TextSize = 14
-setButton.TextColor3 = Color3.fromRGB(220, 220, 230)
+setButton.TextColor3 = Color3.fromRGB(150, 150, 160)
 setButton.TextXAlignment = Enum.TextXAlignment.Center
 setButton.Text = settingModes[currentSettingIndex]
 setButton.ZIndex = 4
@@ -822,12 +773,15 @@ local setCorner = Instance.new("UICorner")
 setCorner.CornerRadius = UDim.new(0, 10)
 setCorner.Parent = setButton
 
+-- make it clearly not active
+setButton.AutoButtonColor = false
 setButton.MouseButton1Click:Connect(function()
-    currentSettingIndex = currentSettingIndex % #settingModes + 1
-    setButton.Text = settingModes[currentSettingIndex]
+    infoLabel.Text = "Semi Immortal settings are disabled right now."
 end)
 
--- Player options
+---------------------------------------------------------------------//
+-- PLAYER OPTIONS (Speed / Jump)
+---------------------------------------------------------------------//
 blatantHeader("Player Options")
 
 local function createSlider(title, desc, min, max, default, callback)
@@ -919,7 +873,9 @@ createSlider("Jump Power", "Choose the jump power of your character.", 25, 150, 
     end
 end)
 
--- Manual Spam + Triggerbot
+---------------------------------------------------------------------//
+-- MANUAL SPAM + TRIGGERBOT
+---------------------------------------------------------------------//
 local manualCard = createCard(48)
 local manualTitle = baseTitle:Clone()
 manualTitle.Text = "Manual Spam"
@@ -1140,28 +1096,6 @@ UIS.InputEnded:Connect(function(input, gp)
 
     if input.KeyCode == manualKey then
         manualSpamActive = false
-    end
-end)
-
----------------------------------------------------------------------//
--- SEMI IMMORTAL MOVEMENT LOOP (BOUNCE, CAMERA FROZEN)
----------------------------------------------------------------------//
-task.spawn(function()
-    local dir = 1
-    local bounceAmount = 25
-    while true do
-        if getgenv().BinHub_SemiImmortal then
-            local char = LocalPlayer.Character
-            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local pos = hrp.Position
-                dir = -dir
-                hrp.CFrame = CFrame.new(pos.X, pos.Y + dir * bounceAmount, pos.Z)
-            end
-            task.wait(0.12)
-        else
-            task.wait(0.2)
-        end
     end
 end)
 
