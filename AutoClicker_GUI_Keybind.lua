@@ -47,7 +47,7 @@ local function getGameName()
     return "Unknown Game"
 end
 
--- detect executor / exploit type
+-- NEW: detect executor / exploit type
 local function getExecutorInfo()
     local execName = "Unknown"
     local exploitType = "Unknown"
@@ -111,7 +111,7 @@ local function getBasicEmbedFields()
     }
 end
 
--- FULL LOG: hub / keybind info block
+-- FULL SCRIPT INFO BLOCK FOR LOGGING
 local function getScriptInfoBlock()
     local lines = {
         "Hub: Bin Hub X - Argon-style Hub v3.3",
@@ -140,7 +140,6 @@ local function getScriptInfoBlock()
         "  • RightCtrl = Show/Hide hub",
         "  • Bug reports from Settings tab go to this same webhook.",
     }
-
     return table.concat(lines, "\n")
 end
 
@@ -149,7 +148,7 @@ local function sendWebhookLog()
     local req = getRequestFunction()
     if not req then return end
 
-    local meta = getBasicEmbedFields()
+    local meta       = getBasicEmbedFields()
     local scriptInfo = getScriptInfoBlock()
 
     local payload = {
@@ -164,7 +163,7 @@ local function sendWebhookLog()
                         inline = false
                     },
                     {
-                        name = "Game Session",
+                        name = "Game",
                         value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
                         inline = false
                     },
@@ -409,7 +408,7 @@ local function applyAbilityEsp(on)
     abilityEspOn = false
 end
 
--- Only touch WalkSpeed when speed is ON
+-- NEW: Only touch WalkSpeed when speed is ON
 local function applySpeed()
     if not speedEnabled then return end
     local hum = getHumanoid()
@@ -420,7 +419,7 @@ local function applySpeed()
     hum.WalkSpeed = speedValue
 end
 
--- Only touch JumpPower when jump is ON
+-- NEW: Only touch JumpPower when jump is ON
 local function applyJump()
     if not jumpEnabled then return end
     local hum = getHumanoid()
@@ -1747,10 +1746,8 @@ jumpThumb.ZIndex = 5
 jumpThumb.Parent = jumpToggle
 
 local jumpThumbCorner = Instance.new("UICorner")
-jumpThumbCorner.CornerRadius = UDim.New(1,0)
-jumpThumbCorner.Parent = jumpThumb
--- fix typo: UDim.New -> UDim.new
 jumpThumbCorner.CornerRadius = UDim.new(1,0)
+jumpThumbCorner.Parent = jumpThumb
 
 local function updateJumpToggleVisual()
     if jumpEnabled then
