@@ -59,11 +59,9 @@ local function getExecutorInfo()
         end
     end
 
-    -- Most modern executors
     if typeof(getexecutorname) == "function" then
         execName = tryCall(getexecutorname) or execName
     elseif typeof(identifyexecutor) == "function" then
-        -- some return 1 value, some 2
         local ok, n1, n2 = pcall(identifyexecutor)
         if ok then
             if n2 ~= nil then
@@ -74,11 +72,8 @@ local function getExecutorInfo()
         end
     end
 
-    -- Try guess exploit type off globals
     if syn ~= nil then
         exploitType = "Synapse Environment"
-    elseif getgenv and islclosure and not syn then
-        exploitType = "Generic Executor"
     elseif KRNL_LOADED or iskrnlclosure then
         exploitType = "KRNL Environment"
     elseif fluxus or isfluxusclosure then
@@ -309,9 +304,14 @@ local listeningForManual   = false
 local mode        = "Toggle"  -- Toggle / Hold
 local actionMode  = "Click"   -- Click / Parry
 
--- Speed toggle state
-local speedEnabled = false
-local speedValue   = 20  -- default slider value
+-- Speed / Jump states
+local speedEnabled       = false
+local speedValue         = 20
+local originalWalkSpeed  = nil
+
+local jumpEnabled        = false
+local jumpValue          = 50
+local originalJumpPower  = nil
 
 ---------------------------------------------------------------------//
 -- FX HELPERS
@@ -370,15 +370,29 @@ local function applyAbilityEsp(on)
     abilityEspOn = false
 end
 
+-- NEW: Only touch WalkSpeed when speed is ON
 local function applySpeed()
+    if not speedEnabled then return end
     local hum = getHumanoid()
-    if hum then
-        if speedEnabled then
-            hum.WalkSpeed = speedValue
-        else
-            hum.WalkSpeed = 16 -- default Roblox walk speed
-        end
+    if not hum then return end
+    if not originalWalkSpeed then
+        originalWalkSpeed = hum.WalkSpeed
     end
+    hum.WalkSpeed = speedValue
+end
+
+-- NEW: Only touch JumpPower when jump is ON
+local function applyJump()
+    if not jumpEnabled then return end
+    local hum = getHumanoid()
+    if not hum then return end
+    if hum.UseJumpPower ~= nil then
+        hum.UseJumpPower = true
+    end
+    if not originalJumpPower then
+        originalJumpPower = hum.JumpPower
+    end
+    hum.JumpPower = jumpValue
 end
 
 ---------------------------------------------------------------------//
@@ -1248,7 +1262,7 @@ infoLabel.TextWrapped = true
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 infoLabel.TextColor3 = Color3.fromRGB(180,180,190)
-infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Speed is now a toggle in Blatant > Player Options."
+infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Speed & Jump are toggles in Blatant > Player Options."
 infoLabel.ZIndex = 3
 infoLabel.Parent = mainPage
 
@@ -1531,11 +1545,11 @@ slashThumbCorner.CornerRadius = UDim.new(1,0)
 slashThumbCorner.Parent = slashThumb
 
 ---------------------------------------------------------------------//
--- PLAYER OPTIONS  (Speed toggle + Jump slider)
+-- PLAYER OPTIONS  (Speed toggle + Jump toggle)
 ---------------------------------------------------------------------//
 blatantHeader("Player Options")
 
--- Speed card with toggle
+-- SPEED CARD
 local speedCard = createCard(64)
 makeTitle(speedCard,"Speed")
 makeDesc(speedCard,"Choose the speed of your character. Toggle must be ON to apply.")
@@ -1551,7 +1565,6 @@ speedValueLabel.Text = tostring(speedValue)
 speedValueLabel.ZIndex = 4
 speedValueLabel.Parent = speedCard
 
--- Speed toggle
 local speedToggle = Instance.new("Frame")
 speedToggle.Size = UDim2.new(0,40,0,20)
 speedToggle.Position = UDim2.new(1,-50,0,8)
@@ -1587,15 +1600,6 @@ local function updateSpeedToggleVisual()
 end
 updateSpeedToggleVisual()
 
-speedToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        speedEnabled = not speedEnabled
-        updateSpeedToggleVisual()
-        applySpeed()
-    end
-end)
-
--- Speed slider bar
 local speedBar = Instance.new("Frame")
 speedBar.Size = UDim2.new(1,-40,0,6)
 speedBar.Position = UDim2.new(0,10,0,40)
@@ -1626,7 +1630,9 @@ local function setSpeedFromX(x)
     speedValue = val
     speedValueLabel.Text = tostring(val)
     speedFill.Size = UDim2.new(rel,0,1,0)
-    applySpeed()
+    if speedEnabled then
+        applySpeed()
+    end
 end
 
 speedBar.InputBegan:Connect(function(inp)
@@ -1648,82 +1654,142 @@ UIS.InputEnded:Connect(function(inp)
     end
 end)
 
--- Generic slider creator for Jump
-local function createSlider(title,desc,min,max,default,callback)
-    local card = createCard(64)
-    makeTitle(card,title)
-    makeDesc(card,desc)
-
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0,40,0,16)
-    valueLabel.Position = UDim2.new(1,-46,0,8)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Font = Enum.Font.Gotham
-    valueLabel.TextSize = 12
-    valueLabel.TextColor3 = Color3.fromRGB(220,220,230)
-    valueLabel.Text = tostring(default)
-    valueLabel.ZIndex = 4
-    valueLabel.Parent = card
-
-    local bar = Instance.new("Frame")
-    bar.Size = UDim2.new(1,-40,0,6)
-    bar.Position = UDim2.new(0,10,0,40)
-    bar.BackgroundColor3 = Color3.fromRGB(35,35,42)
-    bar.BorderSizePixel = 0
-    bar.ZIndex = 4
-    bar.Parent = card
-
-    local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim.new(0,6)
-    barCorner.Parent = bar
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
-    fill.BackgroundColor3 = Color3.fromRGB(140,200,255)
-    fill.BorderSizePixel = 0
-    fill.ZIndex = 5
-    fill.Parent = bar
-
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0,6)
-    fillCorner.Parent = fill
-
-    local dragging = false
-    local function setFromX(x)
-        local rel = math.clamp((x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
-        local val = math.floor(min + (max-min)*rel + 0.5)
-        valueLabel.Text = tostring(val)
-        fill.Size = UDim2.new(rel,0,1,0)
-        if callback then callback(val) end
+speedToggle.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        if speedEnabled then
+            speedEnabled = false
+            updateSpeedToggleVisual()
+            local hum = getHumanoid()
+            if hum and originalWalkSpeed ~= nil then
+                hum.WalkSpeed = originalWalkSpeed
+            end
+        else
+            speedEnabled = true
+            updateSpeedToggleVisual()
+            applySpeed()
+        end
     end
+end)
 
-    bar.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            setFromX(inp.Position.X)
-        end
-    end)
+-- JUMP CARD (TOGGLE + SLIDER)
+local jumpCard = createCard(64)
+makeTitle(jumpCard,"Jump Power")
+makeDesc(jumpCard,"Choose the jump power of your character. Toggle must be ON to apply.")
 
-    UIS.InputChanged:Connect(function(inp)
-        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
-            setFromX(inp.Position.X)
-        end
-    end)
+local jumpValueLabel = Instance.new("TextLabel")
+jumpValueLabel.Size = UDim2.new(0,40,0,16)
+jumpValueLabel.Position = UDim2.new(1,-90,0,8)
+jumpValueLabel.BackgroundTransparency = 1
+jumpValueLabel.Font = Enum.Font.Gotham
+jumpValueLabel.TextSize = 12
+jumpValueLabel.TextColor3 = Color3.fromRGB(220,220,230)
+jumpValueLabel.Text = tostring(jumpValue)
+jumpValueLabel.ZIndex = 4
+jumpValueLabel.Parent = jumpCard
 
-    UIS.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
+local jumpToggle = Instance.new("Frame")
+jumpToggle.Size = UDim2.new(0,40,0,20)
+jumpToggle.Position = UDim2.new(1,-50,0,8)
+jumpToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+jumpToggle.BorderSizePixel = 0
+jumpToggle.ZIndex = 4
+jumpToggle.Parent = jumpCard
 
-    if callback then callback(default) end
+local jumpToggleCorner = Instance.new("UICorner")
+jumpToggleCorner.CornerRadius = UDim.new(1,0)
+jumpToggleCorner.Parent = jumpToggle
+
+local jumpThumb = Instance.new("Frame")
+jumpThumb.Size = UDim2.new(0,16,0,16)
+jumpThumb.Position = UDim2.new(0,2,0.5,-8)
+jumpThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+jumpThumb.BorderSizePixel = 0
+jumpThumb.ZIndex = 5
+jumpThumb.Parent = jumpToggle
+
+local jumpThumbCorner = Instance.new("UICorner")
+jumpThumbCorner.CornerRadius = UDim.new(1,0)
+jumpThumbCorner.Parent = jumpThumb
+
+local function updateJumpToggleVisual()
+    if jumpEnabled then
+        jumpToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+        jumpThumb.Position = UDim2.new(1,-18,0.5,-8)
+    else
+        jumpToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+        jumpThumb.Position = UDim2.new(0,2,0.5,-8)
+    end
+end
+updateJumpToggleVisual()
+
+local jumpBar = Instance.new("Frame")
+jumpBar.Size = UDim2.new(1,-40,0,6)
+jumpBar.Position = UDim2.new(0,10,0,40)
+jumpBar.BackgroundColor3 = Color3.fromRGB(35,35,42)
+jumpBar.BorderSizePixel = 0
+jumpBar.ZIndex = 4
+jumpBar.Parent = jumpCard
+
+local jumpBarCorner = Instance.new("UICorner")
+jumpBarCorner.CornerRadius = UDim.new(0,6)
+jumpBarCorner.Parent = jumpBar
+
+local jumpFill = Instance.new("Frame")
+jumpFill.Size = UDim2.new((jumpValue-25)/(150-25),0,1,0)
+jumpFill.BackgroundColor3 = Color3.fromRGB(140,200,255)
+jumpFill.BorderSizePixel = 0
+jumpFill.ZIndex = 5
+jumpFill.Parent = jumpBar
+
+local jumpFillCorner = Instance.new("UICorner")
+jumpFillCorner.CornerRadius = UDim.new(0,6)
+jumpFillCorner.Parent = jumpFill
+
+local jumpDragging = false
+local function setJumpFromX(x)
+    local rel = math.clamp((x - jumpBar.AbsolutePosition.X)/jumpBar.AbsoluteSize.X,0,1)
+    local val = math.floor(25 + (150-25)*rel + 0.5)
+    jumpValue = val
+    jumpValueLabel.Text = tostring(val)
+    jumpFill.Size = UDim2.new(rel,0,1,0)
+    if jumpEnabled then
+        applyJump()
+    end
 end
 
-createSlider("Jump Power","Choose the jump power of your character.",25,150,50,function(val)
-    local hum = getHumanoid()
-    if hum then
-        if hum.UseJumpPower ~= nil then hum.UseJumpPower = true end
-        hum.JumpPower = val
+jumpBar.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        jumpDragging = true
+        setJumpFromX(inp.Position.X)
+    end
+end)
+
+UIS.InputChanged:Connect(function(inp)
+    if jumpDragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+        setJumpFromX(inp.Position.X)
+    end
+end)
+
+UIS.InputEnded:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        jumpDragging = false
+    end
+end)
+
+jumpToggle.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        if jumpEnabled then
+            jumpEnabled = false
+            updateJumpToggleVisual()
+            local hum = getHumanoid()
+            if hum and originalJumpPower ~= nil then
+                hum.JumpPower = originalJumpPower
+            end
+        else
+            jumpEnabled = true
+            updateJumpToggleVisual()
+            applyJump()
+        end
     end
 end)
 
@@ -1789,7 +1855,6 @@ end)
 UIS.InputBegan:Connect(function(input,gp)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-    -- Hub toggle
     if input.KeyCode == Enum.KeyCode.RightControl
         and not listeningForKey and not listeningForManual then
         guiVisible = not guiVisible
@@ -1797,7 +1862,6 @@ UIS.InputBegan:Connect(function(input,gp)
         return
     end
 
-    -- Listening modes
     if listeningForKey then
         if input.KeyCode == Enum.KeyCode.RightControl then
             infoLabel.Text = "RightCtrl is hub toggle only."
@@ -1820,7 +1884,6 @@ UIS.InputBegan:Connect(function(input,gp)
 
     if gp then return end
 
-    -- Main clicker toggle / hold
     if input.KeyCode == toggleKey then
         if mode == "Toggle" then
             toggleClicker()
@@ -1831,7 +1894,6 @@ UIS.InputBegan:Connect(function(input,gp)
         return
     end
 
-    -- Manual spam
     if input.KeyCode == manualKey then
         manualSpamActive = true
     end
@@ -1898,9 +1960,8 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------------//
--- START ON HOME + APPLY DEFAULT SPEED + SEND WEBHOOK
+-- START ON HOME + STATUS + WEBHOOK
 ---------------------------------------------------------------------//
 setActivePage("Home")
 updateStatus()
-applySpeed() -- make sure default 16 & toggle behavior is respected
 sendWebhookLog()
