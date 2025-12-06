@@ -1,4 +1,4 @@
--- Bin Hub X - Argon-style Hub v3.4
+-- Bin Hub X - Argon-style Hub v3.4.1
 -- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local RunService   = game:GetService("RunService")
 local HttpService  = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VIM
 pcall(function()
@@ -114,16 +115,16 @@ end
 -- FULL SCRIPT INFO BLOCK FOR LOGGING
 local function getScriptInfoBlock()
     local lines = {
-        "Hub: Bin Hub X - Argon-style Hub v3.4",
+        "Hub: Bin Hub X - Argon-style Hub v3.4.1",
         "",
         "Main Hub:",
-        "  • Main Toggle Key: F (default, rebindable in UI)",
+        "  • Main Toggle Key: E (LOCKED)",
         "  • Mode: Toggle / Hold (UI controlled)",
         "  • Action: Click / Parry (UI controlled)",
         "",
         "Keybinds:",
         "  • Parry Key: E (locked)",
-        "  • Manual Spam Key: E (default, rebindable in UI)",
+        "  • Manual Spam Key: R (default, rebindable in UI)",
         "  • Slash of Fury Key: Q (locked / disabled in this build)",
         "",
         "Visuals / Extras:",
@@ -188,7 +189,6 @@ local function sendWebhookLog()
     }
 
     local json = HttpService:JSONEncode(payload)
-
     pcall(function()
         req({
             Url = WEBHOOK_URL,
@@ -254,7 +254,6 @@ local function sendBugReport(messageText)
     }
 
     local json = HttpService:JSONEncode(payload)
-
     local ok, err = pcall(function()
         req({
             Url = WEBHOOK_URL,
@@ -326,17 +325,17 @@ local abilityEspOn      = false -- unavailable
 local clicking          = false
 local cps               = 10
 
--- KEYS (LOCKED)
-local toggleKey         = Enum.KeyCode.F      -- main clicker key
+-- KEYS
+local toggleKey         = Enum.KeyCode.E      -- main clicker key (LOCKED)
 local parryKey          = Enum.KeyCode.E      -- locked parry key
-local manualKey         = Enum.KeyCode.E      -- manual spam key
-local abilityKey        = Enum.KeyCode.Q      -- locked Slash of Fury ability key (currently unused)
+local manualKey         = Enum.KeyCode.R      -- manual spam default, rebindable
+local abilityKey        = Enum.KeyCode.Q      -- locked Slash of Fury ability key (unused)
 
 local manualSpamActive  = false
 local triggerbotOn      = false
 local slashOfFuryOn     = false -- unavailable
 
-local listeningForKey      = false
+local listeningForKey      = false -- not used anymore (main key locked)
 local listeningForManual   = false
 
 local mode        = "Toggle"  -- Toggle / Hold
@@ -446,7 +445,7 @@ versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255,255,255)
-versionPill.Text = "v3.4"
+versionPill.Text = "v3.4.1"
 versionPill.ZIndex = 3
 versionPill.Parent = sidebar
 
@@ -840,7 +839,7 @@ do
     info.TextWrapped = true
     info.TextXAlignment = Enum.TextXAlignment.Left
     info.TextYAlignment = Enum.TextYAlignment.Top
-    info.Text = "• RightCtrl = Show/Hide hub\n• Drag only the top bar to move\n• Use the box below to send bug reports straight to the dev webhook."
+    info.Text = "• RightCtrl = Show/Hide hub\n• Main click key is locked to E\n• Use the box below to send bug reports straight to the dev webhook."
     info.ZIndex = 3
     info.Parent = settingsPage
 
@@ -969,7 +968,7 @@ do
 end
 
 ---------------------------------------------------------------------//
--- OTHERS PAGE (DISCORD + FPS + PLAYER FX + ABILITY ESP UNAVAILABLE)
+-- OTHERS PAGE (Discord + FPS + Player FX + ESP off)
 ---------------------------------------------------------------------//
 local function makeCard(parent,y)
     local card = Instance.new("Frame")
@@ -1206,7 +1205,7 @@ status.Font = Enum.Font.Gotham
 status.TextSize = 16
 status.TextXAlignment = Enum.TextXAlignment.Left
 status.TextColor3 = Color3.fromRGB(255,80,80)
-status.Text = "Status: OFF (Toggle, Click)"
+status.Text = "Status: OFF (10 CPS, Toggle, Click)"
 status.ZIndex = 3
 status.Parent = mainPage
 
@@ -1252,8 +1251,9 @@ keyButton.BorderSizePixel = 0
 keyButton.Font = Enum.Font.GothamBold
 keyButton.TextSize = 14
 keyButton.TextColor3 = Color3.fromRGB(255,255,255)
-keyButton.Text = keyToString(toggleKey)
+keyButton.Text = "E"            -- locked display
 keyButton.ZIndex = 3
+keyButton.AutoButtonColor = false
 keyButton.Parent = mainPage
 
 local keyCorner = Instance.new("UICorner")
@@ -1337,10 +1337,10 @@ toggleCorner.CornerRadius = UDim.new(0,10)
 toggleCorner.Parent = toggleBtn
 
 ---------------------------------------------------------------------//
--- LIVE STATUS PANEL (FPS / PING / WALKSPEED / JUMPPOWER)
+-- LIVE STATUS PANEL (FPS / PING / WALKSPEED / JUMPPOWER / REGION)
 ---------------------------------------------------------------------//
 local livePanel = Instance.new("Frame")
-livePanel.Size = UDim2.new(0,220,0,96)
+livePanel.Size = UDim2.new(0,220,0,112)  -- taller for region line
 livePanel.Position = UDim2.new(1,-240,0,20)
 livePanel.BackgroundColor3 = Color3.fromRGB(20,20,26)
 livePanel.BorderSizePixel = 0
@@ -1416,6 +1416,18 @@ jpLabel.Text = "JumpPower: --"
 jpLabel.ZIndex = 4
 jpLabel.Parent = livePanel
 
+local regionLabel = Instance.new("TextLabel")
+regionLabel.Size = UDim2.new(1,-16,0,16)
+regionLabel.Position = UDim2.new(0,8,0,92)
+regionLabel.BackgroundTransparency = 1
+regionLabel.Font = Enum.Font.Gotham
+regionLabel.TextSize = 12
+regionLabel.TextColor3 = Color3.fromRGB(210,210,220)
+regionLabel.TextXAlignment = Enum.TextXAlignment.Left
+regionLabel.Text = "Region: --"
+regionLabel.ZIndex = 4
+regionLabel.Parent = livePanel
+
 -- FPS tracking
 local lastFps = 0
 RunService.RenderStepped:Connect(function(dt)
@@ -1454,6 +1466,43 @@ local function getPingMs()
     return nil
 end
 
+-- server region best-effort
+local cachedRegion = nil
+local function getServerRegion()
+    if cachedRegion ~= nil then
+        return cachedRegion
+    end
+
+    -- try join data (if game supplies region)
+    local ok, joinData = pcall(function()
+        if LocalPlayer and LocalPlayer.GetJoinData then
+            return LocalPlayer:GetJoinData()
+        end
+    end)
+    if ok and joinData then
+        if joinData.Region ~= nil then
+            cachedRegion = tostring(joinData.Region)
+            return cachedRegion
+        end
+        if joinData.matchmakingContext ~= nil then
+            cachedRegion = tostring(joinData.matchmakingContext)
+            return cachedRegion
+        end
+    end
+
+    -- fallback: Roblox locale (not perfect but gives something like en-us)
+    local ok2, loc = pcall(function()
+        return LocalizationService.RobloxLocaleId or LocalizationService.SystemLocaleId
+    end)
+    if ok2 and loc then
+        cachedRegion = tostring(loc)
+        return cachedRegion
+    end
+
+    cachedRegion = "Unknown"
+    return cachedRegion
+end
+
 task.spawn(function()
     while true do
         local hum = getHumanoid()
@@ -1468,6 +1517,7 @@ task.spawn(function()
         end
 
         local pingMs = getPingMs()
+        local region = getServerRegion() or "Unknown"
 
         fpsLabel.Text = "FPS: "..tostring(lastFps)
         if pingMs then
@@ -1477,6 +1527,7 @@ task.spawn(function()
         end
         wsLabel.Text = string.format("WalkSpeed: %.1f", ws)
         jpLabel.Text = string.format("JumpPower: %.1f", jp)
+        regionLabel.Text = "Region: "..tostring(region)
 
         task.wait(0.1)
     end
@@ -1533,14 +1584,8 @@ actionButton.MouseButton1Click:Connect(function()
     updateStatus()
 end)
 
-keyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForManual then return end
-    listeningForKey = true
-    infoLabel.Text = "Press a key for main Toggle/Hold (RightCtrl reserved)."
-end)
-
 ---------------------------------------------------------------------//
--- BLATANT PAGE (SCROLL FRAME)
+-- BLATANT PAGE (scroll frame, same as before)
 ---------------------------------------------------------------------//
 local blatantScroll = Instance.new("ScrollingFrame")
 blatantScroll.Size = UDim2.new(1,-20,1,-20)
@@ -1619,13 +1664,10 @@ local function makeDesc(parent,txt)
     return d
 end
 
----------------------------------------------------------------------//
--- SEMI IMMORTAL (TEMP DISABLED)
----------------------------------------------------------------------//
+-- semi immortal card (disabled)
 local semiCard = createCard(52)
 makeTitle(semiCard,"Semi Immortal")
 makeDesc(semiCard,"Temporarily unavailable.")
-
 local semiToggle = Instance.new("Frame")
 semiToggle.Size = UDim2.new(0,40,0,20)
 semiToggle.Position = UDim2.new(1,-50,0,16)
@@ -1633,11 +1675,9 @@ semiToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
 semiToggle.BorderSizePixel = 0
 semiToggle.ZIndex = 4
 semiToggle.Parent = semiCard
-
 local semiToggleCorner = Instance.new("UICorner")
 semiToggleCorner.CornerRadius = UDim.new(1,0)
 semiToggleCorner.Parent = semiToggle
-
 local semiThumb = Instance.new("Frame")
 semiThumb.Size = UDim2.new(0,16,0,16)
 semiThumb.Position = UDim2.new(0,2,0.5,-8)
@@ -1645,18 +1685,14 @@ semiThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
 semiThumb.BorderSizePixel = 0
 semiThumb.ZIndex = 5
 semiThumb.Parent = semiToggle
-
 local semiThumbCorner = Instance.new("UICorner")
 semiThumbCorner.CornerRadius = UDim.new(1,0)
 semiThumbCorner.Parent = semiThumb
 
----------------------------------------------------------------------//
--- SETTINGS (BLATANT, cosmetic only)
----------------------------------------------------------------------//
+-- settings card (cosmetic)
 local setCard = createCard(52)
 makeTitle(setCard,"Settings")
 makeDesc(setCard,"Semi-Immortal configuration (currently disabled).")
-
 local setButton = Instance.new("TextButton")
 setButton.Size = UDim2.new(0,110,0,24)
 setButton.Position = UDim2.new(1,-120,0,14)
@@ -1669,18 +1705,16 @@ setButton.TextXAlignment = Enum.TextXAlignment.Center
 setButton.Text = "Normal"
 setButton.ZIndex = 4
 setButton.Parent = setCard
-
 local setCorner = Instance.new("UICorner")
 setCorner.CornerRadius = UDim.new(0,10)
 setCorner.Parent = setButton
-
 setButton.AutoButtonColor = false
 setButton.MouseButton1Click:Connect(function()
     infoLabel.Text = "Semi Immortal is disabled in this build."
 end)
 
 ---------------------------------------------------------------------//
--- DETECTIONS
+-- DETECTIONS (all disabled incl Slash of Fury)
 ---------------------------------------------------------------------//
 blatantHeader("Detections")
 
@@ -1722,7 +1756,6 @@ createDisabledDetection("Time Hole Detection","Avoid failing when someone has th
 local slashCard = createCard(52)
 makeTitle(slashCard,"Slash of Fury Detection")
 makeDesc(slashCard,"Temporarily unavailable.")
-
 local slashToggle = Instance.new("Frame")
 slashToggle.Size = UDim2.new(0,40,0,20)
 slashToggle.Position = UDim2.new(1,-50,0,16)
@@ -1730,11 +1763,9 @@ slashToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
 slashToggle.BorderSizePixel = 0
 slashToggle.ZIndex = 4
 slashToggle.Parent = slashCard
-
 local slashToggleCorner = Instance.new("UICorner")
 slashToggleCorner.CornerRadius = UDim.new(1,0)
 slashToggleCorner.Parent = slashToggle
-
 local slashThumb = Instance.new("Frame")
 slashThumb.Size = UDim2.new(0,16,0,16)
 slashThumb.Position = UDim2.new(0,2,0.5,-8)
@@ -1742,7 +1773,6 @@ slashThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
 slashThumb.BorderSizePixel = 0
 slashThumb.ZIndex = 5
 slashThumb.Parent = slashToggle
-
 local slashThumbCorner = Instance.new("UICorner")
 slashThumbCorner.CornerRadius = UDim.new(1,0)
 slashThumbCorner.Parent = slashThumb
@@ -1911,7 +1941,7 @@ jumpThumb.ZIndex = 5
 jumpThumb.Parent = jumpToggle
 
 local jumpThumbCorner = Instance.new("UICorner")
-jumpThumbCorner.CornerRadius = UDim.new(1,0)
+jumpThumbCorner.CornerRadius = UDim.New(1,0)
 jumpThumbCorner.Parent = jumpThumb
 
 local function updateJumpToggleVisual()
@@ -2047,7 +2077,7 @@ trigToggle.InputBegan:Connect(function(inp)
 end)
 
 manualKeyButton.MouseButton1Click:Connect(function()
-    if listeningForKey or listeningForManual then return end
+    if listeningForManual then return end
     listeningForManual = true
     infoLabel.Text = "Press a key for Manual Spam."
 end)
@@ -2059,21 +2089,9 @@ UIS.InputBegan:Connect(function(input,gp)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
     if input.KeyCode == Enum.KeyCode.RightControl
-        and not listeningForKey and not listeningForManual then
+        and not listeningForManual then
         guiVisible = not guiVisible
         gui.Enabled = guiVisible
-        return
-    end
-
-    if listeningForKey then
-        if input.KeyCode == Enum.KeyCode.RightControl then
-            infoLabel.Text = "RightCtrl is hub toggle only."
-        else
-            toggleKey = input.KeyCode
-            keyButton.Text = keyToString(toggleKey)
-            infoLabel.Text = "Main keybind set to: "..keyButton.Text
-        end
-        listeningForKey = false
         return
     end
 
@@ -2117,7 +2135,7 @@ UIS.InputEnded:Connect(function(input,gp)
 end)
 
 ---------------------------------------------------------------------//
--- FX HELPERS (AFTER UI SO THEME CAN APPLY)
+-- FX HELPERS
 ---------------------------------------------------------------------//
 function applyFpsBoost(on)
     fpsBoostOn = on
@@ -2169,11 +2187,9 @@ function applyPlayerEffects(on)
 end
 
 function applyAbilityEsp(on)
-    -- Unavailable (do nothing)
-    abilityEspOn = false
+    abilityEspOn = false -- disabled
 end
 
--- Only touch WalkSpeed when speed is ON
 function applySpeed()
     if not speedEnabled then return end
     local hum = getHumanoid()
@@ -2184,7 +2200,6 @@ function applySpeed()
     hum.WalkSpeed = speedValue
 end
 
--- Only touch JumpPower when jump is ON
 function applyJump()
     if not jumpEnabled then return end
     local hum = getHumanoid()
