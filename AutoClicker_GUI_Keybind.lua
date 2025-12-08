@@ -1378,7 +1378,7 @@ end
 
 -- Bug report card
 local bugCard = createOthersCard(190)
-addTitleDesc(bugCard,"Bug Report","Found something broken? This sends a report with your player + exec info to the webhook.")
+addTitleDesc(bugCard,"Bug Report","Found something broken? send a report with your executor name.")
 
 local bugBox = Instance.new("TextBox")
 bugBox.Size = UDim2.new(1,-20,0,80)
