@@ -1,811 +1,1045 @@
 ---------------------------------------------------------------------
--- Argon-Bin Hub X v3.5  
--- Clean Rebuild Edition (Binxix Custom)
--- RightCtrl = Show/Hide Hub
+--  BIN HUB X - ARGON STYLE HUB v3.6 (CORE PART 1)
+--  Author: BinXix • Custom Theme Edition
 ---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
--- SERVICES / SETUP
+-- SERVICES
 ---------------------------------------------------------------------
 local Players              = game:GetService("Players")
 local UIS                  = game:GetService("UserInputService")
-local TweenService         = game:GetService("TweenService")
 local RunService           = game:GetService("RunService")
 local HttpService          = game:GetService("HttpService")
+local CoreGui              = game:GetService("CoreGui")
+local TweenService         = game:GetService("TweenService")
 local MarketplaceService   = game:GetService("MarketplaceService")
 local LocalizationService  = game:GetService("LocalizationService")
-local CoreGui              = game:GetService("CoreGui")
+local StatsService         = game:GetService("Stats")
 
 local LocalPlayer          = Players.LocalPlayer
-local PlayerGui            = LocalPlayer:WaitForChild("PlayerGui")
-
-local VIM
-pcall(function() VIM = game:GetService("VirtualInputManager") end)
+local Character            = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
 ---------------------------------------------------------------------
--- THEME (Cleaned + Smoothed v3.5 Style)
+-- CUSTOM BINXIX THEME COLORS (BLACK • GOLD • WHITE)
 ---------------------------------------------------------------------
-local Theme = {
-    BG_Dark        = Color3.fromRGB(12, 12, 16),
-    BG_Frame       = Color3.fromRGB(20, 20, 26),
-    BG_Card        = Color3.fromRGB(26, 26, 32),
-    Text_White     = Color3.fromRGB(255, 255, 255),
-    Text_Gray      = Color3.fromRGB(185, 185, 190),
-    Accent_On      = Color3.fromRGB(255, 92, 92),
-    Accent_Off     = Color3.fromRGB(70, 70, 80),
-    Slider_Fill    = Color3.fromRGB(255, 92, 92),
-    Slider_BG      = Color3.fromRGB(45, 45, 55),
+local BINXIX_THEME = {
+    Accent       = Color3.fromRGB(255, 215, 0),     -- Gold
+    AccentOn     = Color3.fromRGB(255, 170, 0),     -- Bright Gold
+    TextPrimary  = Color3.fromRGB(255,255,255),     -- White
+    TextDim      = Color3.fromRGB(200,200,200),
+    Background1  = Color3.fromRGB(10,10,10),        -- Near-black
+    Background2  = Color3.fromRGB(20,20,20),
+    Panel        = Color3.fromRGB(15,15,15),
+    Stroke       = Color3.fromRGB(50,50,50),
 }
 
 ---------------------------------------------------------------------
--- ROOT GUI (Smooth + Clean)
+-- EXECUTOR SAFE REQUEST FUNCTION
 ---------------------------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ArgonBinHubX"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.Enabled = true
-ScreenGui.Parent = PlayerGui
-
--- Main center frame
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 900, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -450, 0.5, -260)
-MainFrame.BackgroundColor3 = Theme.BG_Dark
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-
-local MFCorner = Instance.new("UICorner")
-MFCorner.CornerRadius = UDim.new(0,18)
-MFCorner.Parent = MainFrame
-
--- Main drop-shadow
-local Shadow = Instance.new("ImageLabel")
-Shadow.Size = UDim2.new(1,60,1,60)
-Shadow.Position = UDim2.new(0,-30,0,-30)
-Shadow.ZIndex = -1
-Shadow.BackgroundTransparency = 1
-Shadow.Image = "rbxassetid://6014261993"
-Shadow.ImageColor3 = Color3.fromRGB(0,0,0)
-Shadow.ImageTransparency = 0.45
-Shadow.ScaleType = Enum.ScaleType.Slice
-Shadow.SliceCenter = Rect.new(49,49,450,450)
-Shadow.Parent = MainFrame
-
----------------------------------------------------------------------
--- SIDEBAR FRAME
----------------------------------------------------------------------
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0,260,1,0)
-Sidebar.BackgroundColor3 = Theme.BG_Frame
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = MainFrame
-
-local SBCorner = Instance.new("UICorner")
-SBCorner.CornerRadius = UDim.new(0,18)
-SBCorner.Parent = Sidebar
-
----------------------------------------------------------------------
--- CONTENT FRAME (Pages go here)
----------------------------------------------------------------------
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1,-280,1,-20)
-ContentFrame.Position = UDim2.new(0,270,0,10)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
-
----------------------------------------------------------------------
--- PAGE CREATION FUNCTION (ScrollingFrame + Auto Layout)
----------------------------------------------------------------------
-local function CreatePage()
-    local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1,0,1,0)
-    page.CanvasSize = UDim2.new(0,0,0,0)
-    page.ScrollBarThickness = 6
-    page.ScrollingDirection = Enum.ScrollingDirection.Y
-    page.BackgroundTransparency = 1
-    page.Visible = false
-    page.Parent = ContentFrame
-
-    local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0,12)
-    list.FillDirection = Enum.FillDirection.Vertical
-    list.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    list.SortOrder = Enum.SortOrder.LayoutOrder
-    list.Parent = page
-
-    local pad = Instance.new("UIPadding")
-    pad.PaddingLeft = UDim.new(0,18)
-    pad.PaddingTop = UDim.new(0,20)
-    pad.Parent = page
-
-    list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        page.CanvasSize = UDim2.new(0,0,0,list.AbsoluteContentSize.Y + 25)
-    end)
-
-    return page
+local function SafeRequest()
+    return request or http_request or (syn and syn.request) or (http and http.request) or nil
 end
 
--- Create the pages
-local Page_Home     = CreatePage()
-local Page_Main     = CreatePage()
-local Page_Blatant  = CreatePage()
-local Page_Others   = CreatePage()
-local Page_Settings = CreatePage()
-
 ---------------------------------------------------------------------
--- AUTO UPDATER (v3.5+)
+-- HASH LIBRARY (for HWID hashing)
 ---------------------------------------------------------------------
-local CURRENT_VERSION = "3.5"
-local UPDATE_URL = "https://raw.githubusercontent.com/yourgithub/argon-binxix/main/hub.lua"
-
-local function CheckUpdate()
-    local req = (syn and syn.request) or request or http_request
-    if not req then return false end
-
-    local res = req({ Url = UPDATE_URL, Method = "GET" })
-    if not res or not res.Body then return false end
-
-    if res.Body:find('VERSION = "' .. CURRENT_VERSION .. '"') then
-        return false -- up to date
-    else
-        return true -- update available
-    end
+local function md5(str)
+    local f = loadstring(game:HttpGet("https://raw.githubusercontent.com/ATrainz/HashLibrary/main/md5.lua"))()
+    return f(str)
 end
 
-local UpdateAvailable = CheckUpdate()
+---------------------------------------------------------------------
+-- GET HASHED HWID
+---------------------------------------------------------------------
+local function GetHashedHWID()
+    local raw = "unknown_hwid"
 
----------------------------------------------------------------------
--- EXECUTOR + HWID + LOGGING
----------------------------------------------------------------------
-local function GetExec()
-    local ex, ver = "Unknown", "Unknown"
     pcall(function()
-        if identifyexecutor then
-            local n,v = identifyexecutor()
-            ex = tostring(n)
-            ver = tostring(v)
+        if gethwid then
+            raw = gethwid()
+        elseif identifyexecutor then
+            raw = tostring(identifyexecutor()) .. (game:GetService("RbxAnalyticsService"):GetClientId() or "")
+        elseif game:GetService("RbxAnalyticsService") then
+            raw = game:GetService("RbxAnalyticsService"):GetClientId()
         end
     end)
-    return ex, ver
+
+    return md5(raw)
 end
 
-local function GetHWID()
-    local hw = "Unknown"
-    pcall(function()
-        if syn and syn.get_hwid then hw = syn.get_hwid() end
+---------------------------------------------------------------------
+-- EXECUTION COUNTER (PERSISTENT)
+---------------------------------------------------------------------
+if not isfile("BinHubX_execCount.txt") then
+    writefile("BinHubX_execCount.txt", "0")
+end
+
+local execCount = tonumber(readfile("BinHubX_execCount.txt")) or 0
+execCount += 1
+writefile("BinHubX_execCount.txt", tostring(execCount))
+
+---------------------------------------------------------------------
+-- MAIN WEBHOOK + BUG REPORT WEBHOOK
+---------------------------------------------------------------------
+local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
+local BUG_WEBHOOK  = MAIN_WEBHOOK -- your request: use same webhook
+
+---------------------------------------------------------------------
+-- GAME NAME FETCH
+---------------------------------------------------------------------
+local function GetGameName()
+    local ok, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
     end)
-    return hw
+    if ok and info then
+        return info.Name
+    end
+    return "Unknown Game"
 end
 
 ---------------------------------------------------------------------
--- EXECUTION COUNTER (Saved Locally)
+-- EXECUTOR DECTION
 ---------------------------------------------------------------------
-local execFile = "binhub_exec.txt"
-local execCount = 0
-
-pcall(function()
-    if isfile and readfile and isfile(execFile) then
-        execCount = tonumber(readfile(execFile)) or 0
-    end
-end)
-
-execCount = execCount + 1
-
-pcall(function()
-    if writefile then
-        writefile(execFile, tostring(execCount))
-    end
-end)
+local function DetectExecutor()
+    local result = "Unknown"
+    pcall(function()
+        if identifyexecutor then
+            local a,b = identifyexecutor()
+            if b then result = tostring(a).." "..tostring(b)
+            else result = tostring(a) end
+        elseif getexecutorname then
+            result = getexecutorname()
+        end
+    end)
+    return result
+end
 
 ---------------------------------------------------------------------
--- WEBHOOK SENDER (Your Original Webhook)
+-- SEND EXECUTION LOG WEBHOOK
 ---------------------------------------------------------------------
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
-
-local function SendWebhook(mode, action)
-    local exec, ver = GetExec()
-    local hwid = GetHWID()
+local function SendExecutionLog()
+    local req = SafeRequest()
+    if not req then return end
 
     local data = {
         embeds = {{
-            title = "Argon-Bin Hub v3.5 Executed",
-            color = 0xFF5959,
+            title = "🔥 Bin Hub X Loaded (v3.6)",
+            color = 0xFFD700, -- Gold
             fields = {
-                { name = "Player", value = "`"..LocalPlayer.Name.."`" },
-                { name = "HWID", value = "`"..hwid.."`" },
-                { name = "Executor", value = exec.." | "..ver },
-                { name = "Mode", value = tostring(mode) },
-                { name = "Action", value = tostring(action) },
-                { name = "Exec Count", value = tostring(execCount) },
+                { name = "Player", value = "**"..LocalPlayer.DisplayName.."** (`"..LocalPlayer.Name.."`)", inline = false },
+                { name = "Game", value = GetGameName() .. "\nPlaceId: `" .. game.PlaceId .. "`", inline = false },
+                { name = "Executor", value = DetectExecutor(), inline = false },
+                { name = "Hashed HWID", value = "```"..GetHashedHWID().."```", inline = false },
+                { name = "Execution #", value = tostring(execCount), inline = false },
+                { name = "Time", value = os.date("%Y-%m-%d %H:%M:%S"), inline = false },
             }
         }}
     }
 
-    local req = (syn and syn.request) or request or http_request
-    if req then
+    req({
+        Url = MAIN_WEBHOOK,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode(data)
+    })
+end
+
+---------------------------------------------------------------------
+-- SEND BUG REPORT
+---------------------------------------------------------------------
+function SendBug_Report(msg)
+    local req = SafeRequest()
+    if not req then return false, "Executor blocked request" end
+    if not msg or msg:gsub("%s+","") == "" then return false, "Empty" end
+    
+    local data = {
+        embeds = {{
+            title = "🐞 Bug Report - Bin Hub X",
+            color = 0xFF4444,
+            fields = {
+                { name = "Player", value = LocalPlayer.Name, inline = false },
+                { name = "Report", value = "```"..msg.."```", inline = false },
+                { name = "Time", value = os.date("%Y-%m-%d %H:%M:%S"), inline = false }
+            }
+        }}
+    }
+
+    req({
+        Url = BUG_WEBHOOK,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode(data)
+    })
+
+    return true
+end
+
+---------------------------------------------------------------------
+-- AUTO UPDATER (checks GitHub for newer version)
+---------------------------------------------------------------------
+local VERSION = "3.6"
+
+local function CheckUpdate()
+    local success, online = pcall(function()
+        return game:HttpGet("https://raw.githubusercontent.com/ATrainz/BinHubX/main/version.txt")
+    end)
+
+    if success and online then
+        if tostring(online) ~= VERSION then
+            print("BinHubX: Update found! Online version:", online)
+        end
+    end
+end
+
+---------------------------------------------------------------------
+-- GUI SAFE PARENT (gethui / syn.protect_gui)
+---------------------------------------------------------------------
+local function SafeParent()
+    local g
+
+    pcall(function()
+        if gethui then
+            g = Instance.new("ScreenGui")
+            g.Name = "BinHubX"
+            g.ResetOnSpawn = false
+            g.Parent = gethui()
+        end
+    end)
+
+    if not g then
         pcall(function()
-            req({
-                Url = WEBHOOK_URL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = HttpService:JSONEncode(data)
-            })
+            if syn and syn.protect_gui then
+                g = Instance.new("ScreenGui")
+                g.Name = "BinHubX"
+                g.ResetOnSpawn = false
+                syn.protect_gui(g)
+                g.Parent = CoreGui
+            end
         end)
     end
+
+    if not g then
+        g = Instance.new("ScreenGui")
+        g.Name = "BinHubX"
+        g.ResetOnSpawn = false
+        g.Parent = CoreGui
+    end
+
+    return g
 end
 
--- Send first log
+local GUI = SafeParent()
+
+---------------------------------------------------------------------
+-- FIRE WEBHOOK ON LOAD
+---------------------------------------------------------------------
 task.spawn(function()
-    SendWebhook("N/A", "N/A")
+    task.wait(1)
+    SendExecutionLog()
+    CheckUpdate()
 end)
 ---------------------------------------------------------------------
--- PART 2 — SIDEBAR BUILD + PAGE SWITCHING
+-- PART 2 — ROOT UI + SIDEBAR + NAVIGATION + THEMES
 ---------------------------------------------------------------------
 
----------------------------------------------------------------------
--- TEXT LABEL: Hub Title
----------------------------------------------------------------------
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -20, 0, 36)
-TitleLabel.Position = UDim2.new(0,10,0,10)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.TextSize = 26
-TitleLabel.TextColor3 = Theme.Text_White
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Text = "Argon-Bin Hub"
-TitleLabel.Parent = Sidebar
-
-local VersionBadge = Instance.new("TextLabel")
-VersionBadge.Size = UDim2.new(0,60,0,22)
-VersionBadge.Position = UDim2.new(0,150,0,12)
-VersionBadge.BackgroundColor3 = Theme.Accent_On
-VersionBadge.Font = Enum.Font.GothamBold
-VersionBadge.Text = "v3.5"
-VersionBadge.TextColor3 = Color3.fromRGB(255,255,255)
-VersionBadge.TextSize = 12
-VersionBadge.Parent = Sidebar
-
-local VBcorner = Instance.new("UICorner")
-VBcorner.CornerRadius = UDim.new(0,8)
-VBcorner.Parent = VersionBadge
+local Theme = BINXIX_THEME  -- from Part 1
 
 ---------------------------------------------------------------------
--- SEARCH BOX
+-- ROOT WINDOW
 ---------------------------------------------------------------------
-local SearchBox = Instance.new("TextBox")
-SearchBox.Size = UDim2.new(1,-20,0,32)
-SearchBox.Position = UDim2.new(0,10,0,55)
-SearchBox.PlaceholderText = "Search"
-SearchBox.Font = Enum.Font.Gotham
-SearchBox.TextSize = 14
-SearchBox.TextColor3 = Theme.Text_White
-SearchBox.BackgroundColor3 = Theme.BG_Card
-SearchBox.BorderSizePixel = 0
-SearchBox.TextXAlignment = Enum.TextXAlignment.Left
-SearchBox.ClearTextOnFocus = false
-SearchBox.Parent = Sidebar
+local root = Instance.new("Frame")
+root.Name = "Root"
+root.Size = UDim2.new(0, 720, 0, 380)
+root.Position = UDim2.new(0.5, -360, 0.5, -190)
+root.BackgroundColor3 = Theme.Background1
+root.BorderSizePixel = 0
+root.ZIndex = 1
+root.Parent = GUI
 
-local SBCorner = Instance.new("UICorner")
-SBCorner.CornerRadius = UDim.new(0,8)
-SBCorner.Parent = SearchBox
+local rootCorner = Instance.new("UICorner")
+rootCorner.CornerRadius = UDim.new(0, 18)
+rootCorner.Parent = root
+
+local rootStroke = Instance.new("UIStroke")
+rootStroke.Thickness = 1
+rootStroke.Color = Theme.Stroke
+rootStroke.Parent = root
+
+-- Gold gradient overlay
+local rootGradient = Instance.new("UIGradient")
+rootGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25,20,0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10,10,10))
+})
+rootGradient.Rotation = 45
+rootGradient.Parent = root
 
 ---------------------------------------------------------------------
--- SIDEBAR BUTTON CREATOR
+-- SIDEBAR
 ---------------------------------------------------------------------
-local SidebarButtons = {}
+local sidebar = Instance.new("Frame")
+sidebar.Size = UDim2.new(0, 230, 1, 0)
+sidebar.Position = UDim2.new(0, 0, 0, 0)
+sidebar.BackgroundColor3 = Theme.Background2
+sidebar.BorderSizePixel = 0
+sidebar.ZIndex = 2
+sidebar.Parent = root
 
-local function CreateSidebarButton(text)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1,-20,0,32)
-    btn.BackgroundColor3 = Theme.BG_Card
-    btn.BorderSizePixel = 0
-    btn.Text = text
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextColor3 = Theme.Text_White
-    btn.TextSize = 14
-    btn.AnchorPoint = Vector2.new(0,0)
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0,8)
-    corner.Parent = btn
+local sideCorner = Instance.new("UICorner")
+sideCorner.CornerRadius = UDim.new(0, 18)
+sideCorner.Parent = sidebar
 
-    return btn
+local sideStroke = Instance.new("UIStroke")
+sideStroke.Thickness = 1
+sideStroke.Color = Theme.Stroke
+sideStroke.Parent = sidebar
+
+---------------------------------------------------------------------
+-- SIDEBAR TITLE
+---------------------------------------------------------------------
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -100, 0, 34)
+title.Position = UDim2.new(0, 18, 0, 14)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 20
+title.TextColor3 = Theme.TextPrimary
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Text = "BinXix Hub X"
+title.ZIndex = 3
+title.Parent = sidebar
+
+local versionLabel = Instance.new("TextLabel")
+versionLabel.Size = UDim2.new(0, 70, 0, 24)
+versionLabel.Position = UDim2.new(1, -82, 0, 14)
+versionLabel.BackgroundColor3 = Theme.Accent
+versionLabel.BorderSizePixel = 0
+versionLabel.Font = Enum.Font.GothamBold
+versionLabel.TextSize = 14
+versionLabel.TextColor3 = Color3.fromRGB(0,0,0)
+versionLabel.Text = "v3.6"
+versionLabel.ZIndex = 3
+versionLabel.Parent = sidebar
+
+local versionCorner = Instance.new("UICorner")
+versionCorner.CornerRadius = UDim.new(1,0)
+versionCorner.Parent = versionLabel
+
+---------------------------------------------------------------------
+-- SEARCH BOX (not functional yet, added for UI)
+---------------------------------------------------------------------
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -36, 0, 32)
+searchBox.Position = UDim2.new(0, 18, 0, 58)
+searchBox.BackgroundColor3 = Theme.Panel
+searchBox.BorderSizePixel = 0
+searchBox.PlaceholderText = "Search"
+searchBox.Text = ""
+searchBox.Font = Enum.Font.Gotham
+searchBox.TextSize = 14
+searchBox.TextColor3 = Theme.TextPrimary
+searchBox.PlaceholderColor3 = Theme.TextDim
+searchBox.ZIndex = 3
+searchBox.Parent = sidebar
+
+local searchCorner = Instance.new("UICorner")
+searchCorner.CornerRadius = UDim.new(0, 10)
+searchCorner.Parent = searchBox
+
+---------------------------------------------------------------------
+-- NAVIGATION HOLDER
+---------------------------------------------------------------------
+local navHolder = Instance.new("Frame")
+navHolder.Size = UDim2.new(1, -36, 1, -150)
+navHolder.Position = UDim2.new(0, 18, 0, 100)
+navHolder.BackgroundTransparency = 1
+navHolder.ZIndex = 3
+navHolder.Parent = sidebar
+
+local navLayout = Instance.new("UIListLayout")
+navLayout.SortOrder = Enum.SortOrder.LayoutOrder
+navLayout.Padding = UDim.new(0, 6)
+navLayout.Parent = navHolder
+
+local pages = {}
+local navButtons = {}
+
+---------------------------------------------------------------------
+-- PAGE CREATOR
+---------------------------------------------------------------------
+local function CreatePage(name)
+    local page = Instance.new("Frame")
+    page.Name = name.."Page"
+    page.Size = UDim2.new(1, -20, 1, -20)
+    page.Position = UDim2.new(0,10,0,10)
+    page.BackgroundColor3 = Theme.Panel
+    page.BorderSizePixel = 0
+    page.Visible = false
+    page.ZIndex = 2
+    page.Parent = root
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,16)
+    c.Parent = page
+
+    pages[name] = page
+    return page
 end
 
 ---------------------------------------------------------------------
--- SIDEBAR LAYOUT
+-- CREATE PAGES
 ---------------------------------------------------------------------
-local SideList = Instance.new("UIListLayout")
-SideList.Parent = Sidebar
-SideList.Padding = UDim.new(0,8)
-SideList.FillDirection = Enum.FillDirection.Vertical
-SideList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-SideList.SortOrder = Enum.SortOrder.LayoutOrder
-SideList.VerticalAlignment = Enum.VerticalAlignment.Top
-
-local SidePad = Instance.new("UIPadding")
-SidePad.PaddingTop = UDim.new(0,100)
-SidePad.PaddingLeft = UDim.new(0,10)
-SidePad.PaddingRight = UDim.new(0,10)
-SidePad.Parent = Sidebar
+local homePage     = CreatePage("Home")
+local mainPage     = CreatePage("Main")
+local blatantPage  = CreatePage("Blatant")
+local othersPage   = CreatePage("Others")
+local settingsPage = CreatePage("Settings")
 
 ---------------------------------------------------------------------
--- CREATE BUTTONS
+-- NAV SECTION LABEL
 ---------------------------------------------------------------------
-local Btn_Home     = CreateSidebarButton("Home")
-local Btn_Main     = CreateSidebarButton("Main")
-local Btn_Blatant  = CreateSidebarButton("Blatant")
-local Btn_Others   = CreateSidebarButton("Others")
-local Btn_Settings = CreateSidebarButton("Settings")
-
-Btn_Home.Parent     = Sidebar
-Btn_Main.Parent     = Sidebar
-Btn_Blatant.Parent  = Sidebar
-Btn_Others.Parent   = Sidebar
-Btn_Settings.Parent = Sidebar
-
-SidebarButtons = {
-    Home     = Btn_Home,
-    Main     = Btn_Main,
-    Blatant  = Btn_Blatant,
-    Others   = Btn_Others,
-    Settings = Btn_Settings,
-}
-
----------------------------------------------------------------------
--- PAGE TABLE
----------------------------------------------------------------------
-local Pages = {
-    Home     = Page_Home,
-    Main     = Page_Main,
-    Blatant  = Page_Blatant,
-    Others   = Page_Others,
-    Settings = Page_Settings,
-}
-
----------------------------------------------------------------------
--- HIGHLIGHT ANIMATION
----------------------------------------------------------------------
-local function AnimateButton(btn, active)
-    if active then
-        TweenService:Create(btn, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            BackgroundColor3 = Theme.Accent_On,
-            TextColor3 = Color3.fromRGB(255,255,255)
-        }):Play()
-    else
-        TweenService:Create(btn, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            BackgroundColor3 = Theme.BG_Card,
-            TextColor3 = Theme.Text_White
-        }):Play()
-    end
-end
-
----------------------------------------------------------------------
--- PAGE SWITCH FUNCTION
----------------------------------------------------------------------
-local function ShowPage(name)
-    -- hide all pages:
-    for _, page in pairs(Pages) do
-        page.Visible = false
-    end
-    
-    -- show selected:
-    Pages[name].Visible = true
-    
-    -- update buttons:
-    for n,btn in pairs(SidebarButtons) do
-        AnimateButton(btn, n == name)
-    end
-end
-
----------------------------------------------------------------------
--- BUTTON CONNECTIONS
----------------------------------------------------------------------
-Btn_Home.MouseButton1Click:Connect(function() ShowPage("Home") end)
-Btn_Main.MouseButton1Click:Connect(function() ShowPage("Main") end)
-Btn_Blatant.MouseButton1Click:Connect(function() ShowPage("Blatant") end)
-Btn_Others.MouseButton1Click:Connect(function() ShowPage("Others") end)
-Btn_Settings.MouseButton1Click:Connect(function() ShowPage("Settings") end)
-
----------------------------------------------------------------------
--- START ON HOME PAGE
----------------------------------------------------------------------
-ShowPage("Home")
----------------------------------------------------------------------
--- PART 3 — HOME PAGE + CARD CREATION FUNCTIONS
----------------------------------------------------------------------
-
----------------------------------------------------------------------
--- HOME PAGE CONTENT (Matches your screenshot exactly)
----------------------------------------------------------------------
-
-local HomeTitle = Instance.new("TextLabel")
-HomeTitle.Size = UDim2.new(1, -20, 0, 36)
-HomeTitle.BackgroundTransparency = 1
-HomeTitle.Font = Enum.Font.GothamBlack
-HomeTitle.TextSize = 28
-HomeTitle.TextColor3 = Theme.Text_White
-HomeTitle.TextXAlignment = Enum.TextXAlignment.Left
-HomeTitle.Text = "Welcome, " .. LocalPlayer.DisplayName
-HomeTitle.Parent = Page_Home
-
-local HomeSub = Instance.new("TextLabel")
-HomeSub.Size = UDim2.new(1, -20, 0, 22)
-HomeSub.BackgroundTransparency = 1
-HomeSub.Font = Enum.Font.Gotham
-HomeSub.TextSize = 15
-HomeSub.TextColor3 = Theme.Text_Gray
-HomeSub.TextXAlignment = Enum.TextXAlignment.Left
-HomeSub.Text = "Argon-Bin Hub X | Custom build by Binxix — v3.5"
-HomeSub.Parent = Page_Home
-
----------------------------------------------------------------------
--- CARD CREATOR (Used for every toggle/slider card)
----------------------------------------------------------------------
-local function CreateCard(height)
-    local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, -30, 0, height)
-    card.BackgroundColor3 = Theme.BG_Card
-    card.BorderSizePixel = 0
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = card
-
-    local shadow = Instance.new("ImageLabel")
-    shadow.Size = UDim2.new(1, 20, 1, 20)
-    shadow.Position = UDim2.new(0, -10, 0, -10)
-    shadow.ZIndex = -1
-    shadow.BackgroundTransparency = 1
-    shadow.Image = "rbxassetid://6014261993"
-    shadow.ImageColor3 = Color3.fromRGB(0,0,0)
-    shadow.ImageTransparency = 0.6
-    shadow.ScaleType = Enum.ScaleType.Slice
-    shadow.SliceCenter = Rect.new(49,49,450,450)
-    shadow.Parent = card
-
-    return card
-end
-
----------------------------------------------------------------------
--- LABEL INSIDE CARDS
----------------------------------------------------------------------
-local function CreateCardLabel(parent, text)
+local function Section(text)
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -20, 0, 22)
-    lbl.Position = UDim2.new(0,10,0,10)
+    lbl.Size = UDim2.new(1,0,0,18)
     lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamMedium
-    lbl.TextSize = 17
-    lbl.TextColor3 = Theme.Text_White
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 12
+    lbl.TextColor3 = Theme.TextDim
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Text = text
+    lbl.ZIndex = 3
+    lbl.Parent = navHolder
+end
+
+---------------------------------------------------------------------
+-- NAV BUTTON
+---------------------------------------------------------------------
+local function NavButton(name, text)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Theme.Panel
+    btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.TextColor3 = Theme.TextPrimary
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Text = text
+    btn.ZIndex = 3
+    btn.Parent = navHolder
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        for pageName, page in pairs(pages) do
+            page.Visible = (pageName == name)
+        end
+        for navName, button in pairs(navButtons) do
+            button.BackgroundColor3 = (navName == name)
+                and Theme.Accent
+                or Theme.Panel
+        end
+    end)
+
+    navButtons[name] = btn
+end
+
+---------------------------------------------------------------------
+-- NAVIGATION BUILD
+---------------------------------------------------------------------
+Section(" Home")
+NavButton("Home", ".Dashboard")
+
+Section(" Main")
+NavButton("Main", ".AutoClicker")
+NavButton("Blatant", ".Player Mods")
+NavButton("Others", ".Utilities")
+
+Section(" Settings")
+NavButton("Settings", ".Settings")
+
+---------------------------------------------------------------------
+-- DRAGGING SYSTEM
+---------------------------------------------------------------------
+local dragging = false
+local dragStart
+local startPos
+
+root.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos  = root.Position
+    end
+end)
+
+root.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        root.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+---------------------------------------------------------------------
+-- DEFAULT PAGE
+---------------------------------------------------------------------
+homePage.Visible = true
+navButtons["Home"].BackgroundColor3 = Theme.Accent
+---------------------------------------------------------------------
+-- PART 3 — HOME PAGE (WELCOME + PLAYER CARD + STATUS)
+---------------------------------------------------------------------
+
+local function NewText(parent, text, size, color, bold)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -20, 0, size + 10)
+    lbl.Position = UDim2.new(0, 10, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham
+    lbl.TextSize = size
+    lbl.TextColor3 = color
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 3
     lbl.Parent = parent
     return lbl
 end
 
 ---------------------------------------------------------------------
--- CLEAN TOGGLE (OFF → ON) BUTTON
+-- HOME TITLE
 ---------------------------------------------------------------------
-local function CreateToggle(parent, defaultState, callback)
-    local toggle = Instance.new("TextButton")
-    toggle.Size = UDim2.new(0, 56, 0, 26)
-    toggle.Position = UDim2.new(1, -66, 0, 10)
-    toggle.BackgroundColor3 = defaultState and Theme.Accent_On or Theme.Accent_Off
-    toggle.Text = defaultState and "ON" or "OFF"
-    toggle.TextColor3 = Theme.Text_White
-    toggle.TextSize = 13
-    toggle.Font = Enum.Font.GothamBold
-    toggle.BorderSizePixel = 0
-    toggle.Parent = parent
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = toggle
-
-    local state = defaultState
-
-    toggle.MouseButton1Click:Connect(function()
-        state = not state
-        toggle.Text = state and "ON" or "OFF"
-
-        TweenService:Create(toggle, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = state and Theme.Accent_On or Theme.Accent_Off
-        }):Play()
-
-        if callback then
-            callback(state)
-        end
-    end)
-
-    return toggle, function() return state end
-end
+local homeTitle = NewText(homePage, "Dashboard", 26, Theme.TextPrimary, true)
+homeTitle.Position = UDim2.new(0, 14, 0, 14)
 
 ---------------------------------------------------------------------
--- BASE SLIDER FUNCTION (Speed/Jump will use this in Part 4)
+-- MAIN CARD
 ---------------------------------------------------------------------
-local function CreateSlider(parent, min, max, defaultValue, callback)
-    local SliderBG = Instance.new("Frame")
-    SliderBG.Size = UDim2.new(1, -30, 0, 8)
-    SliderBG.Position = UDim2.new(0,10,0,40)
-    SliderBG.BackgroundColor3 = Theme.Slider_BG
-    SliderBG.BorderSizePixel = 0
-    SliderBG.Parent = parent
+local dashCard = Instance.new("Frame")
+dashCard.Size = UDim2.new(1, -28, 0, 320)
+dashCard.Position = UDim2.new(0, 14, 0, 60)
+dashCard.BackgroundColor3 = Theme.Background2
+dashCard.BorderSizePixel = 0
+dashCard.ZIndex = 2
+dashCard.Parent = homePage
 
-    local SCorner = Instance.new("UICorner")
-    SCorner.CornerRadius = UDim.new(0,5)
-    SCorner.Parent = SliderBG
+local dashCorner = Instance.new("UICorner")
+dashCorner.CornerRadius = UDim.new(0, 16)
+dashCorner.Parent = dashCard
 
-    local Fill = Instance.new("Frame")
-    Fill.Size = UDim2.new(defaultValue / max, 0, 1, 0)
-    Fill.BackgroundColor3 = Theme.Slider_Fill
-    Fill.BorderSizePixel = 0
-    Fill.Parent = SliderBG
-
-    local FCorner = Instance.new("UICorner")
-    FCorner.CornerRadius = UDim.new(0,5)
-    FCorner.Parent = Fill
-
-    local ValLabel = Instance.new("TextLabel")
-    ValLabel.Size = UDim2.new(0, 60, 0, 18)
-    ValLabel.Position = UDim2.new(1, -70, 0, 6)
-    ValLabel.BackgroundTransparency = 1
-    ValLabel.Font = Enum.Font.GothamMedium
-    ValLabel.TextSize = 13
-    ValLabel.TextColor3 = Theme.Text_Gray
-    ValLabel.Text = tostring(defaultValue)
-    ValLabel.Parent = parent
-
-    -- Slider drag behavior
-    SliderBG.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local moving = true
-            
-            local moveConn
-            moveConn = UIS.InputChanged:Connect(function(changed)
-                if changed.UserInputType == Enum.UserInputType.MouseMovement and moving then
-                    local percent = math.clamp((changed.Position.X - SliderBG.AbsolutePosition.X) / SliderBG.AbsoluteSize.X, 0, 1)
-                    local value = math.floor(min + (max - min) * percent)
-
-                    Fill.Size = UDim2.new(percent, 0, 1, 0)
-                    ValLabel.Text = tostring(value)
-
-                    if callback then
-                        callback(value)
-                    end
-                end
-            end)
-
-            UIS.InputEnded:Connect(function(endInput)
-                if endInput.UserInputType == Enum.UserInputType.MouseButton1 then
-                    if moveConn then moveConn:Disconnect() end
-                    moving = false
-                end
-            end)
-        end
-    end)
-end
-
--- These functions will be used in Part 4 & 5
-_G.CreateCard      = CreateCard
-_G.CreateCardLabel = CreateCardLabel
-_G.CreateToggle    = CreateToggle
-_G.CreateSlider    = CreateSlider
----------------------------------------------------------------------
--- PART 4 — MAIN PAGE
----------------------------------------------------------------------
+local dashStroke = Instance.new("UIStroke")
+dashStroke.Thickness = 1
+dashStroke.Color = Theme.Stroke
+dashStroke.Parent = dashCard
 
 ---------------------------------------------------------------------
--- DEFAULT VARIABLES
+-- TOP HEADER (gold bar)
 ---------------------------------------------------------------------
+local goldBar = Instance.new("Frame")
+goldBar.Size = UDim2.new(1, 0, 0, 40)
+goldBar.BackgroundColor3 = Theme.Accent
+goldBar.BorderSizePixel = 0
+goldBar.ZIndex = 3
+goldBar.Parent = dashCard
 
-local ModeType        = "Toggle"   -- Toggle or Hold
-local ActionType      = "Click"    -- Click or Parry
-local RapidFireOn     = false
-local AutoJumpOn      = false
-local AutoFireOn      = false
+local goldCorner = Instance.new("UICorner")
+goldCorner.CornerRadius = UDim.new(0,16)
+goldCorner.Parent = goldBar
 
-local SpeedEnabled    = false
-local SpeedValue      = 16         -- Default WalkSpeed
-local JumpEnabled     = false
-local JumpValue       = 50         -- Default JumpPower
+local goldText = Instance.new("TextLabel")
+goldText.Size = UDim2.new(1, -20, 1, 0)
+goldText.Position = UDim2.new(0, 10, 0, 0)
+goldText.BackgroundTransparency = 1
+goldText.Font = Enum.Font.GothamBold
+goldText.TextSize = 18
+goldText.TextColor3 = Color3.fromRGB(0,0,0)
+goldText.TextXAlignment = Enum.TextXAlignment.Left
+goldText.Text = "Welcome to BinHub X v3.6"
+goldText.ZIndex = 4
+goldText.Parent = goldBar
 
-local Humanoid = nil
-local function GetHumanoid()
-    local char = LocalPlayer.Character
-    if char then
-        return char:FindFirstChildWhichIsA("Humanoid")
+---------------------------------------------------------------------
+-- PLAYER INFO SECTION
+---------------------------------------------------------------------
+local playerTitle = NewText(dashCard, "Player Information", 18, Theme.TextPrimary, true)
+playerTitle.Position = UDim2.new(0, 14, 0, 55)
+
+local playerUser = NewText(dashCard, "Username: " .. LocalPlayer.Name, 15, Theme.TextDim)
+playerUser.Position = UDim2.new(0, 14, 0, 88)
+
+local playerDisplay = NewText(dashCard, "Display Name: " .. LocalPlayer.DisplayName, 15, Theme.TextDim)
+playerDisplay.Position = UDim2.new(0, 14, 0, 118)
+
+---------------------------------------------------------------------
+-- GAME INFO SECTION
+---------------------------------------------------------------------
+local gameTitle = NewText(dashCard, "Current Game", 18, Theme.TextPrimary, true)
+gameTitle.Position = UDim2.new(0, 14, 0, 160)
+
+local gameName = NewText(dashCard, "Name: " .. GetGameName(), 15, Theme.TextDim)
+gameName.Position = UDim2.new(0, 14, 0, 190)
+
+local gameId = NewText(dashCard, "PlaceId: " .. game.PlaceId, 15, Theme.TextDim)
+gameId.Position = UDim2.new(0, 14, 0, 220)
+
+---------------------------------------------------------------------
+-- SYSTEM STATUS SECTION (FPS / Ping)
+---------------------------------------------------------------------
+local sysTitle = NewText(dashCard, "System Status", 18, Theme.TextPrimary, true)
+sysTitle.Position = UDim2.new(0, 14, 0, 260)
+
+local fpsLabel = NewText(dashCard, "FPS: ...", 15, Theme.TextDim)
+fpsLabel.Position = UDim2.new(0, 14, 0, 291)
+
+local pingLabel = NewText(dashCard, "Ping: ...", 15, Theme.TextDim)
+pingLabel.Position = UDim2.new(0, 180, 0, 291)
+
+---------------------------------------------------------------------
+-- LIVE UPDATE THREAD FOR FPS + PING
+---------------------------------------------------------------------
+task.spawn(function()
+    while task.wait(0.2) do
+        local fps = math.floor(1 / RunService.RenderStepped:Wait())
+        local ping = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+
+        fpsLabel.Text = "FPS: " .. tostring(fps)
+        pingLabel.Text = "Ping: " .. tostring(math.floor(ping)) .. "ms"
     end
-    return nil
-end
-Humanoid = GetHumanoid()
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.4)
-    Humanoid = char:WaitForChild("Humanoid")
-
-    if SpeedEnabled then Humanoid.WalkSpeed = SpeedValue end
-    if JumpEnabled then Humanoid.JumpPower = JumpValue end
 end)
+---------------------------------------------------------------------
+-- PART 4 — MAIN PAGE (AUTO CLICKER / MODES / SPEED / JUMP)
+---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
 -- MAIN TITLE
 ---------------------------------------------------------------------
 local mainTitle = Instance.new("TextLabel")
 mainTitle.Size = UDim2.new(1, -20, 0, 32)
+mainTitle.Position = UDim2.new(0, 14, 0, 14)
 mainTitle.BackgroundTransparency = 1
 mainTitle.Font = Enum.Font.GothamBlack
 mainTitle.TextSize = 26
-mainTitle.TextColor3 = Theme.Text_White
+mainTitle.TextColor3 = Theme.TextPrimary
 mainTitle.TextXAlignment = Enum.TextXAlignment.Left
-mainTitle.Text = "Main Hub"
-mainTitle.Parent = Page_Main
+mainTitle.Text = "Main Controls"
+mainTitle.ZIndex = 3
+mainTitle.Parent = mainPage
 
 ---------------------------------------------------------------------
--- MODE TYPE (Hold / Toggle)
+-- SCROLL FRAME FOR CLEAN LAYOUT
 ---------------------------------------------------------------------
-local cardMode = _G.CreateCard(68)
-cardMode.Parent = Page_Main
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -28, 1, -66)
+scroll.Position = UDim2.new(0, 14, 0, 56)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 4
+scroll.CanvasSize = UDim2.new(0,0,0,800)
+scroll.ScrollBarImageColor3 = Theme.Accent
+scroll.ZIndex = 2
+scroll.Parent = mainPage
 
-_G.CreateCardLabel(cardMode, "Mode Type (Hold / Toggle)")
+local scrollLayout = Instance.new("UIListLayout")
+scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+scrollLayout.Padding = UDim.new(0, 12)
+scrollLayout.Parent = scroll
 
-_G.CreateToggle(cardMode, false, function(state)
+---------------------------------------------------------------------
+-- CARD CREATOR
+---------------------------------------------------------------------
+local function newCard(height)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, 0, 0, height)
+    card.BackgroundColor3 = Theme.Background2
+    card.BorderSizePixel = 0
+    card.ZIndex = 3
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 14)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Color = Theme.Stroke
+    stroke.Parent = card
+
+    card.Parent = scroll
+    return card
+end
+
+local function cardLabel(parent, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -20, 0, 24)
+    lbl.Position = UDim2.new(0, 10, 0, 6)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 16
+    lbl.TextColor3 = Theme.TextPrimary
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 4
+    lbl.Parent = parent
+end
+
+local function makeToggle(parent, default, callback)
+    local tog = Instance.new("TextButton")
+    tog.Size = UDim2.new(0, 70, 0, 26)
+    tog.Position = UDim2.new(1, -90, 0, 8)
+    tog.BackgroundColor3 = default and Theme.Accent or Theme.Panel
+    tog.BorderSizePixel = 0
+    tog.Font = Enum.Font.GothamBold
+    tog.TextSize = 14
+    tog.TextColor3 = Theme.TextPrimary
+    tog.Text = default and "ON" or "OFF"
+    tog.ZIndex = 4
+    tog.Parent = parent
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = tog
+
+    local state = default
+
+    tog.MouseButton1Click:Connect(function()
+        state = not state
+        tog.BackgroundColor3 = state and Theme.Accent or Theme.Panel
+        tog.Text = state and "ON" or "OFF"
+        callback(state)
+    end)
+
+    return tog
+end
+
+local function makeSlider(parent, min, max, start, callback)
+    local slider = Instance.new("Frame")
+    slider.Size = UDim2.new(1, -20, 0, 40)
+    slider.Position = UDim2.new(0, 10, 0, 32)
+    slider.BackgroundTransparency = 1
+    slider.ZIndex = 4
+    slider.Parent = parent
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1,0,0,6)
+    bar.Position = UDim2.new(0,0,0,18)
+    bar.BackgroundColor3 = Theme.Stroke
+    bar.BorderSizePixel = 0
+    bar.ZIndex = 4
+    bar.Parent = slider
+
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(1,0)
+    barCorner.Parent = bar
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((start-min)/(max-min),0,1,0)
+    fill.BackgroundColor3 = Theme.Accent
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 4
+    fill.Parent = bar
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(1,0)
+    fillCorner.Parent = fill
+
+    local val = Instance.new("TextLabel")
+    val.Size = UDim2.new(0,60,0,20)
+    val.Position = UDim2.new(1,-70,0,6)
+    val.BackgroundTransparency = 1
+    val.Font = Enum.Font.GothamBold
+    val.TextColor3 = Theme.TextPrimary
+    val.TextSize = 14
+    val.Text = tostring(start)
+    val.ZIndex = 4
+    val.Parent = slider
+
+    local dragging = false
+
+    bar.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    bar.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local rel = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+            fill.Size = UDim2.new(rel,0,1,0)
+            local value = math.floor(min + (max-min)*rel)
+            val.Text = tostring(value)
+            callback(value)
+        end
+    end)
+end
+
+---------------------------------------------------------------------
+-- STATE VARIABLES
+---------------------------------------------------------------------
+local ModeType = "Toggle"
+local ActionType = "Click"
+
+local AutoJump = false
+local AutoFire = false
+local RapidFire = false
+
+local SpeedOn = false
+local SpeedValue = 20
+local OriginalSpeed = 20
+
+local JumpOn = false
+local JumpValue = 50
+local OriginalJump = 50
+
+local Humanoid = Character:WaitForChild("Humanoid")
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.4)
+    Humanoid = char:WaitForChild("Humanoid")
+
+    if SpeedOn then Humanoid.WalkSpeed = SpeedValue else Humanoid.WalkSpeed = OriginalSpeed end
+    if JumpOn then Humanoid.JumpPower = JumpValue else Humanoid.JumpPower = OriginalJump end
+end)
+
+---------------------------------------------------------------------
+-- MODE TYPE CARD
+---------------------------------------------------------------------
+local card1 = newCard(70)
+cardLabel(card1, "Mode Type (Hold / Toggle)")
+makeToggle(card1, false, function(state)
     ModeType = state and "Hold" or "Toggle"
 end)
 
 ---------------------------------------------------------------------
--- ACTION TYPE (Click / Parry)
+-- ACTION TYPE CARD
 ---------------------------------------------------------------------
-local cardAction = _G.CreateCard(68)
-cardAction.Parent = Page_Main
-
-_G.CreateCardLabel(cardAction, "Action Type")
-
-_G.CreateToggle(cardAction, false, function(state)
+local card2 = newCard(70)
+cardLabel(card2, "Action Type (Click / Parry)")
+makeToggle(card2, false, function(state)
     ActionType = state and "Parry" or "Click"
 end)
 
 ---------------------------------------------------------------------
--- RAPID FIRE (Hold-Only)
+-- AUTO FIRE CARD
 ---------------------------------------------------------------------
-local cardRapid = _G.CreateCard(68)
-cardRapid.Parent = Page_Main
-
-_G.CreateCardLabel(cardRapid, "Rapid Fire (Hold Only)")
-
-_G.CreateToggle(cardRapid, false, function(state)
-    RapidFireOn = state
+local card3 = newCard(70)
+cardLabel(card3, "Auto Fire")
+makeToggle(card3, false, function(state)
+    AutoFire = state
 end)
 
 ---------------------------------------------------------------------
--- AUTO JUMP
+-- AUTO JUMP CARD
 ---------------------------------------------------------------------
-local cardAutoJump = _G.CreateCard(68)
-cardAutoJump.Parent = Page_Main
-
-_G.CreateCardLabel(cardAutoJump, "Auto Jump")
-
-_G.CreateToggle(cardAutoJump, false, function(state)
-    AutoJumpOn = state
+local card4 = newCard(70)
+cardLabel(card4, "Auto Jump")
+makeToggle(card4, false, function(state)
+    AutoJump = state
 end)
 
 ---------------------------------------------------------------------
--- AUTO FIRE
+-- RAPID FIRE CARD
 ---------------------------------------------------------------------
-local cardAutoFire = _G.CreateCard(68)
-cardAutoFire.Parent = Page_Main
-
-_G.CreateCardLabel(cardAutoFire, "Auto Fire")
-
-_G.CreateToggle(cardAutoFire, false, function(state)
-    AutoFireOn = state
+local card5 = newCard(70)
+cardLabel(card5, "Rapid Fire (Hold Only)")
+makeToggle(card5, false, function(state)
+    RapidFire = state
 end)
 
 ---------------------------------------------------------------------
--- SPEED SLIDER (Slider + Toggle)
+-- SPEED BOOST CARD
 ---------------------------------------------------------------------
-local cardSpeed = _G.CreateCard(90)
-cardSpeed.Parent = Page_Main
+local card6 = newCard(110)
+cardLabel(card6, "Speed Boost")
 
-_G.CreateCardLabel(cardSpeed, "Speed Boost")
-
--- Toggle
-_G.CreateToggle(cardSpeed, false, function(state)
-    SpeedEnabled = state
-    Humanoid = GetHumanoid()
+makeToggle(card6, false, function(state)
+    SpeedOn = state
     if Humanoid then
-        if state then Humanoid.WalkSpeed = SpeedValue
-        else Humanoid.WalkSpeed = 16 end
+        if state then
+            OriginalSpeed = Humanoid.WalkSpeed
+            Humanoid.WalkSpeed = SpeedValue
+        else
+            Humanoid.WalkSpeed = OriginalSpeed
+        end
     end
 end)
 
--- Slider
-_G.CreateSlider(cardSpeed, 16, 80, 16, function(value)
-    SpeedValue = value
-    if SpeedEnabled and Humanoid then
+makeSlider(card6, 20, 80, 20, function(v)
+    SpeedValue = v
+    if SpeedOn and Humanoid then
         Humanoid.WalkSpeed = SpeedValue
     end
 end)
 
 ---------------------------------------------------------------------
--- JUMP SLIDER (Slider + Toggle)
+-- JUMP BOOST CARD
 ---------------------------------------------------------------------
-local cardJump = _G.CreateCard(90)
-cardJump.Parent = Page_Main
+local card7 = newCard(110)
+cardLabel(card7, "Jump Boost")
 
-_G.CreateCardLabel(cardJump, "Jump Boost")
-
-_G.CreateToggle(cardJump, false, function(state)
-    JumpEnabled = state
-    Humanoid = GetHumanoid()
+makeToggle(card7, false, function(state)
+    JumpOn = state
     if Humanoid then
-        if state then Humanoid.JumpPower = JumpValue
-        else Humanoid.JumpPower = 50 end
+        if state then
+            OriginalJump = Humanoid.JumpPower
+            Humanoid.JumpPower = JumpValue
+        else
+            Humanoid.JumpPower = OriginalJump
+        end
     end
 end)
 
-_G.CreateSlider(cardJump, 50, 120, 50, function(value)
-    JumpValue = value
-    if JumpEnabled and Humanoid then
+makeSlider(card7, 50, 120, 50, function(v)
+    JumpValue = v
+    if JumpOn and Humanoid then
         Humanoid.JumpPower = JumpValue
     end
 end)
-
 ---------------------------------------------------------------------
--- MAIN PAGE FINISHED
----------------------------------------------------------------------
----------------------------------------------------------------------
--- PART 5 — BLATANT PAGE
+-- PART 5 — BLATANT PAGE (FPS / SHADOWS / ANTI-LAG / ULTRA MODE)
 ---------------------------------------------------------------------
 
----------------------------------------------------------------------
--- DEFAULT VARIABLES
----------------------------------------------------------------------
-local FPSBoostOn    = false
-local AntiLagOn     = false
-local ShadowsOn     = false
-local UltraBoostOn  = false
+local function NewLabel(parent, text, size, yPos)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,-20,0,size+10)
+    lbl.Position = UDim2.new(0,10,0,yPos)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = size
+    lbl.TextColor3 = Theme.TextPrimary
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 3
+    lbl.Parent = parent
+    return lbl
+end
 
 ---------------------------------------------------------------------
--- BLATANT PAGE TITLE
+-- BLATANT TITLE
 ---------------------------------------------------------------------
-local blTitle = Instance.new("TextLabel")
-blTitle.Size = UDim2.new(1, -20, 0, 32)
-blTitle.BackgroundTransparency = 1
-blTitle.Font = Enum.Font.GothamBlack
-blTitle.TextSize = 26
-blTitle.TextColor3 = Theme.Text_White
-blTitle.TextXAlignment = Enum.TextXAlignment.Left
-blTitle.Text = "Blatant"
-blTitle.Parent = Page_Blatant
+local blTitle = NewLabel(blatantPage, "Player Modifiers", 26, 14)
 
 ---------------------------------------------------------------------
--- FPS BOOST (Lighting)
+-- SCROLL FRAME FOR CLEAN LAYOUT
 ---------------------------------------------------------------------
-local cardFPS = _G.CreateCard(68)
-cardFPS.Parent = Page_Blatant
+local blScroll = Instance.new("ScrollingFrame")
+blScroll.Size = UDim2.new(1, -28, 1, -66)
+blScroll.Position = UDim2.new(0, 14, 0, 56)
+blScroll.BackgroundTransparency = 1
+blScroll.BorderSizePixel = 0
+blScroll.ScrollBarThickness = 4
+blScroll.CanvasSize = UDim2.new(0,0,0,650)
+blScroll.ScrollBarImageColor3 = Theme.Accent
+blScroll.ZIndex = 2
+blScroll.Parent = blatantPage
 
-_G.CreateCardLabel(cardFPS, "FPS Boost")
+local blLayout = Instance.new("UIListLayout")
+blLayout.SortOrder = Enum.SortOrder.LayoutOrder
+blLayout.Padding = UDim.new(0,12)
+blLayout.Parent = blScroll
 
-_G.CreateToggle(cardFPS, false, function(state)
-    FPSBoostOn = state
+---------------------------------------------------------------------
+-- CARD CREATOR (Same style as Main Page)
+---------------------------------------------------------------------
+local function blCard(height)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1,0,0,height)
+    card.BackgroundColor3 = Theme.Background2
+    card.BorderSizePixel = 0
+    card.ZIndex = 3
+    card.Parent = blScroll
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,14)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Color = Theme.Stroke
+    stroke.Parent = card
+
+    return card
+end
+
+local function blLabel(parent, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,-20,0,24)
+    lbl.Position = UDim2.new(0,10,0,6)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 16
+    lbl.TextColor3 = Theme.TextPrimary
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 4
+    lbl.Parent = parent
+end
+
+local function blToggle(parent, default, callback)
+    local tog = Instance.new("TextButton")
+    tog.Size = UDim2.new(0,70,0,26)
+    tog.Position = UDim2.new(1,-90,0,8)
+    tog.BackgroundColor3 = default and Theme.Accent or Theme.Panel
+    tog.BorderSizePixel = 0
+    tog.Font = Enum.Font.GothamBold
+    tog.TextSize = 14
+    tog.TextColor3 = Theme.TextPrimary
+    tog.Text = default and "ON" or "OFF"
+    tog.ZIndex = 4
+    tog.Parent = parent
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,8)
+    corner.Parent = tog
+
+    local state = default
+
+    tog.MouseButton1Click:Connect(function()
+        state = not state
+        tog.BackgroundColor3 = state and Theme.Accent or Theme.Panel
+        tog.Text = state and "ON" or "OFF"
+        callback(state)
+    end)
+end
+
+---------------------------------------------------------------------
+-- STATE VARS
+---------------------------------------------------------------------
+local FPSBoost = false
+local AntiLag = false
+local Shadows = false
+local Ultra = false
+
+---------------------------------------------------------------------
+-- FPS BOOST CARD
+---------------------------------------------------------------------
+local c1 = blCard(70)
+blLabel(c1, "FPS Boost")
+
+blToggle(c1, false, function(state)
+    FPSBoost = state
+
     if state then
-        -- turn off expensive effects
         for _,v in pairs(Lighting:GetChildren()) do
-            if v:IsA("BloomEffect") or 
-               v:IsA("SunRaysEffect") or 
-               v:IsA("ColorCorrectionEffect") or 
-               v:IsA("DepthOfFieldEffect") or
-               v:IsA("Atmosphere") then
+            if v:IsA("BloomEffect") or v:IsA("SunRaysEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("Atmosphere") then
                 v.Enabled = false
             end
         end
         Lighting.FogEnd = 1e6
-        Lighting.GlobalShadows = ShadowsOn -- respect shadow toggle
+        Lighting.GlobalShadows = Shadows
     else
-        -- restore default-ish
         Lighting.FogEnd = 1000
         Lighting.GlobalShadows = true
         for _,v in pairs(Lighting:GetChildren()) do
@@ -815,15 +1049,13 @@ _G.CreateToggle(cardFPS, false, function(state)
 end)
 
 ---------------------------------------------------------------------
--- ANTI-LAG (Remove decals/particles)
+-- ANTI-LAG CARD
 ---------------------------------------------------------------------
-local cardLag = _G.CreateCard(68)
-cardLag.Parent = Page_Blatant
+local c2 = blCard(70)
+blLabel(c2, "Anti-Lag (Remove Particles/Decals)")
 
-_G.CreateCardLabel(cardLag, "Anti-Lag (Remove Particles/Trails)")
-
-_G.CreateToggle(cardLag, false, function(state)
-    AntiLagOn = state
+blToggle(c2, false, function(state)
+    AntiLag = state
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
             obj.Enabled = not state
@@ -835,50 +1067,42 @@ _G.CreateToggle(cardLag, false, function(state)
 end)
 
 ---------------------------------------------------------------------
--- SHADOWS TOGGLE
+-- SHADOWS CARD
 ---------------------------------------------------------------------
-local cardShadow = _G.CreateCard(68)
-cardShadow.Parent = Page_Blatant
+local c3 = blCard(70)
+blLabel(c3, "Shadows")
 
-_G.CreateCardLabel(cardShadow, "Shadows")
-
-_G.CreateToggle(cardShadow, false, function(state)
-    ShadowsOn = state
+blToggle(c3, false, function(state)
+    Shadows = state
     Lighting.GlobalShadows = state
 end)
 
 ---------------------------------------------------------------------
--- ULTRA PERFORMANCE MODE (Combines all boosting)
+-- ULTRA PERFORMANCE MODE CARD
 ---------------------------------------------------------------------
-local cardUltra = _G.CreateCard(72)
-cardUltra.Parent = Page_Blatant
+local c4 = blCard(90)
+blLabel(c4, "Ultra Performance Mode")
 
-_G.CreateCardLabel(cardUltra, "Ultra Performance Mode")
-
-_G.CreateToggle(cardUltra, false, function(state)
-    UltraBoostOn = state
+blToggle(c4, false, function(state)
+    Ultra = state
 
     if state then
-        -- FPS Boost
+        -- Turn off heavy stuff
         for _,v in pairs(Lighting:GetChildren()) do
-            if v:IsA("BloomEffect") or 
-               v:IsA("SunRaysEffect") or
-               v:IsA("Atmosphere") or
-               v:IsA("DepthOfFieldEffect") then
+            if v:IsA("BloomEffect") or v:IsA("SunRaysEffect") or v:IsA("Atmosphere") or v:IsA("DepthOfFieldEffect") then
                 v.Enabled = false
             end
         end
-        Lighting.GlobalShadows = false
         Lighting.FogEnd = 1e6
+        Lighting.GlobalShadows = false
 
-        -- Anti-Lag
+        -- Workspace cleanup
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then obj.Enabled = false end
             if obj:IsA("Decal") then obj.Transparency = 1 end
         end
 
     else
-        -- Restore default
         Lighting.FogEnd = 1000
         Lighting.GlobalShadows = true
 
@@ -888,99 +1112,256 @@ _G.CreateToggle(cardUltra, false, function(state)
         end
     end
 end)
-
 ---------------------------------------------------------------------
--- BLATANT PAGE FINISHED
----------------------------------------------------------------------
----------------------------------------------------------------------
--- PART 6 — FINAL ENGINE (Auto Click, Auto Parry, Rapid Fire, Modes)
+-- PART 6 — OTHERS PAGE (Bug Report, Utilities)
 ---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
--- INPUT KEYS
+-- TITLE
 ---------------------------------------------------------------------
-local ToggleKey = Enum.KeyCode.E         -- Main key
-local ParryKey  = Enum.KeyCode.E         -- Parry key (locked)
-local ManualKey = Enum.KeyCode.Q         -- Manual spam key (locked)
+local oTitle = Instance.new("TextLabel")
+oTitle.Size = UDim2.new(1, -20, 0, 32)
+oTitle.Position = UDim2.new(0, 14, 0, 14)
+oTitle.BackgroundTransparency = 1
+oTitle.Font = Enum.Font.GothamBlack
+oTitle.TextSize = 26
+oTitle.TextColor3 = Theme.TextPrimary
+oTitle.TextXAlignment = Enum.TextXAlignment.Left
+oTitle.Text = "Utilities"
+oTitle.ZIndex = 3
+oTitle.Parent = othersPage
 
 ---------------------------------------------------------------------
--- STATE VARIABLES
+-- SCROLL AREA
 ---------------------------------------------------------------------
-local Clicking      = false
-local ManualSpam    = false
-local LastInput     = tick()
+local oScroll = Instance.new("ScrollingFrame")
+oScroll.Size = UDim2.new(1, -28, 1, -66)
+oScroll.Position = UDim2.new(0, 14, 0, 56)
+oScroll.BackgroundTransparency = 1
+oScroll.BorderSizePixel = 0
+oScroll.ScrollBarThickness = 4
+oScroll.CanvasSize = UDim2.new(0,0,0,500)
+oScroll.ScrollBarImageColor3 = Theme.Accent
+oScroll.ZIndex = 2
+oScroll.Parent = othersPage
+
+local oLayout = Instance.new("UIListLayout")
+oLayout.SortOrder = Enum.SortOrder.LayoutOrder
+oLayout.Padding = UDim.new(0,12)
+oLayout.Parent = oScroll
 
 ---------------------------------------------------------------------
--- SAFE INPUT HANDLER
+-- SMALL CARD CREATOR
 ---------------------------------------------------------------------
-local function SafeKeyPress(key)
-    if not VIM then return end
-    pcall(function()
-        VIM:SendKeyEvent(true, key, false, game)
-        task.wait(0.02)
-        VIM:SendKeyEvent(false, key, false, game)
-    end)
+local function utilCard(height)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1,0,0,height)
+    card.BackgroundColor3 = Theme.Background2
+    card.BorderSizePixel = 0
+    card.ZIndex = 3
+    card.Parent = oScroll
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,14)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Color = Theme.Stroke
+    stroke.Parent = card
+
+    return card
+end
+
+local function utilLabel(parent, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,-20,0,24)
+    lbl.Position = UDim2.new(0,10,0,6)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 16
+    lbl.TextColor3 = Theme.TextPrimary
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 4
+    lbl.Parent = parent
 end
 
 ---------------------------------------------------------------------
--- MOUSE CLICK
+-- DISCORD JOIN CARD
 ---------------------------------------------------------------------
-local function SafeMouse1Click()
+local dCard = utilCard(80)
+utilLabel(dCard, "Official Discord")
+
+local joinBtn = Instance.new("TextButton")
+joinBtn.Size = UDim2.new(0,160,0,30)
+joinBtn.Position = UDim2.new(0, 10, 0, 40)
+joinBtn.BackgroundColor3 = Theme.Accent
+joinBtn.BorderSizePixel = 0
+joinBtn.Font = Enum.Font.GothamBold
+joinBtn.TextSize = 14
+joinBtn.TextColor3 = Color3.new(0,0,0)
+joinBtn.Text = "Join Discord"
+joinBtn.ZIndex = 4
+joinBtn.Parent = dCard
+
+local joinCorner = Instance.new("UICorner")
+joinCorner.CornerRadius = UDim.new(0,10)
+joinCorner.Parent = joinBtn
+
+joinBtn.MouseButton1Click:Connect(function()
+    setclipboard("https://discord.gg/placeholder") 
+end)
+
+---------------------------------------------------------------------
+-- BUG REPORT CARD
+---------------------------------------------------------------------
+local bCard = utilCard(180)
+utilLabel(bCard, "Bug Report")
+
+local bugBox = Instance.new("TextBox")
+bugBox.Size = UDim2.new(1, -20, 0, 80)
+bugBox.Position = UDim2.new(0, 10, 0, 40)
+bugBox.BackgroundColor3 = Theme.Panel
+bugBox.BorderSizePixel = 0
+bugBox.Font = Enum.Font.Gotham
+bugBox.TextSize = 14
+bugBox.TextColor3 = Theme.TextPrimary
+bugBox.PlaceholderText = "Describe the bug..."
+bugBox.PlaceholderColor3 = Theme.TextDim
+bugBox.TextWrapped = true
+bugBox.ClearTextOnFocus = false
+bugBox.MultiLine = true
+bugBox.ZIndex = 4
+bugBox.Parent = bCard
+
+local bCorner = Instance.new("UICorner")
+bCorner.CornerRadius = UDim.new(0,10)
+bCorner.Parent = bugBox
+
+local sendBtn = Instance.new("TextButton")
+sendBtn.Size = UDim2.new(0,150,0,30)
+sendBtn.Position = UDim2.new(0,10,0,132)
+sendBtn.BackgroundColor3 = Theme.Accent
+sendBtn.BorderSizePixel = 0
+sendBtn.Font = Enum.Font.GothamBold
+sendBtn.TextSize = 14
+sendBtn.TextColor3 = Color3.new(0,0,0)
+sendBtn.Text = "Submit Bug Report"
+sendBtn.ZIndex = 4
+sendBtn.Parent = bCard
+
+local sbCorner = Instance.new("UICorner")
+sbCorner.CornerRadius = UDim.new(0,10)
+sbCorner.Parent = sendBtn
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1,-180,0,30)
+status.Position = UDim2.new(0,170,0,132)
+status.BackgroundTransparency = 1
+status.Font = Enum.Font.Gotham
+status.TextSize = 12
+status.TextColor3 = Theme.TextDim
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.Text = ""
+status.ZIndex = 4
+status.Parent = bCard
+
+sendBtn.MouseButton1Click:Connect(function()
+    local txt = bugBox.Text
+
+    if txt:gsub("%s+","") == "" then
+        status.TextColor3 = Color3.fromRGB(255,120,120)
+        status.Text = "Enter something first!"
+        return
+    end
+
+    status.TextColor3 = Theme.TextDim
+    status.Text = "Sending..."
+
+    task.spawn(function()
+        local ok, err = SendBug_Report(txt)
+        if ok then
+            bugBox.Text = ""
+            status.TextColor3 = Color3.fromRGB(120,255,120)
+            status.Text = "Sent!"
+        else
+            status.TextColor3 = Color3.fromRGB(255,120,120)
+            status.Text = "Failed (".. tostring(err) ..")"
+        end
+    end)
+end)
+---------------------------------------------------------------------
+-- PART 7 — INPUT HANDLING + AUTO CLICK ENGINE + BOOST ENGINE
+---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+-- SAFE INPUT FUNCTIONS
+---------------------------------------------------------------------
+local function SafeKeyPress(key)
+    pcall(function()
+        keypress(key)
+        task.wait(0.03)
+        keyrelease(key)
+    end)
+end
+
+local function SafeMouseClick()
     pcall(function()
         mouse1click()
     end)
 end
 
 ---------------------------------------------------------------------
--- CLICK/PARRY ACTION
+-- INPUT BINDS (LOCKED AS REQUESTED)
+---------------------------------------------------------------------
+local TOGGLE_KEY = Enum.KeyCode.E       -- Main click/parry key
+local MANUAL_KEY = Enum.KeyCode.Q       -- Manual spam key
+
+---------------------------------------------------------------------
+-- CLICK/PARRY ACTION FUNCTION
 ---------------------------------------------------------------------
 local function DoAction()
     if ActionType == "Click" then
-        SafeMouse1Click()
+        SafeMouseClick()
     else
-        SafeKeyPress(ParryKey)
+        SafeKeyPress(TOGGLE_KEY)
     end
 end
 
 ---------------------------------------------------------------------
--- MODE HANDLING (HOLD vs TOGGLE)
+-- MAIN STATE VARIABLES
 ---------------------------------------------------------------------
-local function ToggleClicking()
-    if ModeType == "Toggle" then
-        Clicking = not Clicking
-    else
-        Clicking = true
-    end
-end
-
-local function ReleaseClicking()
-    if ModeType == "Hold" then
-        Clicking = false
-    end
-end
+local Clicking     = false
+local ManualSpam   = false
 
 ---------------------------------------------------------------------
--- USER INPUT
+-- INPUT HANDLING
 ---------------------------------------------------------------------
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
 
-    -- Main clicking key
-    if input.KeyCode == ToggleKey then
-        ToggleClicking()
+    if input.KeyCode == TOGGLE_KEY then
+        if ModeType == "Toggle" then
+            Clicking = not Clicking
+        else
+            Clicking = true
+        end
     end
 
-    -- Manual Q spam key
-    if input.KeyCode == ManualKey then
+    if input.KeyCode == MANUAL_KEY then
         ManualSpam = true
     end
 end)
 
 UIS.InputEnded:Connect(function(input)
-    if input.KeyCode == ToggleKey then
-        ReleaseClicking()
+    if input.KeyCode == TOGGLE_KEY then
+        if ModeType == "Hold" then
+            Clicking = false
+        end
     end
-    if input.KeyCode == ManualKey then
+
+    if input.KeyCode == MANUAL_KEY then
         ManualSpam = false
     end
 end)
@@ -990,7 +1371,7 @@ end)
 ---------------------------------------------------------------------
 task.spawn(function()
     while true do
-        if AutoJumpOn and Humanoid then
+        if AutoJump and Humanoid then
             Humanoid.Jump = true
         end
         task.wait(0.18)
@@ -1002,66 +1383,50 @@ end)
 ---------------------------------------------------------------------
 task.spawn(function()
     while true do
-        if AutoFireOn then
-            SafeMouse1Click()
+        if AutoFire then
+            SafeMouseClick()
         end
         task.wait(0.12)
     end
 end)
 
 ---------------------------------------------------------------------
--- RAPID FIRE ENGINE (HOLD ONLY)
+-- RAPID FIRE ENGINE (Hold Only)
 ---------------------------------------------------------------------
 task.spawn(function()
     while true do
-        if RapidFireOn and UIS:IsKeyDown(Enum.KeyCode.ButtonR2) then
-            SafeMouse1Click()
+        if RapidFire and UIS:IsKeyDown(TOGGLE_KEY) then
+            SafeMouseClick()
         end
         task.wait(0.05)
     end
 end)
 
 ---------------------------------------------------------------------
--- MAIN AUTO-CLICK/PARRY LOOP
+-- MAIN CLICK/PARRY LOOP
 ---------------------------------------------------------------------
 task.spawn(function()
     while task.wait() do
-        -- Main clicker/parry
         if Clicking then
             DoAction()
         end
 
-        -- Manual spam
         if ManualSpam then
-            SafeKeyPress(ManualKey)
+            SafeKeyPress(MANUAL_KEY)
         end
     end
 end)
 
 ---------------------------------------------------------------------
--- SEND ACTION TO WEBHOOK
+-- RIGHT CTRL — GUI TOGGLE
 ---------------------------------------------------------------------
-local function LogAction()
-    local mode = ModeType
-    local act  = ActionType
-    SendWebhook(mode, act)
-end
-
--- Log the final action selection once user interacts
-task.delay(1.5, LogAction)
-
----------------------------------------------------------------------
--- GUI TOGGLE (RightCtrl)
----------------------------------------------------------------------
-local guiVisible = true
-UIS.InputBegan:Connect(function(i, g)
-    if not g and i.KeyCode == Enum.KeyCode.RightControl then
-        guiVisible = not guiVisible
-        ScreenGui.Enabled = guiVisible
+UIS.InputBegan:Connect(function(input, gp)
+    if not gp and input.KeyCode == Enum.KeyCode.RightControl then
+        GUI.Enabled = not GUI.Enabled
     end
 end)
 
 ---------------------------------------------------------------------
--- FINAL CONFIRMATION
+-- FINAL LOADED MESSAGE
 ---------------------------------------------------------------------
-print("[Argon-Bin Hub X] v3.5 Loaded Successfully.")
+print("[BinHub X v3.6] Fully Loaded — Engine Running.")
