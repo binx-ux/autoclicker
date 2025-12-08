@@ -1402,6 +1402,9 @@ end)
 ---------------------------------------------------------------------//
 -- OTHERS PAGE (BUG REPORT + INFO)
 ---------------------------------------------------------------------//
+---------------------------------------------------------------------//
+-- OTHERS PAGE (BUG REPORT ONLY)
+---------------------------------------------------------------------//
 do
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1,-40,0,28)
@@ -1415,27 +1418,10 @@ do
     title.ZIndex = 3
     title.Parent = othersPage
 
-    local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1,-40,0,70)
-    info.Position = UDim2.new(0,20,0,52)
-    info.BackgroundTransparency = 1
-    info.Font = Enum.Font.Gotham
-    info.TextSize = 13
-    info.TextColor3 = Color3.fromRGB(200,200,210)
-    info.TextWrapped = true
-    info.TextXAlignment = Enum.TextXAlignment.Left
-    info.TextYAlignment = Enum.TextYAlignment.Top
-    info.Text =
-        "• Script optimized for performance\n"..
-        "• Keybind changes disabled for safety\n"..
-        "• Includes HWID + Exec Counter Webhook Logs\n"..
-        "• Ping/FPS/Region tracking enabled"
-    info.ZIndex = 3
-    info.Parent = othersPage
-
+    -- Bug report only
     local bugLabel = Instance.new("TextLabel")
     bugLabel.Size = UDim2.new(1,-40,0,20)
-    bugLabel.Position = UDim2.new(0,20,0,130)
+    bugLabel.Position = UDim2.new(0,20,0,60)
     bugLabel.BackgroundTransparency = 1
     bugLabel.Font = Enum.Font.GothamSemibold
     bugLabel.TextSize = 14
@@ -1447,7 +1433,7 @@ do
 
     local bugBox = Instance.new("TextBox")
     bugBox.Size = UDim2.new(1,-40,0,120)
-    bugBox.Position = UDim2.new(0,20,0,154)
+    bugBox.Position = UDim2.new(0,20,0,84)
     bugBox.BackgroundColor3 = Color3.fromRGB(25,25,32)
     bugBox.BorderSizePixel = 0
     bugBox.Font = Enum.Font.Gotham
@@ -1466,7 +1452,7 @@ do
 
     local bugButton = Instance.new("TextButton")
     bugButton.Size = UDim2.new(0,160,0,30)
-    bugButton.Position = UDim2.new(0,20,0,284)
+    bugButton.Position = UDim2.new(0,20,0,214)
     bugButton.BackgroundColor3 = Color3.fromRGB(80,200,120)
     bugButton.BorderSizePixel = 0
     bugButton.Font = Enum.Font.GothamBold
@@ -1482,7 +1468,7 @@ do
 
     local bugStatusLabel = Instance.new("TextLabel")
     bugStatusLabel.Size = UDim2.new(1,-200,0,20)
-    bugStatusLabel.Position = UDim2.new(0,190,0,288)
+    bugStatusLabel.Position = UDim2.new(0,190,0,218)
     bugStatusLabel.BackgroundTransparency = 1
     bugStatusLabel.Font = Enum.Font.Gotham
     bugStatusLabel.TextSize = 12
