@@ -201,7 +201,7 @@ end)
 ---------------------------------------------------------------------
 -- WEBHOOK SENDER (Your Original Webhook)
 ---------------------------------------------------------------------
-local WEBHOOK_URL = "YOUR_WEBHOOK_HERE"
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
 
 local function SendWebhook(mode, action)
     local exec, ver = GetExec()
