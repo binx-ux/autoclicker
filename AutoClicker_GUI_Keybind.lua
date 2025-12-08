@@ -82,7 +82,7 @@ writefile("BinHubX_execCount.txt", tostring(execCount))
 -- MAIN WEBHOOK + BUG REPORT WEBHOOK
 ---------------------------------------------------------------------
 local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
-local BUG_WEBHOOK  = MAIN_WEBHOOK -- your request: use same webhook
+local BUG_WEBHOOK  = MAIN_WEBHOOK -- "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
 
 ---------------------------------------------------------------------
 -- GAME NAME FETCH
