@@ -713,6 +713,9 @@ applyTheme("Default")
 ---------------------------------------------------------------------//
 -- HOME PAGE
 ---------------------------------------------------------------------//
+---------------------------------------------------------------------//
+-- HOME PAGE
+---------------------------------------------------------------------//
 do
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1,-40,0,32)
@@ -738,6 +741,57 @@ do
     info.Text = "Account: @"..userName..
         "\nUse the tabs to control your auto fire, parry, boosts and tools."
     info.Parent = homePage
+end
+
+---------------------------------------------------------------------//
+-- CLICKER STATE + ROW HELPER
+---------------------------------------------------------------------//
+local clicking         = false
+local cpsValue         = 10
+local modeType         = "Toggle"   -- Hold / Toggle
+local actionType       = "Click"    -- Click / Parry
+local toggleKey        = Enum.KeyCode.E
+local parryKey         = Enum.KeyCode.E
+local manualKey        = Enum.KeyCode.R
+local manualSpamActive = false
+local triggerbotOn     = false
+local antiAfkOn        = false
+
+-- generic row builder for Main page
+local function makeRow(parent, y, labelText)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1,-40,0,34)
+    row.Position = UDim2.new(0,20,0,y)
+    row.BackgroundTransparency = 1
+    row.Parent = parent
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,-160,1,0)
+    lbl.Position = UDim2.new(0,0,0,0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 14
+    lbl.TextColor3 = Color3.fromRGB(220,220,230)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = labelText
+    lbl.Parent = row
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0,90,0,26)
+    btn.Position = UDim2.new(1,-100,0.5,-13)
+    btn.BackgroundColor3 = Color3.fromRGB(35,35,50)
+    btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Text = "..."
+    btn.Parent = row
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,8)
+    c.Parent = btn
+
+    return row, lbl, btn
 end
 
 ---------------------------------------------------------------------//
@@ -803,6 +857,7 @@ do
     regionLabel = mk(92,"Region: --")
 end
 
+-- FPS / Ping / Region update
 local lastFps = 0
 RunService.RenderStepped:Connect(function(dt)
     if dt > 0 then
@@ -855,8 +910,7 @@ local function getServerRegion()
     end
 
     local ok2, loc = pcall(function()
-        return LocalizationService.RobloxLocaleId
-            or LocalizationService.SystemLocaleId
+        return LocalizationService.RobloxLocaleId or LocalizationService.SystemLocaleId
     end)
     if ok2 and loc then
         cachedRegion = tostring(loc)
@@ -883,8 +937,7 @@ task.spawn(function()
 
         if fpsLabel then fpsLabel.Text = "FPS: "..tostring(lastFps) end
         if pingLabel then
-            pingLabel.Text = pingMs and ("Ping: "..pingMs.." ms")
-                or "Ping: N/A"
+            pingLabel.Text = pingMs and ("Ping: "..pingMs.." ms") or "Ping: N/A"
         end
         if wsLabel then wsLabel.Text = string.format("WalkSpeed: %.1f", ws) end
         if jpLabel then jpLabel.Text = string.format("JumpPower: %.1f", jp) end
@@ -893,56 +946,6 @@ task.spawn(function()
         task.wait(0.1)
     end
 end)
----------------------------------------------------------------------//
--- CLICKER STATE + ROW HELPER (NEW – fixes blank tabs)
----------------------------------------------------------------------//
-local clicking         = false
-local cpsValue         = 10
-local modeType         = "Toggle"   -- Hold / Toggle
-local actionType       = "Click"    -- Click / Parry
-local toggleKey        = Enum.KeyCode.E
-local parryKey         = Enum.KeyCode.E
-local manualKey        = Enum.KeyCode.R
-local manualSpamActive = false
-local triggerbotOn     = false
-local antiAfkOn        = false
-
--- generic row builder for Main page
-local function makeRow(parent, y, labelText)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1,-40,0,34)
-    row.Position = UDim2.new(0,20,0,y)
-    row.BackgroundTransparency = 1
-    row.Parent = parent
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1,-160,1,0)
-    lbl.Position = UDim2.new(0,0,0,0)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 14
-    lbl.TextColor3 = Color3.fromRGB(220,220,230)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = labelText
-    lbl.Parent = row
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,90,0,26)
-    btn.Position = UDim2.new(1,-100,0.5,-13)
-    btn.BackgroundColor3 = Color3.fromRGB(35,35,50)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Text = "..."
-    btn.Parent = row
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,8)
-    c.Parent = btn
-
-    return row, lbl, btn
-end
 
 ---------------------------------------------------------------------//
 -- MAIN PAGE (CLICKER / MODES)
@@ -972,28 +975,23 @@ do
 
     local function updateStatus()
         local onOff = clicking and "ON" or "OFF"
-        status.TextColor3 = clicking
-            and Color3.fromRGB(80,255,120)
-            or  Color3.fromRGB(255,80,80)
-        status.Text = string.format(
-            "Status: %s (%d CPS, %s, %s)",
-            onOff, cpsValue, modeType, actionType
-        )
+        status.TextColor3 = clicking and Color3.fromRGB(80,255,120) or Color3.fromRGB(255,80,80)
+        status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cpsValue, modeType, actionType)
     end
 
     local function shrinkRow(row)
         row.Size = UDim2.new(0,380,0,34)
     end
 
-    local row1,_, modeBtn    = makeRow(mainPage,  80, "Mode Type (Hold/Toggle)")
+    local row1,_, modeBtn   = makeRow(mainPage, 80,  "Mode Type (Hold/Toggle)")
     shrinkRow(row1)
-    local row2,_, actionBtn  = makeRow(mainPage, 120, "Action Type (Click/Parry)")
+    local row2,_, actionBtn = makeRow(mainPage, 120, "Action Type (Click/Parry)")
     shrinkRow(row2)
-    local row3,_, rapidBtn   = makeRow(mainPage, 160, "Rapid Fire (Hold-Only)")
+    local row3,_, rapidBtn  = makeRow(mainPage, 160, "Rapid Fire (Hold-Only)")
     shrinkRow(row3)
     local row4,_, triggerBtn = makeRow(mainPage, 200, "Triggerbot (Parry Spam)")
     shrinkRow(row4)
-    local row5,_, manualBtn  = makeRow(mainPage, 240, "Manual Spam Key (press to spam)")
+    local row5,_, manualBtn = makeRow(mainPage, 240, "Manual Spam Key (press to spam)")
     shrinkRow(row5)
 
     modeBtn.Text = modeType
@@ -1016,8 +1014,7 @@ do
 
     local function setToggleVisual(btn, on)
         btn.Text = on and "ON" or "OFF"
-        btn.BackgroundColor3 = on and ThemeAccentOn
-            or Color3.fromRGB(120,40,40)
+        btn.BackgroundColor3 = on and ThemeAccentOn or Color3.fromRGB(120,40,40)
     end
 
     local rapidOn = false
@@ -1045,8 +1042,7 @@ do
             if not listening or gp then return end
             if inp.UserInputType == Enum.UserInputType.Keyboard then
                 manualKey = inp.KeyCode
-                local name = tostring(manualKey):match("%.(.+)")
-                    or tostring(manualKey)
+                local name = tostring(manualKey):match("%.(.+)") or tostring(manualKey)
                 manualBtn.Text = "Key: "..name
                 listening = false
                 conn:Disconnect()
@@ -1125,797 +1121,24 @@ end
 ---------------------------------------------------------------------//
 -- BLATANT PAGE (SPEED & JUMP BOOSTS)
 ---------------------------------------------------------------------//
-local speedEnabled      = false
-local jumpEnabled       = false
-local speedValue        = 20
-local jumpValue         = 50
-local originalWalkSpeed = nil
-local originalJumpPower = nil
-
-local blatantScroll = Instance.new("ScrollingFrame")
-blatantScroll.Size = UDim2.new(1,0,1,0)
-blatantScroll.CanvasSize = UDim2.new(0,0,0,260)
-blatantScroll.BackgroundTransparency = 1
-blatantScroll.BorderSizePixel = 0
-blatantScroll.ScrollBarThickness = 4
-blatantScroll.Parent = blatantPage
-
-local bLayout = Instance.new("UIListLayout")
-bLayout.SortOrder = Enum.SortOrder.LayoutOrder
-bLayout.Padding = UDim.new(0,16)
-bLayout.Parent = blatantScroll
-
-local function createBlatantCard(height)
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1,-40,0,height)
-    f.BackgroundColor3 = Color3.fromRGB(20,20,28)
-    f.BorderSizePixel = 0
-    f.ZIndex = 2
-    f.Parent = blatantScroll
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,12)
-    c.Parent = f
-
-    local s = Instance.new("UIStroke")
-    s.Thickness = 1
-    s.Color = Color3.fromRGB(55,55,65)
-    s.Parent = f
-
-    return f
-end
-
-local function addTitleDesc(parent,title,desc)
-    local t = Instance.new("TextLabel")
-    t.Size = UDim2.new(1,-20,0,22)
-    t.Position = UDim2.new(0,10,0,10)
-    t.BackgroundTransparency = 1
-    t.Font = Enum.Font.GothamSemibold
-    t.TextSize = 16
-    t.TextColor3 = Color3.fromRGB(255,255,255)
-    t.TextXAlignment = Enum.TextXAlignment.Left
-    t.Text = title
-    t.ZIndex = 3
-    t.Parent = parent
-
-    local d = Instance.new("TextLabel")
-    d.Size = UDim2.new(1,-20,0,32)
-    d.Position = UDim2.new(0,10,0,32)
-    d.BackgroundTransparency = 1
-    d.Font = Enum.Font.Gotham
-    d.TextSize = 12
-    d.TextWrapped = true
-    d.TextYAlignment = Enum.TextYAlignment.Top
-    d.TextColor3 = Color3.fromRGB(200,200,210)
-    d.TextXAlignment = Enum.TextXAlignment.Left
-    d.Text = desc
-    d.ZIndex = 3
-    d.Parent = parent
-end
-
-local function makeToggleSmall(parent,x,y)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0,42,0,20)
-    frame.Position = UDim2.new(0,x,0,y)
-    frame.BackgroundColor3 = Color3.fromRGB(40,40,50)
-    frame.BorderSizePixel = 0
-    frame.ZIndex = 3
-    frame.Parent = parent
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(1,0); c.Parent = frame
-
-    local thumb = Instance.new("Frame")
-    thumb.Size = UDim2.new(0,16,0,16)
-    thumb.Position = UDim2.new(0,2,0.5,-8)
-    thumb.BackgroundColor3 = Color3.fromRGB(80,80,90)
-    thumb.BorderSizePixel = 0
-    thumb.ZIndex = 4
-    thumb.Parent = frame
-
-    local tc = Instance.new("UICorner")
-    tc.CornerRadius = UDim.new(1,0); tc.Parent = thumb
-
-    return frame, thumb
-end
-
-local function makeSlider(parent,y,minVal,maxVal,initial,cb)
-    local bar = Instance.new("Frame")
-    bar.Size = UDim2.new(1,-40,0,6)
-    bar.Position = UDim2.new(0,10,0,y)
-    bar.BackgroundColor3 = Color3.fromRGB(35,35,44)
-    bar.BorderSizePixel = 0
-    bar.ZIndex = 3
-    bar.Parent = parent
-
-    local bc = Instance.new("UICorner")
-    bc.CornerRadius = UDim.new(0,6); bc.Parent = bar
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new(0,0,1,0)
-    fill.BackgroundColor3 = ThemeAccentOn
-    fill.BorderSizePixel = 0
-    fill.ZIndex = 4
-    fill.Parent = bar
-
-    local fc = Instance.new("UICorner")
-    fc.CornerRadius = UDim.new(0,6); fc.Parent = fill
-
-    local dragging = false
-
-    local function setFromX(x)
-        local rel = math.clamp(
-            (x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,
-            0,1
-        )
-        local v = minVal + (maxVal-minVal)*rel
-        v = math.floor(v+0.5)
-        tween(fill,{Size = UDim2.new(rel,0,1,0)},0.08)
-        if cb then cb(v) end
-    end
-
-    bar.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            setFromX(inp.Position.X)
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(inp)
-        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
-            setFromX(inp.Position.X)
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    local rel = (initial-minVal)/(maxVal-minVal)
-    fill.Size = UDim2.new(math.clamp(rel,0,1),0,1,0)
-end
-
--- SPEED CARD
-local speedCard = createBlatantCard(120)
-addTitleDesc(
-    speedCard,
-    "Speed Boost",
-    "Boost your WalkSpeed. Only affects you when toggle is ON. OFF = game default."
-)
-
-local speedValLabel = Instance.new("TextLabel")
-speedValLabel.Size = UDim2.new(0,60,0,18)
-speedValLabel.Position = UDim2.new(1,-70,0,10)
-speedValLabel.BackgroundTransparency = 1
-speedValLabel.Font = Enum.Font.Gotham
-speedValLabel.TextSize = 12
-speedValLabel.TextColor3 = Color3.fromRGB(220,220,230)
-speedValLabel.TextXAlignment = Enum.TextXAlignment.Right
-speedValLabel.Text = tostring(speedValue)
-speedValLabel.ZIndex = 3
-speedValLabel.Parent = speedCard
-
-local speedToggle, speedThumb =
-    makeToggleSmall(speedCard, speedCard.AbsoluteSize.X-60,10)
-speedCard:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-    speedToggle.Position = UDim2.new(1,-54,0,10)
-end)
-
-local function updateSpeedVisual()
-    if speedEnabled then
-        tween(speedToggle,{BackgroundColor3 = ThemeAccentOn},0.12)
-        tween(speedThumb,{Position = UDim2.new(1,-18,0.5,-8)},0.12)
-    else
-        tween(speedToggle,{BackgroundColor3 = Color3.fromRGB(40,40,50)},0.12)
-        tween(speedThumb,{Position = UDim2.new(0,2,0.5,-8)},0.12)
-    end
-end
-
-local function applySpeed()
-    if not speedEnabled then return end
-    local hum = getHumanoid()
-    if not hum then return end
-    if not originalWalkSpeed then
-        originalWalkSpeed = hum.WalkSpeed
-    end
-    hum.WalkSpeed = speedValue
-end
-
-local function resetSpeed()
-    local hum = getHumanoid()
-    if hum and originalWalkSpeed ~= nil then
-        hum.WalkSpeed = originalWalkSpeed
-    end
-end
-
-makeSlider(speedCard,68,10,100,speedValue,function(v)
-    speedValue = v
-    speedValLabel.Text = tostring(v)
-    if speedEnabled then applySpeed() end
-end)
-
-speedToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        speedEnabled = not speedEnabled
-        updateSpeedVisual()
-        if speedEnabled then applySpeed() else resetSpeed() end
-    end
-end)
-updateSpeedVisual()
-
--- JUMP CARD
-local jumpCard = createBlatantCard(120)
-addTitleDesc(
-    jumpCard,
-    "Jump Boost",
-    "Boost your JumpPower. Only affects you when toggle is ON. OFF = game default."
-)
-
-local jumpValLabel = Instance.new("TextLabel")
-jumpValLabel.Size = UDim2.new(0,60,0,18)
-jumpValLabel.Position = UDim2.new(1,-70,0,10)
-jumpValLabel.BackgroundTransparency = 1
-jumpValLabel.Font = Enum.Font.Gotham
-jumpValLabel.TextSize = 12
-jumpValLabel.TextColor3 = Color3.fromRGB(220,220,230)
-jumpValLabel.TextXAlignment = Enum.TextXAlignment.Right
-jumpValLabel.Text = tostring(jumpValue)
-jumpValLabel.ZIndex = 3
-jumpValLabel.Parent = jumpCard
-
-local jumpToggle, jumpThumb =
-    makeToggleSmall(jumpCard,jumpCard.AbsoluteSize.X-60,10)
-jumpCard:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-    jumpToggle.Position = UDim2.new(1,-54,0,10)
-end)
-
-local function updateJumpVisual()
-    if jumpEnabled then
-        tween(jumpToggle,{BackgroundColor3 = ThemeAccentOn},0.12)
-        tween(jumpThumb,{Position = UDim2.new(1,-18,0.5,-8)},0.12)
-    else
-        tween(jumpToggle,{BackgroundColor3 = Color3.fromRGB(40,40,50)},0.12)
-        tween(jumpThumb,{Position = UDim2.new(0,2,0.5,-8)},0.12)
-    end
-end
-
-local function applyJump()
-    if not jumpEnabled then return end
-    local hum = getHumanoid()
-    if not hum then return end
-    if hum.UseJumpPower ~= nil then
-        hum.UseJumpPower = true
-    end
-    if not originalJumpPower then
-        originalJumpPower = hum.JumpPower
-    end
-    hum.JumpPower = jumpValue
-end
-
-local function resetJump()
-    local hum = getHumanoid()
-    if hum and originalJumpPower ~= nil then
-        hum.JumpPower = originalJumpPower
-    end
-end
-
-makeSlider(jumpCard,68,25,150,jumpValue,function(v)
-    jumpValue = v
-    jumpValLabel.Text = tostring(v)
-    if jumpEnabled then applyJump() end
-end)
-
-jumpToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        jumpEnabled = not jumpEnabled
-        updateJumpVisual()
-        if jumpEnabled then applyJump() else resetJump() end
-    end
-end)
-updateJumpVisual()
-
-LocalPlayer.CharacterAdded:Connect(function()
-    originalWalkSpeed = nil
-    originalJumpPower = nil
-    task.delay(1.5,function()
-        if speedEnabled then applySpeed() end
-        if jumpEnabled  then applyJump()  end
-    end)
-end)
+-- (keep your existing Blatant / Others / Settings / Input / Anti-AFK /
+-- spam loop code here – that part of your script was fine)
 
 ---------------------------------------------------------------------//
--- OTHERS PAGE (BUG REPORT + ANTI AFK + SIMPLE UPDATER UI)
+-- BOTTOM-RIGHT STATIC LABEL
 ---------------------------------------------------------------------//
-local othersScroll = Instance.new("ScrollingFrame")
-othersScroll.Size = UDim2.new(1,0,1,0)
-othersScroll.CanvasSize = UDim2.new(0,0,0,260)
-othersScroll.BackgroundTransparency = 1
-othersScroll.BorderSizePixel = 0
-othersScroll.ScrollBarThickness = 4
-othersScroll.Parent = othersPage
-
-local oLayout = Instance.new("UIListLayout")
-oLayout.SortOrder = Enum.SortOrder.LayoutOrder
-oLayout.Padding = UDim.new(0,16)
-oLayout.Parent = othersScroll
-
-local function createOthersCard(height)
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1,-40,0,height)
-    f.BackgroundColor3 = Color3.fromRGB(20,20,28)
-    f.BorderSizePixel = 0
-    f.ZIndex = 2
-    f.Parent = othersScroll
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,12); c.Parent = f
-
-    local s = Instance.new("UIStroke")
-    s.Thickness = 1; s.Color = Color3.fromRGB(55,55,65); s.Parent = f
-    return f
-end
-
--- Bug report card
-local bugCard = createOthersCard(190)
-addTitleDesc(
-    bugCard,
-    "Bug Report",
-    "Found something broken? send a report with your executor name."
-)
-
-local bugBox = Instance.new("TextBox")
-bugBox.Size = UDim2.new(1,-20,0,80)
-bugBox.Position = UDim2.new(0,10,0,70)
-bugBox.BackgroundColor3 = Color3.fromRGB(26,26,34)
-bugBox.BorderSizePixel = 0
-bugBox.Font = Enum.Font.Gotham
-bugBox.TextSize = 14
-bugBox.TextColor3 = Color3.fromRGB(255,255,255)
-bugBox.TextWrapped = true
-bugBox.TextYAlignment = Enum.TextYAlignment.Top
-bugBox.ClearTextOnFocus = false
-bugBox.MultiLine = true
-bugBox.PlaceholderText = "Explain what happened, what you were doing, errors, etc..."
-bugBox.ZIndex = 3
-bugBox.Parent = bugCard
-
-local bugCorner = Instance.new("UICorner")
-bugCorner.CornerRadius = UDim.new(0,8); bugCorner.Parent = bugBox
-
-local sendBugBtn = Instance.new("TextButton")
-sendBugBtn.Size = UDim2.new(0,120,0,28)
-sendBugBtn.Position = UDim2.new(0,10,0,160)
-sendBugBtn.BackgroundColor3 = ThemeAccentOn
-sendBugBtn.BorderSizePixel = 0
-sendBugBtn.Font = Enum.Font.GothamBold
-sendBugBtn.TextSize = 14
-sendBugBtn.TextColor3 = Color3.fromRGB(255,255,255)
-sendBugBtn.Text = "Send Report"
-sendBugBtn.ZIndex = 3
-sendBugBtn.Parent = bugCard
-
-local sbc = Instance.new("UICorner")
-sbc.CornerRadius = UDim.new(0,8); sbc.Parent = sendBugBtn
-
-local bugStatus = Instance.new("TextLabel")
-bugStatus.Size = UDim2.new(1,-140,0,22)
-bugStatus.Position = UDim2.new(0,140,0,164)
-bugStatus.BackgroundTransparency = 1
-bugStatus.Font = Enum.Font.Gotham
-bugStatus.TextSize = 12
-bugStatus.TextColor3 = Color3.fromRGB(190,190,200)
-bugStatus.TextXAlignment = Enum.TextXAlignment.Left
-bugStatus.Text = ""
-bugStatus.ZIndex = 3
-bugStatus.Parent = bugCard
-
-sendBugBtn.MouseButton1Click:Connect(function()
-    local txt = bugBox.Text or ""
-    if txt:gsub("%s+","") == "" then
-        bugStatus.TextColor3 = Color3.fromRGB(255,120,120)
-        bugStatus.Text = "Type something first."
-        return
-    end
-
-    bugStatus.TextColor3 = Color3.fromRGB(200,200,210)
-    bugStatus.Text = "Sending..."
-    task.spawn(function()
-        local ok,err = sendBugReport(txt)
-        if ok then
-            bugBox.Text = ""
-            bugStatus.TextColor3 = Color3.fromRGB(120,220,120)
-            bugStatus.Text = "Bug sent!"
-        else
-            bugStatus.TextColor3 = Color3.fromRGB(255,120,120)
-            bugStatus.Text = "Failed ("..tostring(err or "error")..")"
-        end
-    end)
-end)
-
--- System tools card
-local sysCard = createOthersCard(150)
-addTitleDesc(sysCard,"System Tools","Anti-AFK + simple updater info.")
-
-local antiLabel = Instance.new("TextLabel")
-antiLabel.Size = UDim2.new(0,100,0,20)
-antiLabel.Position = UDim2.new(0,10,0,60)
-antiLabel.BackgroundTransparency = 1
-antiLabel.Font = Enum.Font.Gotham
-antiLabel.TextSize = 13
-antiLabel.TextColor3 = Color3.fromRGB(220,220,230)
-antiLabel.TextXAlignment = Enum.TextXAlignment.Left
-antiLabel.Text = "Anti-AFK:"
-antiLabel.ZIndex = 3
-antiLabel.Parent = sysCard
-
-local antiToggle, antiThumb = makeToggleSmall(sysCard, 90,60)
-local function updateAntiVisual()
-    if antiAfkOn then
-        tween(antiToggle,{BackgroundColor3 = ThemeAccentOn},0.12)
-        tween(antiThumb,{Position = UDim2.new(1,-18,0.5,-8)},0.12)
-    else
-        tween(antiToggle,{BackgroundColor3 = Color3.fromRGB(40,40,50)},0.12)
-        tween(antiThumb,{Position = UDim2.new(0,2,0.5,-8)},0.12)
-    end
-end
-antiToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        antiAfkOn = not antiAfkOn
-        updateAntiVisual()
-    end
-end)
-updateAntiVisual()
-
-local updLabel = Instance.new("TextLabel")
-updLabel.Size = UDim2.new(1,-20,0,20)
-updLabel.Position = UDim2.new(0,10,0,96)
-updLabel.BackgroundTransparency = 1
-updLabel.Font = Enum.Font.Gotham
-updLabel.TextSize = 12
-updLabel.TextColor3 = Color3.fromRGB(200,200,210)
-updLabel.TextXAlignment = Enum.TextXAlignment.Left
-updLabel.Text = "Updater: manual for now (Build "..CURRENT_VERSION..")"
-updLabel.ZIndex = 3
-updLabel.Parent = sysCard
-
----------------------------------------------------------------------//
--- SETTINGS PAGE (THEMES + CUSTOM ACCENT)
----------------------------------------------------------------------//
-local settingsScroll = Instance.new("ScrollingFrame")
-settingsScroll.Size = UDim2.new(1,0,1,0)
-settingsScroll.CanvasSize = UDim2.new(0,0,0,220)
-settingsScroll.BackgroundTransparency = 1
-settingsScroll.BorderSizePixel = 0
-settingsScroll.ScrollBarThickness = 4
-settingsScroll.Parent = settingsPage
-
-local sLayout = Instance.new("UIListLayout")
-sLayout.SortOrder = Enum.SortOrder.LayoutOrder
-sLayout.Padding   = UDim.new(0,16)
-sLayout.Parent    = settingsScroll
-
-local function createSettingsCard(height)
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1,-40,0,height)
-    f.BackgroundColor3 = Color3.fromRGB(20,20,28)
-    f.BorderSizePixel = 0
-    f.ZIndex = 2
-    f.Parent = settingsScroll
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,12); c.Parent = f
-
-    local s = Instance.new("UIStroke")
-    s.Thickness = 1; s.Color = Color3.fromRGB(55,55,65); s.Parent = f
-    return f
-end
-
-local function addSettingsTitle(parent,text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1,-20,0,22)
-    lbl.Position = UDim2.new(0,10,0,10)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 16
-    lbl.TextColor3 = Color3.fromRGB(255,255,255)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = text
-    lbl.ZIndex = 3
-    lbl.Parent = parent
-end
-
-local function addSettingsDesc(parent,y,text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1,-20,0,32)
-    lbl.Position = UDim2.new(0,10,0,y)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextWrapped = true
-    lbl.TextYAlignment = Enum.TextYAlignment.Top
-    lbl.TextColor3 = Color3.fromRGB(200,200,210)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = text
-    lbl.ZIndex = 3
-    lbl.Parent = parent
-end
-
-local themeCard = createSettingsCard(170)
-addSettingsTitle(themeCard,"Theme & Appearance")
-addSettingsDesc(
-    themeCard,
-    32,
-    "Pick a preset or use your own accent color. Custom accent updates the whole hub."
-)
-
-local presetLabel = Instance.new("TextLabel")
-presetLabel.Size = UDim2.new(1,-20,0,18)
-presetLabel.Position = UDim2.new(0,10,0,68)
-presetLabel.BackgroundTransparency = 1
-presetLabel.Font = Enum.Font.Gotham
-presetLabel.TextSize = 12
-presetLabel.TextColor3 = Color3.fromRGB(210,210,220)
-presetLabel.TextXAlignment = Enum.TextXAlignment.Left
-presetLabel.Text = "Presets:"
-presetLabel.ZIndex = 3
-presetLabel.Parent = themeCard
-
-local function makePresetButton(txt,x,themeName)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,70,0,24)
-    btn.Position = UDim2.new(0,x,0,90)
-    btn.BackgroundColor3 = Color3.fromRGB(26,26,34)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(230,230,235)
-    btn.Text = txt
-    btn.ZIndex = 3
-    btn.Parent = themeCard
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,8); c.Parent = btn
-
-    btn.MouseButton1Click:Connect(function()
-        applyTheme(themeName)
-    end)
-end
-
-makePresetButton("Default",10,"Default")
-makePresetButton("Purple",90,"Purple")
-makePresetButton("Aqua",170,"Aqua")
-makePresetButton("Custom",250,"Custom")
-
-local rgbLabel = Instance.new("TextLabel")
-rgbLabel.Size = UDim2.new(1,-20,0,18)
-rgbLabel.Position = UDim2.new(0,10,0,122)
-rgbLabel.BackgroundTransparency = 1
-rgbLabel.Font = Enum.Font.Gotham
-rgbLabel.TextSize = 12
-rgbLabel.TextColor3 = Color3.fromRGB(210,210,220)
-rgbLabel.TextXAlignment = Enum.TextXAlignment.Left
-rgbLabel.Text = "Custom Accent (RGB 0–255):"
-rgbLabel.ZIndex = 3
-rgbLabel.Parent = themeCard
-
-local function makeRGBBox(x,placeholder)
-    local box = Instance.new("TextBox")
-    box.Size = UDim2.new(0,46,0,22)
-    box.Position = UDim2.new(0,x,0,142)
-    box.BackgroundColor3 = Color3.fromRGB(26,26,34)
-    box.BorderSizePixel = 0
-    box.Font = Enum.Font.Gotham
-    box.TextSize = 13
-    box.TextColor3 = Color3.fromRGB(255,255,255)
-    box.PlaceholderText = placeholder
-    box.ClearTextOnFocus = false
-    box.ZIndex = 3
-    box.Parent = themeCard
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,6); c.Parent = box
-
-    return box
-end
-
-local rBox = makeRGBBox(10,"R")
-local gBox = makeRGBBox(62,"G")
-local bBox = makeRGBBox(114,"B")
-
-local applyRGBBtn = Instance.new("TextButton")
-applyRGBBtn.Size = UDim2.new(0,90,0,22)
-applyRGBBtn.Position = UDim2.new(0,170,0,142)
-applyRGBBtn.BackgroundColor3 = Color3.fromRGB(60,60,70)
-applyRGBBtn.BorderSizePixel = 0
-applyRGBBtn.Font = Enum.Font.GothamBold
-applyRGBBtn.TextSize = 13
-applyRGBBtn.TextColor3 = Color3.fromRGB(255,255,255)
-applyRGBBtn.Text = "Apply"
-applyRGBBtn.ZIndex = 3
-applyRGBBtn.Parent = themeCard
-
-local rgbCorner = Instance.new("UICorner")
-rgbCorner.CornerRadius = UDim.new(0,6); rgbCorner.Parent = applyRGBBtn
-
-local rgbStatus = Instance.new("TextLabel")
-rgbStatus.Size = UDim2.new(1,-270,0,20)
-rgbStatus.Position = UDim2.new(0,270,0,142)
-rgbStatus.BackgroundTransparency = 1
-rgbStatus.Font = Enum.Font.Gotham
-rgbStatus.TextSize = 11
-rgbStatus.TextColor3 = Color3.fromRGB(190,190,200)
-rgbStatus.TextXAlignment = Enum.TextXAlignment.Left
-rgbStatus.Text = ""
-rgbStatus.ZIndex = 3
-rgbStatus.Parent = themeCard
-
-local function applyCustomRGB()
-    local r = tonumber(rBox.Text)
-    local g = tonumber(gBox.Text)
-    local b = tonumber(bBox.Text)
-
-    if not r or not g or not b then
-        rgbStatus.TextColor3 = Color3.fromRGB(255,120,120)
-        rgbStatus.Text = "Enter numbers."
-        return
-    end
-
-    r = math.clamp(math.floor(r+0.5),0,255)
-    g = math.clamp(math.floor(g+0.5),0,255)
-    b = math.clamp(math.floor(b+0.5),0,255)
-
-    CustomAccent = Color3.fromRGB(r,g,b)
-    rgbStatus.TextColor3 = Color3.fromRGB(120,220,120)
-    rgbStatus.Text = "Applied."
-    applyTheme("Custom")
-end
-
-applyRGBBtn.MouseButton1Click:Connect(applyCustomRGB)
-
-local infoCard = createSettingsCard(90)
-addSettingsTitle(infoCard,"Info")
-addSettingsDesc(
-    infoCard,
-    32,
-    "RightCtrl = show / hide hub.\nTikTok: "..TIKTOK_HANDLE
-)
----------------------------------------------------------------------//
--- INPUT HANDLING (TOGGLES / CLICKER / MANUAL)
----------------------------------------------------------------------//
-UIS.InputBegan:Connect(function(input,gp)
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == Enum.KeyCode.RightControl then
-            guiVisible = not guiVisible
-            gui.Enabled = guiVisible
-            return
-        end
-
-        if gp then return end
-
-        if input.KeyCode == toggleKey then
-            if modeType == "Toggle" then
-                clicking = not clicking
-            else
-                clicking = true
-            end
-        end
-
-        if input.KeyCode == manualKey then
-            manualSpamActive = true
-        end
-    end
-end)
-
-UIS.InputEnded:Connect(function(input,gp)
-    if gp then return end
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == toggleKey and modeType == "Hold" then
-            clicking = false
-        end
-        if input.KeyCode == manualKey then
-            manualSpamActive = false
-        end
-    end
-end)
-
----------------------------------------------------------------------//
--- ANTI AFK LOOP
----------------------------------------------------------------------//
-if not getgenv().__BinHub_AntiAfkHooked then
-    getgenv().__BinHub_AntiAfkHooked = true
-    task.spawn(function()
-        local vu
-        pcall(function() vu = game:GetService("VirtualUser") end)
-        if LocalPlayer then
-            LocalPlayer.Idled:Connect(function()
-                if not antiAfkOn then return end
-                if vu then
-                    pcall(function()
-                        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                        task.wait(0.1)
-                        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                    end)
-                end
-            end)
-        end
-    end)
-end
-
----------------------------------------------------------------------//
--- MAIN SPAM LOOP
----------------------------------------------------------------------//
-task.spawn(function()
-    while true do
-        if clicking or triggerbotOn or manualSpamActive then
-            local delay = 1 / math.max(cpsValue,1)
-            if actionType == "Click" then
-                if clicking or manualSpamActive then
-                    pcall(function() mouse1click() end)
-                end
-            else
-                if (clicking or manualSpamActive or triggerbotOn)
-                    and VIM and parryKey then
-                    pcall(function()
-                        VIM:SendKeyEvent(true, parryKey, false, game)
-                        task.wait(0.01)
-                        VIM:SendKeyEvent(false, parryKey, false, game)
-                    end)
-                end
-            end
-            task.wait(delay)
-        else
-            task.wait(0.05)
-        end
-    end
-end)
-
----------------------------------------------------------------------//
--- BOTTOM-RIGHT TOAST NOTIFICATIONS (NEW)
----------------------------------------------------------------------//
-local function showToast(message, order)
-    order = order or 1
-    local toast = Instance.new("Frame")
-    toast.Size = UDim2.new(0,260,0,36)
-    toast.AnchorPoint = Vector2.new(1,1)
-    toast.Position = UDim2.new(1,-20,1,-20 - (order-1)*40)
-    toast.BackgroundColor3 = Color3.fromRGB(18,18,26)
-    toast.BorderSizePixel = 0
-    toast.BackgroundTransparency = 1
-    toast.Parent = gui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0,10)
-    corner.Parent = toast
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1
-    stroke.Color = Color3.fromRGB(60,60,80)
-    stroke.Parent = toast
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1,-16,1,-8)
-    lbl.Position = UDim2.new(0,8,0,4)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 13
-    lbl.TextColor3 = Color3.fromRGB(255,255,255)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = message
-    lbl.TextTransparency = 1
-    lbl.Parent = toast
-
-    tween(toast,{BackgroundTransparency = 0},0.2)
-    tween(lbl,{TextTransparency = 0},0.2)
-
-    task.delay(3,function()
-        tween(toast,{BackgroundTransparency = 1},0.3)
-        tween(lbl,{TextTransparency = 1},0.3)
-        task.delay(0.35,function()
-            if toast then toast:Destroy() end
-        end)
-    end)
+do
+    local label = Instance.new("TextLabel")
+    label.AnchorPoint = Vector2.new(1,1)
+    label.Size = UDim2.new(0,320,0,20)
+    label.Position = UDim2.new(1,-25,1,-10)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Right
+    label.TextColor3 = Color3.fromRGB(200,200,210)
+    label.Text = "Anticheat bypass | Script made by Binxix"
+    label.Parent = root
 end
 
 ---------------------------------------------------------------------//
@@ -1929,12 +1152,4 @@ task.spawn(function()
     if not ok then
         warn("[BinHubX] Failed to send execution log: "..tostring(err))
     end
-end)
-
--- show the two notifications at bottom-right
-task.spawn(function()
-    task.wait(1.2)
-    showToast("Anticheat bypass loaded.", 1)
-    task.wait(0.6)
-    showToast("Script made by Binxix.", 2)
 end)
