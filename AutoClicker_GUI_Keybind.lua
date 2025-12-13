@@ -1,56 +1,28 @@
--- BinHub X v3.6
+-- Bin Hub X - Argon-style Hub v3.3
 -- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
 -- SERVICES / SETUP
 ---------------------------------------------------------------------//
-local Players            = game:GetService("Players")
-local UIS                = game:GetService("UserInputService")
-local CoreGui            = game:GetService("CoreGui")
-local TweenService       = game:GetService("TweenService")
-local RunService         = game:GetService("RunService")
-local HttpService        = game:GetService("HttpService")
+local Players      = game:GetService("Players")
+local UIS          = game:GetService("UserInputService")
+local CoreGui      = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local RunService   = game:GetService("RunService")
+local HttpService  = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
-local LocalizationService= game:GetService("LocalizationService")
-
-local LocalPlayer        = Players.LocalPlayer
-local displayName        = (LocalPlayer and LocalPlayer.DisplayName) or "Player"
-local userName           = (LocalPlayer and LocalPlayer.Name)        or "Unknown"
+local Lighting     = game:GetService("Lighting")
 
 local VIM
 pcall(function()
     VIM = game:GetService("VirtualInputManager")
 end)
 
-local TIKTOK_HANDLE      = "@binxix"
-local CURRENT_VERSION    = "3.6"
+local LocalPlayer = Players.LocalPlayer
+local displayName = (LocalPlayer and LocalPlayer.DisplayName) or "Player"
+local userName    = (LocalPlayer and LocalPlayer.Name)        or "Unknown"
 
----------------------------------------------------------------------//
--- GLOBAL EXEC COUNTER / HWID
----------------------------------------------------------------------//
-getgenv().BinHub_RunCount = (getgenv().BinHub_RunCount or 0) + 1
-local execCount = getgenv().BinHub_RunCount
-
-local function getHWID()
-    local hwidFuncs = {
-        function() return gethwid and gethwid() end,
-        function()
-            return (identifyexecutor and ({identifyexecutor()})[2])
-        end,
-        function()
-            return (syn and syn.gethwid and syn.gethwid())
-        end,
-    }
-    for _,fn in ipairs(hwidFuncs) do
-        local ok,res = pcall(fn)
-        if ok and res then
-            return tostring(res)
-        end
-    end
-    return "Unknown"
-end
-
-local hardwareId = getHWID()
+local TIKTOK_HANDLE = "@binxix"
 
 ---------------------------------------------------------------------//
 -- WEBHOOK
@@ -75,81 +47,22 @@ local function getGameName()
     return "Unknown Game"
 end
 
-local function getExecutorInfo()
-    local execName   = "Unknown"
-    local exploitType = "Unknown"
-
-    if typeof(getexecutorname) == "function" then
-        local ok, res = pcall(getexecutorname)
-        if ok and res then execName = tostring(res) end
-    elseif typeof(identifyexecutor) == "function" then
-        local ok, a,b = pcall(identifyexecutor)
-        if ok then
-            if b then
-                execName = tostring(a).." "..tostring(b)
-            elseif a then
-                execName = tostring(a)
-            end
-        end
-    end
-
-    if syn then
-        exploitType = "Synapse Environment"
-    elseif KRNL_LOADED or iskrnlclosure then
-        exploitType = "KRNL Environment"
-    elseif fluxus or isfluxusclosure then
-        exploitType = "Fluxus Environment"
-    elseif sentinel then
-        exploitType = "Sentinel Environment"
-    elseif execName ~= "Unknown" then
-        exploitType = execName.." Environment"
-    end
-
-    return execName, exploitType
-end
-
 local function getBasicEmbedFields()
-    local gameName  = getGameName()
-    local placeId   = tostring(game.PlaceId)
-    local jobId     = tostring(game.JobId)
-    local username  = userName
-    local dName     = displayName
-    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-    local execName, exploitType = getExecutorInfo()
+    local gameName = getGameName()
+    local placeId  = tostring(game.PlaceId)
+    local jobId    = tostring(game.JobId)
+    local username    = userName
+    local dName       = displayName
+    local timestamp   = os.date("%Y-%m-%d %H:%M:%S")
 
     return {
-        username    = username,
+        username = username,
         displayName = dName,
-        gameName    = gameName,
-        placeId     = placeId,
-        jobId       = jobId,
-        timestamp   = timestamp,
-        executor    = execName,
-        exploitType = exploitType,
-        hwid        = hardwareId,
-        execCount   = execCount,
+        gameName = gameName,
+        placeId = placeId,
+        jobId = jobId,
+        timestamp = timestamp,
     }
-end
-
-local function getScriptInfoBlock()
-    local lines = {
-        "Hub: BinHub X v"..CURRENT_VERSION,
-        "",
-        "Main:",
-        "  • Mode Key: E (locked)",
-        "  • Mode Type: Hold / Toggle",
-        "  • Action: Click / Parry",
-        "",
-        "Misc:",
-        "  • Manual Spam Key: R",
-        "  • Anti AFK: toggle in Others tab",
-        "  • Speed / Jump Boosts: in Blatant tab",
-        "",
-        "Notes:",
-        "  • RightCtrl = show / hide UI",
-        "  • Includes HWID + Exec Counter logging",
-    }
-    return table.concat(lines,"\n")
 end
 
 local function sendWebhookLog()
@@ -157,172 +70,123 @@ local function sendWebhookLog()
     local req = getRequestFunction()
     if not req then return end
 
-    local meta       = getBasicEmbedFields()
-    local scriptInfo = getScriptInfoBlock()
+    local meta = getBasicEmbedFields()
 
     local payload = {
-        username = "BinHub X Logger",
-        embeds = {{
-            title = "BinHub X Executed",
-            color = 0xF1C40F,
-            fields = {
-                {
-                    name  = "Player",
-                    value = string.format(
-                        "Display: **%s**\nUsername: `%s`",
-                        meta.displayName, meta.username
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "Game",
-                    value = string.format(
-                        "**%s**\nPlaceId: `%s`\nJobId: `%s`",
-                        meta.gameName, meta.placeId, meta.jobId
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "Executor",
-                    value = string.format(
-                        "Name: `%s`\nType: `%s`",
-                        meta.executor, meta.exploitType
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "HWID / Exec Count",
-                    value = string.format(
-                        "HWID: `%s`\nExec Count: `%s`",
-                        meta.hwid, tostring(meta.execCount)
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "Script Info",
-                    value = "```"..scriptInfo.."```",
-                    inline = false
-                },
-                {
-                    name  = "Time",
-                    value = "```"..meta.timestamp.."```",
-                    inline = false
+        embeds = {
+            {
+                title = "Bin Hub X - Script Executed",
+                color = 0x5865F2,
+                fields = {
+                    {
+                        name = "Player",
+                        value = string.format("Display: **%s**\nUsername: `%s`", meta.displayName, meta.username),
+                        inline = false
+                    },
+                    {
+                        name = "Game",
+                        value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
+                        inline = false
+                    },
+                    {
+                        name = "Time",
+                        value = "```" .. meta.timestamp .. "```",
+                        inline = false
+                    }
                 }
             }
-        }}
+        }
     }
 
     local json = HttpService:JSONEncode(payload)
+
     pcall(function()
         req({
-            Url     = WEBHOOK_URL,
-            Method  = "POST",
+            Url = WEBHOOK_URL,
+            Method = "POST",
             Headers = {["Content-Type"] = "application/json"},
-            Body    = json
+            Body = json
         })
     end)
 end
 
-local function sendBugReport(text)
+local function sendBugReport(messageText)
     if not WEBHOOK_URL or WEBHOOK_URL == "" then
-        return false,"No webhook"
+        return false, "No webhook"
     end
     local req = getRequestFunction()
     if not req then
-        return false,"No request func"
+        return false, "No request func"
     end
-    text = text or ""
-    if text:gsub("%s+","") == "" then
-        return false,"Empty"
+    if not messageText or messageText:gsub("%s+","") == "" then
+        return false, "Empty"
     end
 
     local meta = getBasicEmbedFields()
-    if #text > 900 then
-        text = text:sub(1,900).."..."
+    local trimmed = messageText
+    if #trimmed > 1000 then
+        trimmed = trimmed:sub(1,1000) .. "..."
     end
 
     local payload = {
-        username = "BinHub X Bug Report",
-        embeds = {{
-            title = "Bug Report",
-            color = 0xE74C3C,
-            fields = {
-                {
-                    name  = "Player",
-                    value = string.format(
-                        "Display: **%s**\nUsername: `%s`",
-                        meta.displayName, meta.username
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "Game",
-                    value = string.format(
-                        "**%s**\nPlaceId: `%s`\nJobId: `%s`",
-                        meta.gameName, meta.placeId, meta.jobId
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "Executor / HWID",
-                    value = string.format(
-                        "Exec: `%s`\nType: `%s`\nHWID: `%s`",
-                        meta.executor, meta.exploitType, meta.hwid
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "Exec Count / Time",
-                    value = string.format(
-                        "Exec Count: `%s`\nTime: `%s`",
-                        tostring(meta.execCount), meta.timestamp
-                    ),
-                    inline = false
-                },
-                {
-                    name  = "Report",
-                    value = "```"..text.."```",
-                    inline = false
+        embeds = {
+            {
+                title = "Bin Hub X - Bug Report",
+                color = 0xFF0000,
+                fields = {
+                    {
+                        name = "Player",
+                        value = string.format("Display: **%s**\nUsername: `%s`", meta.displayName, meta.username),
+                        inline = false
+                    },
+                    {
+                        name = "Game",
+                        value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
+                        inline = false
+                    },
+                    {
+                        name = "Time",
+                        value = "```" .. meta.timestamp .. "```",
+                        inline = false
+                    },
+                    {
+                        name = "Bug Report",
+                        value = "```" .. trimmed .. "```",
+                        inline = false
+                    }
                 }
             }
-        }}
+        }
     }
 
     local json = HttpService:JSONEncode(payload)
-    local ok,err = pcall(function()
+
+    local ok, err = pcall(function()
         req({
-            Url     = WEBHOOK_URL,
-            Method  = "POST",
+            Url = WEBHOOK_URL,
+            Method = "POST",
             Headers = {["Content-Type"] = "application/json"},
-            Body    = json
+            Body = json
         })
     end)
-    return ok, err
+
+    if not ok then
+        return false, tostring(err)
+    end
+    return true
 end
 
 ---------------------------------------------------------------------//
--- SMALL HELPERS
+-- HELPERS
 ---------------------------------------------------------------------//
-local function tween(obj, props, time)
-    local ti = TweenInfo.new(
-        time or 0.15,
-        Enum.EasingStyle.Quad,
-        Enum.EasingDirection.Out
-    )
-    TweenService:Create(obj,ti,props):Play()
-end
-
 local function getHumanoid()
     if not LocalPlayer then return end
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     return char:FindFirstChildOfClass("Humanoid")
 end
 
----------------------------------------------------------------------//
--- GUI ROOT / PARENT
----------------------------------------------------------------------//
 local function safeParent()
-    local ok, guiObj = pcall(function()
+    local ok, res = pcall(function()
         if gethui then
             local g = Instance.new("ScreenGui")
             g.Name = "BinHubX"
@@ -331,9 +195,9 @@ local function safeParent()
             return g
         end
     end)
-    if ok and guiObj then return guiObj end
+    if ok and res then return res end
 
-    ok, guiObj = pcall(function()
+    ok, res = pcall(function()
         if syn and syn.protect_gui then
             local g = Instance.new("ScreenGui")
             g.Name = "BinHubX"
@@ -343,7 +207,7 @@ local function safeParent()
             return g
         end
     end)
-    if ok and guiObj then return guiObj end
+    if ok and res then return res end
 
     local g = Instance.new("ScreenGui")
     g.Name = "BinHubX"
@@ -357,12 +221,113 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 local guiVisible = true
 
 ---------------------------------------------------------------------//
--- MAIN FRAME + TOP BAR
+-- GLOBAL TOGGLES / STATES
+---------------------------------------------------------------------//
+getgenv().BinHub_SemiImmortal          = false
+getgenv().BinHub_SlashOfFuryDetection  = false
+
+local fpsBoostOn        = false
+local playerEffectsOn   = false
+local abilityEspOn      = false -- but unavailable
+local clicking          = false
+local cps               = 10
+
+-- KEYS (LOCKED)
+local toggleKey         = Enum.KeyCode.F      -- main clicker key
+local parryKey          = Enum.KeyCode.E      -- locked parry key
+local manualKey         = Enum.KeyCode.E      -- manual spam key
+local abilityKey        = Enum.KeyCode.Q      -- locked Slash of Fury key (unused / disabled)
+
+local manualSpamActive  = false
+local triggerbotOn      = false
+local slashOfFuryOn     = false -- disabled
+
+local listeningForKey      = false
+local listeningForManual   = false
+
+local mode        = "Toggle"  -- Toggle / Hold
+local actionMode  = "Click"   -- Click / Parry
+
+-- Speed toggle state
+local speedEnabled = false
+local speedValue   = 20  -- default slider value
+
+---------------------------------------------------------------------//
+-- FX HELPERS
+---------------------------------------------------------------------//
+local function applyFpsBoost(on)
+    fpsBoostOn = on
+    if on then
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+        pcall(function()
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+        end)
+    else
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+        end)
+    end
+end
+
+local function applyPlayerEffects(on)
+    playerEffectsOn = on
+    local char = LocalPlayer and (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+    if not char then return end
+
+    local function setPart(name, alpha)
+        local p = char:FindFirstChild(name)
+        if p and p:IsA("BasePart") then
+            p.Transparency = alpha
+            for _,d in ipairs(p:GetDescendants()) do
+                if d:IsA("Decal") or d:IsA("Texture") then
+                    d.Transparency = alpha
+                end
+            end
+        end
+    end
+
+    local head = char:FindFirstChild("Head")
+    if head then
+        head.Transparency = on and 1 or 0
+        for _,d in ipairs(head:GetDescendants()) do
+            if d:IsA("Decal") or d:IsA("Texture") then
+                d.Transparency = on and 1 or 0
+            end
+        end
+    end
+
+    for _,n in ipairs({"RightUpperLeg","RightLowerLeg","RightFoot"}) do
+        setPart(n, on and 1 or 0)
+    end
+end
+
+local function applyAbilityEsp(on)
+    -- Unavailable (do nothing)
+    abilityEspOn = false
+end
+
+local function applySpeed()
+    local hum = getHumanoid()
+    if hum then
+        if speedEnabled then
+            hum.WalkSpeed = speedValue
+        else
+            hum.WalkSpeed = 16 -- default
+        end
+    end
+end
+
+---------------------------------------------------------------------//
+-- ROOT + PARTICLES
 ---------------------------------------------------------------------//
 local root = Instance.new("Frame")
-root.Size = UDim2.new(0,900,0,430)
-root.Position = UDim2.new(0.5,-450,0.5,-215)
-root.BackgroundColor3 = Color3.fromRGB(8,8,12)
+root.Name = "Root"
+root.Size = UDim2.new(0, 720, 0, 380)
+root.Position = UDim2.new(0.5, -360, 0.5, -190)
+root.BackgroundColor3 = Color3.fromRGB(10,10,10)
 root.BorderSizePixel = 0
 root.Parent = gui
 
@@ -372,18 +337,24 @@ rootCorner.Parent = root
 
 local rootStroke = Instance.new("UIStroke")
 rootStroke.Thickness = 1
-rootStroke.Color = Color3.fromRGB(50,50,60)
+rootStroke.Color = Color3.fromRGB(60,60,60)
 rootStroke.Parent = root
 
--- subtle dots
-for i = 1,30 do
+local rootGrad = Instance.new("UIGradient")
+rootGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(20,20,26)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(5,5,10))
+}
+rootGrad.Rotation = 45
+rootGrad.Parent = root
+
+local function createDot()
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0,4,0,4)
-    dot.Position = UDim2.new(math.random(),0,math.random(),0)
     dot.BackgroundColor3 = Color3.fromRGB(
-        math.random(160,255),
         math.random(140,255),
-        math.random(80,200)
+        math.random(80,255),
+        math.random(80,255)
     )
     dot.BorderSizePixel = 0
     dot.ZIndex = 0
@@ -393,55 +364,258 @@ for i = 1,30 do
     c.CornerRadius = UDim.new(1,0)
     c.Parent = dot
 
-    local ti = TweenInfo.new(
-        math.random(8,16),
-        Enum.EasingStyle.Linear,
-        Enum.EasingDirection.InOut,
-        -1,
-        true
-    )
-    TweenService:Create(
-        dot,
-        ti,
-        {Position = UDim2.new(math.random(),0,math.random(),0)}
-    ):Play()
+    local function tweenDot()
+        dot.Position = UDim2.new(math.random(),0,math.random(),0)
+        local goal = {Position = UDim2.new(math.random(),0,math.random(),0)}
+        local ti = TweenInfo.new(math.random(10,20), Enum.EasingStyle.Linear)
+        TweenService:Create(dot,ti,goal):Play()
+    end
+
+    tweenDot()
 end
 
--- Top bar
-local topBar = Instance.new("Frame")
-topBar.Size = UDim2.new(1,0,0,40)
-topBar.BackgroundTransparency = 1
-topBar.Parent = root
+for i=1,40 do createDot() end
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(0,260,1,0)
-titleLabel.Position = UDim2.new(0,22,0,0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Font = Enum.Font.GothamBlack
-titleLabel.TextSize = 22
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
-titleLabel.Text = "BinHub X v"..CURRENT_VERSION
-titleLabel.Parent = topBar
+---------------------------------------------------------------------//
+-- SIDEBAR
+---------------------------------------------------------------------//
+local sidebar = Instance.new("Frame")
+sidebar.Size = UDim2.new(0,230,1,0)
+sidebar.BackgroundColor3 = Color3.fromRGB(10,10,12)
+sidebar.BorderSizePixel = 0
+sidebar.ZIndex = 2
+sidebar.Parent = root
 
-local buildPill = Instance.new("TextLabel")
-buildPill.Size = UDim2.new(0,120,0,28)
-buildPill.Position = UDim2.new(1,-130,0.5,-14)
-buildPill.BackgroundColor3 = Color3.fromRGB(241,196,15)
-buildPill.BorderSizePixel = 0
-buildPill.Font = Enum.Font.GothamBold
-buildPill.TextSize = 14
-buildPill.TextColor3 = Color3.fromRGB(20,20,25)
-buildPill.Text = "Build "..CURRENT_VERSION
-buildPill.Parent = topBar
+local sidebarCorner = Instance.new("UICorner")
+sidebarCorner.CornerRadius = UDim.new(0,18)
+sidebarCorner.Parent = sidebar
 
-local bpCorner = Instance.new("UICorner")
-bpCorner.CornerRadius = UDim.new(1,0)
-bpCorner.Parent = buildPill
+local sidebarStroke = Instance.new("UIStroke")
+sidebarStroke.Thickness = 1
+sidebarStroke.Color = Color3.fromRGB(40,40,45)
+sidebarStroke.Parent = sidebar
 
--- drag window
-local dragging, dragStart, startPos
-topBar.InputBegan:Connect(function(input)
+local titleBar = Instance.new("TextLabel")
+titleBar.Size = UDim2.new(1,-80,0,30)
+titleBar.Position = UDim2.new(0,18,0,14)
+titleBar.BackgroundTransparency = 1
+titleBar.Font = Enum.Font.GothamBlack
+titleBar.TextSize = 20
+titleBar.TextColor3 = Color3.fromRGB(255,255,255)
+titleBar.TextXAlignment = Enum.TextXAlignment.Left
+titleBar.Text = "Argon-Bin Hub"
+titleBar.ZIndex = 3
+titleBar.Parent = sidebar
+
+local versionPill = Instance.new("TextLabel")
+versionPill.Size = UDim2.new(0,60,0,22)
+versionPill.Position = UDim2.new(1,-72,0,14)
+versionPill.BackgroundColor3 = Color3.fromRGB(220,60,60)
+versionPill.BorderSizePixel = 0
+versionPill.Font = Enum.Font.GothamBold
+versionPill.TextSize = 14
+versionPill.TextColor3 = Color3.fromRGB(255,255,255)
+versionPill.Text = "v3.3"
+versionPill.ZIndex = 3
+versionPill.Parent = sidebar
+
+local vCorner = Instance.new("UICorner")
+vCorner.CornerRadius = UDim.new(1,0)
+vCorner.Parent = versionPill
+
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1,-36,0,32)
+searchBox.Position = UDim2.new(0,18,0,54)
+searchBox.BackgroundColor3 = Color3.fromRGB(25,25,30)
+searchBox.BorderSizePixel = 0
+searchBox.PlaceholderText = "Search"
+searchBox.Text = ""
+searchBox.Font = Enum.Font.Gotham
+searchBox.TextSize = 14
+searchBox.TextColor3 = Color3.fromRGB(255,255,255)
+searchBox.PlaceholderColor3 = Color3.fromRGB(140,140,150)
+searchBox.ZIndex = 3
+searchBox.Parent = sidebar
+
+local searchCorner = Instance.new("UICorner")
+searchCorner.CornerRadius = UDim.new(0,10)
+searchCorner.Parent = searchBox
+
+local navHolder = Instance.new("Frame")
+navHolder.Size = UDim2.new(1,-36,1,-150)
+navHolder.Position = UDim2.new(0,18,0,96)
+navHolder.BackgroundTransparency = 1
+navHolder.ZIndex = 3
+navHolder.Parent = sidebar
+
+local navLayout = Instance.new("UIListLayout")
+navLayout.SortOrder = Enum.SortOrder.LayoutOrder
+navLayout.Padding = UDim.new(0,4)
+navLayout.Parent = navHolder
+
+local pages      = {}
+local navButtons = {}
+local currentPage
+
+local function setActivePage(name)
+    for n,f in pairs(pages) do
+        f.Visible = (n == name)
+    end
+    for n,b in pairs(navButtons) do
+        b.BackgroundColor3 = (n == name) and Color3.fromRGB(55,55,65) or Color3.fromRGB(25,25,32)
+    end
+    currentPage = name
+end
+
+local function sectionLabel(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,0,0,18)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 12
+    lbl.TextColor3 = Color3.fromRGB(150,150,165)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 3
+    lbl.Parent = navHolder
+end
+
+local function navButton(name,text)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1,0,0,30)
+    btn.BackgroundColor3 = Color3.fromRGB(25,25,32)
+    btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.TextColor3 = Color3.fromRGB(235,235,240)
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Text = text
+    btn.ZIndex = 3
+    btn.Parent = navHolder
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,10)
+    c.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        setActivePage(name)
+    end)
+
+    navButtons[name] = btn
+end
+
+sectionLabel("Home")
+navButton("Home",".Home")
+
+sectionLabel("Main")
+navButton("Main","Main")
+navButton("Blatant","Blatant")
+navButton("Others","Others")
+
+sectionLabel("Settings")
+navButton("Settings","Settings")
+
+local profileFrame = Instance.new("Frame")
+profileFrame.Size = UDim2.new(1,-36,0,76)
+profileFrame.Position = UDim2.new(0,18,1,-86)
+profileFrame.BackgroundColor3 = Color3.fromRGB(20,20,26)
+profileFrame.BorderSizePixel = 0
+profileFrame.ZIndex = 3
+profileFrame.Parent = sidebar
+
+local pfCorner = Instance.new("UICorner")
+pfCorner.CornerRadius = UDim.new(0,14)
+pfCorner.Parent = profileFrame
+
+local pfName = Instance.new("TextLabel")
+pfName.Size = UDim2.new(1,-10,0,22)
+pfName.Position = UDim2.new(0,10,0,6)
+pfName.BackgroundTransparency = 1
+pfName.Font = Enum.Font.GothamBold
+pfName.TextSize = 14
+pfName.TextColor3 = Color3.fromRGB(255,255,255)
+pfName.TextXAlignment = Enum.TextXAlignment.Left
+pfName.Text = displayName
+pfName.ZIndex = 4
+pfName.Parent = profileFrame
+
+local pfTag = Instance.new("TextLabel")
+pfTag.Size = UDim2.new(1,-10,0,18)
+pfTag.Position = UDim2.new(0,10,0,26)
+pfTag.BackgroundTransparency = 1
+pfTag.Font = Enum.Font.Gotham
+pfTag.TextSize = 12
+pfTag.TextColor3 = Color3.fromRGB(170,170,185)
+pfTag.TextXAlignment = Enum.TextXAlignment.Left
+pfTag.Text = "@"..userName
+pfTag.ZIndex = 4
+pfTag.Parent = profileFrame
+
+local pfTikTok = Instance.new("TextLabel")
+pfTikTok.Size = UDim2.new(1,-10,0,18)
+pfTikTok.Position = UDim2.new(0,10,0,46)
+pfTikTok.BackgroundTransparency = 1
+pfTikTok.Font = Enum.Font.Gotham
+pfTikTok.TextSize = 12
+pfTikTok.TextColor3 = Color3.fromRGB(200,120,220)
+pfTikTok.TextXAlignment = Enum.TextXAlignment.Left
+pfTikTok.Text = "TikTok: "..TIKTOK_HANDLE
+pfTikTok.ZIndex = 4
+pfTikTok.Parent = profileFrame
+
+---------------------------------------------------------------------//
+-- TOP BAR (DRAG)
+---------------------------------------------------------------------//
+local contentTop = Instance.new("Frame")
+contentTop.Size = UDim2.new(1,-230,0,36)
+contentTop.Position = UDim2.new(0,230,0,0)
+contentTop.BackgroundTransparency = 1
+contentTop.ZIndex = 2
+contentTop.Parent = root
+
+local topTitle = Instance.new("TextLabel")
+topTitle.Size = UDim2.new(1,-80,1,0)
+topTitle.Position = UDim2.new(0,10,0,0)
+topTitle.BackgroundTransparency = 1
+topTitle.Font = Enum.Font.GothamBold
+topTitle.TextSize = 18
+topTitle.TextXAlignment = Enum.TextXAlignment.Left
+topTitle.TextColor3 = Color3.fromRGB(235,235,240)
+topTitle.Text = "AutoClicker + Parry Hub"
+topTitle.ZIndex = 2
+topTitle.Parent = contentTop
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0,28,0,28)
+closeBtn.Position = UDim2.new(1,-32,0.5,-14)
+closeBtn.BackgroundColor3 = Color3.fromRGB(70,30,30)
+closeBtn.BorderSizePixel = 0
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+closeBtn.Text = "X"
+closeBtn.ZIndex = 2
+closeBtn.Parent = contentTop
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(1,0)
+closeCorner.Parent = closeBtn
+
+closeBtn.MouseButton1Click:Connect(function()
+    guiVisible = false
+    gui.Enabled = false
+end)
+
+local dragging, dragInput, dragStart, startPos
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    root.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end
+
+contentTop.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
@@ -454,171 +628,50 @@ topBar.InputBegan:Connect(function(input)
     end
 end)
 
+contentTop.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
 UIS.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        root.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
+    if input == dragInput and dragging then
+        updateDrag(input)
     end
 end)
 
 ---------------------------------------------------------------------//
--- SIDEBAR + NAV
----------------------------------------------------------------------//
-local sidebar = Instance.new("Frame")
-sidebar.Size = UDim2.new(0,190,1,-40)
-sidebar.Position = UDim2.new(0,0,0,40)
-sidebar.BackgroundColor3 = Color3.fromRGB(10,10,16)
-sidebar.BorderSizePixel = 0
-sidebar.Parent = root
-
-local sbCorner = Instance.new("UICorner")
-sbCorner.CornerRadius = UDim.new(0,18)
-sbCorner.Parent = sidebar
-
-local sbStroke = Instance.new("UIStroke")
-sbStroke.Thickness = 1
-sbStroke.Color = Color3.fromRGB(40,40,50)
-sbStroke.Parent = sidebar
-
-local sbTitle = Instance.new("TextLabel")
-sbTitle.Size = UDim2.new(1,-20,0,26)
-sbTitle.Position = UDim2.new(0,10,0,10)
-sbTitle.BackgroundTransparency = 1
-sbTitle.Font = Enum.Font.GothamBlack
-sbTitle.TextSize = 18
-sbTitle.TextXAlignment = Enum.TextXAlignment.Left
-sbTitle.TextColor3 = Color3.fromRGB(255,255,255)
-sbTitle.Text = "BinHub X"
-sbTitle.Parent = sidebar
-
-local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(1,-20,0,28)
-searchBox.Position = UDim2.new(0,10,0,40)
-searchBox.BackgroundColor3 = Color3.fromRGB(22,22,30)
-searchBox.BorderSizePixel = 0
-searchBox.PlaceholderText = "Search (visual only)"
-searchBox.Font = Enum.Font.Gotham
-searchBox.TextSize = 13
-searchBox.TextColor3 = Color3.fromRGB(255,255,255)
-searchBox.PlaceholderColor3 = Color3.fromRGB(150,150,165)
-searchBox.Parent = sidebar
-
-local sbSearchCorner = Instance.new("UICorner")
-sbSearchCorner.CornerRadius = UDim.new(0,8)
-sbSearchCorner.Parent = searchBox
-
-local navHolder = Instance.new("Frame")
-navHolder.Size = UDim2.new(1,-20,1,-130)
-navHolder.Position = UDim2.new(0,10,0,76)
-navHolder.BackgroundTransparency = 1
-navHolder.Parent = sidebar
-
-local navLayout = Instance.new("UIListLayout")
-navLayout.SortOrder = Enum.SortOrder.LayoutOrder
-navLayout.Padding = UDim.new(0,6)
-navLayout.Parent = navHolder
-
-local pages = {}
-local navButtons = {}
-local currentPage
-
-local function navButton(name, text)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1,0,0,28)
-    btn.BackgroundColor3 = Color3.fromRGB(22,22,30)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.TextColor3 = Color3.fromRGB(220,220,230)
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Text = "  "..text
-    btn.Parent = navHolder
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,8)
-    c.Parent = btn
-
-    navButtons[name] = btn
-    return btn
-end
-
-local profileCard = Instance.new("Frame")
-profileCard.Size = UDim2.new(1,-20,0,64)
-profileCard.Position = UDim2.new(0,10,1,-70)
-profileCard.BackgroundColor3 = Color3.fromRGB(16,16,24)
-profileCard.BorderSizePixel = 0
-profileCard.Parent = sidebar
-
-local pfCorner = Instance.new("UICorner")
-pfCorner.CornerRadius = UDim.new(0,12)
-pfCorner.Parent = profileCard
-
-local pfName = Instance.new("TextLabel")
-pfName.Size = UDim2.new(1,-14,0,22)
-pfName.Position = UDim2.new(0,8,0,6)
-pfName.BackgroundTransparency = 1
-pfName.Font = Enum.Font.GothamSemibold
-pfName.TextSize = 14
-pfName.TextColor3 = Color3.fromRGB(255,255,255)
-pfName.TextXAlignment = Enum.TextXAlignment.Left
-pfName.Text = displayName
-pfName.Parent = profileCard
-
-local pfUser = Instance.new("TextLabel")
-pfUser.Size = UDim2.new(1,-14,0,18)
-pfUser.Position = UDim2.new(0,8,0,26)
-pfUser.BackgroundTransparency = 1
-pfUser.Font = Enum.Font.Gotham
-pfUser.TextSize = 12
-pfUser.TextColor3 = Color3.fromRGB(180,180,195)
-pfUser.TextXAlignment = Enum.TextXAlignment.Left
-pfUser.Text = "@"..userName
-pfUser.Parent = profileCard
-
-local pfTik = Instance.new("TextLabel")
-pfTik.Size = UDim2.new(1,-14,0,16)
-pfTik.Position = UDim2.new(0,8,0,44)
-pfTik.BackgroundTransparency = 1
-pfTik.Font = Enum.Font.Gotham
-pfTik.TextSize = 11
-pfTik.TextColor3 = Color3.fromRGB(255,190,80)
-pfTik.TextXAlignment = Enum.TextXAlignment.Left
-pfTik.Text = "TikTok: "..TIKTOK_HANDLE
-pfTik.Parent = profileCard
-
----------------------------------------------------------------------//
--- CONTENT HOLDER / PAGES
+-- PAGES CONTAINER
 ---------------------------------------------------------------------//
 local contentHolder = Instance.new("Frame")
-contentHolder.Size = UDim2.new(1,-210,1,-40)
-contentHolder.Position = UDim2.new(0,200,0,40)
+contentHolder.Size = UDim2.new(1,-230,1,-40)
+contentHolder.Position = UDim2.new(0,230,0,40)
 contentHolder.BackgroundTransparency = 1
+contentHolder.ZIndex = 1
 contentHolder.Parent = root
 
 local function createPage(name)
-    local f = Instance.new("Frame")
-    f.Name = name.."Page"
-    f.Size = UDim2.new(1,-10,1,-10)
-    f.Position = UDim2.new(0,5,0,5)
-    f.BackgroundColor3 = Color3.fromRGB(14,14,22)
-    f.BorderSizePixel = 0
-    f.Visible = false
-    f.Parent = contentHolder
+    local page = Instance.new("Frame")
+    page.Name = name.."Page"
+    page.Size = UDim2.new(1,-20,1,-20)
+    page.Position = UDim2.new(0,10,0,10)
+    page.BackgroundColor3 = Color3.fromRGB(15,15,18)
+    page.BorderSizePixel = 0
+    page.Visible = false
+    page.ZIndex = 2
+    page.Parent = contentHolder
 
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0,16)
-    c.Parent = f
+    c.Parent = page
 
     local s = Instance.new("UIStroke")
     s.Thickness = 1
-    s.Color = Color3.fromRGB(55,55,70)
-    s.Parent = f
+    s.Color = Color3.fromRGB(40,40,45)
+    s.Parent = page
 
-    pages[name] = f
-    return f
+    pages[name] = page
+    return page
 end
 
 local homePage     = createPage("Home")
@@ -627,529 +680,1120 @@ local blatantPage  = createPage("Blatant")
 local othersPage   = createPage("Others")
 local settingsPage = createPage("Settings")
 
-local function setActivePage(name)
-    for n,f in pairs(pages) do
-        f.Visible = (n == name)
-    end
-    for n,b in pairs(navButtons) do
-        b.BackgroundColor3 =
-            (n == name) and Color3.fromRGB(40,40,55)
-            or Color3.fromRGB(22,22,30)
-    end
-    currentPage = name
-end
-
--- create nav buttons
-navButton("Home","Home").MouseButton1Click:Connect(function()
-    setActivePage("Home")
-end)
-navButton("Main","Main").MouseButton1Click:Connect(function()
-    setActivePage("Main")
-end)
-navButton("Blatant","Blatant").MouseButton1Click:Connect(function()
-    setActivePage("Blatant")
-end)
-navButton("Others","Others").MouseButton1Click:Connect(function()
-    setActivePage("Others")
-end)
-navButton("Settings","Settings").MouseButton1Click:Connect(function()
-    setActivePage("Settings")
-end)
-
 ---------------------------------------------------------------------//
--- THEMES
----------------------------------------------------------------------//
-local ThemeConfig = {
-    Default = {
-        Accent       = Color3.fromRGB(241,196,15),
-        AccentOn     = Color3.fromRGB(88,214,141),
-        AccentText   = Color3.fromRGB(241,196,15),
-        RootTop      = Color3.fromRGB(25,25,35),
-        RootBottom   = Color3.fromRGB(5,5,10),
-    },
-    Purple = {
-        Accent       = Color3.fromRGB(187,85,255),
-        AccentOn     = Color3.fromRGB(155,110,255),
-        AccentText   = Color3.fromRGB(187,85,255),
-        RootTop      = Color3.fromRGB(35,20,60),
-        RootBottom   = Color3.fromRGB(10,0,20),
-    },
-    Aqua = {
-        Accent       = Color3.fromRGB(52,183,235),
-        AccentOn     = Color3.fromRGB(46,204,155),
-        AccentText   = Color3.fromRGB(52,183,235),
-        RootTop      = Color3.fromRGB(12,28,40),
-        RootBottom   = Color3.fromRGB(0,8,16),
-    },
-    Custom = {
-        Accent       = Color3.fromRGB(255,140,0),
-        AccentOn     = Color3.fromRGB(255,180,60),
-        AccentText   = Color3.fromRGB(255,200,120),
-        RootTop      = Color3.fromRGB(25,25,35),
-        RootBottom   = Color3.fromRGB(5,5,10),
-    }
-}
-
-local currentTheme  = "Default"
-local ThemeAccentOn = ThemeConfig.Default.AccentOn
-CustomAccent = CustomAccent or ThemeConfig.Custom.Accent
-
-local function applyTheme(name)
-    if name == "Custom" then
-        ThemeConfig.Custom.Accent     = CustomAccent
-        ThemeConfig.Custom.AccentOn   = CustomAccent
-        ThemeConfig.Custom.AccentText = CustomAccent
-    end
-
-    local th = ThemeConfig[name] or ThemeConfig.Default
-    currentTheme  = name
-    ThemeAccentOn = th.AccentOn
-
-    buildPill.BackgroundColor3 = th.Accent
-end
-
-applyTheme("Default")
-
----------------------------------------------------------------------//
--- HOME PAGE
----------------------------------------------------------------------//
----------------------------------------------------------------------//
--- HOME PAGE
+-- HOME
 ---------------------------------------------------------------------//
 do
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(1,-40,0,40)
+    t.Position = UDim2.new(0,20,0,20)
+    t.BackgroundTransparency = 1
+    t.Font = Enum.Font.GothamBlack
+    t.TextSize = 26
+    t.TextColor3 = Color3.fromRGB(255,255,255)
+    t.TextXAlignment = Enum.TextXAlignment.Left
+    t.TextYAlignment = Enum.TextYAlignment.Top
+    t.Text = "Hello, "..displayName
+    t.ZIndex = 3
+    t.Parent = homePage
+
+    local d = Instance.new("TextLabel")
+    d.Size = UDim2.new(1,-40,0,70)
+    d.Position = UDim2.new(0,20,0,60)
+    d.BackgroundTransparency = 1
+    d.Font = Enum.Font.Gotham
+    d.TextSize = 14
+    d.TextColor3 = Color3.fromRGB(210,210,220)
+    d.TextWrapped = true
+    d.TextXAlignment = Enum.TextXAlignment.Left
+    d.TextYAlignment = Enum.TextYAlignment.Top
+    d.Text = "Account: @"..userName.."\nUse the tabs on the left to control your auto clicker, auto parry and blatant settings."
+    d.ZIndex = 3
+    d.Parent = homePage
+
+    local tk = Instance.new("TextLabel")
+    tk.Size = UDim2.new(1,-40,0,24)
+    tk.Position = UDim2.new(0,20,0,140)
+    tk.BackgroundTransparency = 1
+    tk.Font = Enum.Font.GothamSemibold
+    tk.TextSize = 14
+    tk.TextColor3 = Color3.fromRGB(200,120,220)
+    tk.TextXAlignment = Enum.TextXAlignment.Left
+    tk.Text = "TikTok: "..TIKTOK_HANDLE
+    tk.ZIndex = 3
+    tk.Parent = homePage
+end
+
+---------------------------------------------------------------------//
+-- SETTINGS PAGE (BUG REPORT)
+---------------------------------------------------------------------//
+local bugStatusLabel
+do
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,-40,0,32)
+    title.Size = UDim2.new(1,-40,0,28)
     title.Position = UDim2.new(0,20,0,20)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
-    title.TextSize = 24
+    title.TextSize = 20
     title.TextColor3 = Color3.fromRGB(255,255,255)
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Text = "Welcome, "..displayName
-    title.Parent = homePage
+    title.Text = "Settings & Bug Reports"
+    title.ZIndex = 3
+    title.Parent = settingsPage
 
     local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1,-40,0,56)
-    info.Position = UDim2.new(0,20,0,60)
+    info.Size = UDim2.new(1,-40,0,50)
+    info.Position = UDim2.new(0,20,0,52)
     info.BackgroundTransparency = 1
     info.Font = Enum.Font.Gotham
-    info.TextSize = 14
+    info.TextSize = 13
+    info.TextColor3 = Color3.fromRGB(200,200,210)
     info.TextWrapped = true
-    info.TextYAlignment = Enum.TextYAlignment.Top
-    info.TextColor3 = Color3.fromRGB(210,210,220)
     info.TextXAlignment = Enum.TextXAlignment.Left
-    info.Text = "Account: @"..userName..
-        "\nUse the tabs to control your auto fire, parry, boosts and tools."
-    info.Parent = homePage
+    info.TextYAlignment = Enum.TextYAlignment.Top
+    info.Text = "• RightCtrl = Show/Hide hub\n• Drag only the top bar to move\n• Use the box below to send bug reports straight to the dev webhook."
+    info.ZIndex = 3
+    info.Parent = settingsPage
+
+    local bugLabel = Instance.new("TextLabel")
+    bugLabel.Size = UDim2.new(1,-40,0,20)
+    bugLabel.Position = UDim2.new(0,20,0,110)
+    bugLabel.BackgroundTransparency = 1
+    bugLabel.Font = Enum.Font.GothamSemibold
+    bugLabel.TextSize = 14
+    bugLabel.TextColor3 = Color3.fromRGB(230,230,235)
+    bugLabel.TextXAlignment = Enum.TextXAlignment.Left
+    bugLabel.Text = "Bug Report:"
+    bugLabel.ZIndex = 3
+    bugLabel.Parent = settingsPage
+
+    local bugBox = Instance.new("TextBox")
+    bugBox.Size = UDim2.new(1,-40,0,130)
+    bugBox.Position = UDim2.new(0,20,0,134)
+    bugBox.BackgroundColor3 = Color3.fromRGB(25,25,32)
+    bugBox.BorderSizePixel = 0
+    bugBox.Font = Enum.Font.Gotham
+    bugBox.TextSize = 14
+    bugBox.TextColor3 = Color3.fromRGB(255,255,255)
+    bugBox.PlaceholderText = "Describe the bug, what happened, and what you were doing..."
+    bugBox.TextWrapped = true
+    bugBox.MultiLine = true
+    bugBox.ClearTextOnFocus = false
+    bugBox.ZIndex = 3
+    bugBox.Parent = settingsPage
+
+    local bugCorner = Instance.new("UICorner")
+    bugCorner.CornerRadius = UDim.new(0,10)
+    bugCorner.Parent = bugBox
+
+    local bugButton = Instance.new("TextButton")
+    bugButton.Size = UDim2.new(0,160,0,30)
+    bugButton.Position = UDim2.new(0,20,0,274)
+    bugButton.BackgroundColor3 = Color3.fromRGB(70,90,160)
+    bugButton.BorderSizePixel = 0
+    bugButton.Font = Enum.Font.GothamBold
+    bugButton.TextSize = 14
+    bugButton.TextColor3 = Color3.fromRGB(255,255,255)
+    bugButton.Text = "Send Bug Report"
+    bugButton.ZIndex = 3
+    bugButton.Parent = settingsPage
+
+    local bugBtnCorner = Instance.new("UICorner")
+    bugBtnCorner.CornerRadius = UDim.new(0,10)
+    bugBtnCorner.Parent = bugButton
+
+    bugStatusLabel = Instance.new("TextLabel")
+    bugStatusLabel.Size = UDim2.new(1,-200,0,20)
+    bugStatusLabel.Position = UDim2.new(0,190,0,278)
+    bugStatusLabel.BackgroundTransparency = 1
+    bugStatusLabel.Font = Enum.Font.Gotham
+    bugStatusLabel.TextSize = 12
+    bugStatusLabel.TextColor3 = Color3.fromRGB(180,180,190)
+    bugStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    bugStatusLabel.Text = ""
+    bugStatusLabel.ZIndex = 3
+    bugStatusLabel.Parent = settingsPage
+
+    bugButton.MouseButton1Click:Connect(function()
+        local text = bugBox.Text or ""
+        if text:gsub("%s+","") == "" then
+            bugStatusLabel.TextColor3 = Color3.fromRGB(255,120,120)
+            bugStatusLabel.Text = "Type something first."
+            return
+        end
+
+        bugStatusLabel.TextColor3 = Color3.fromRGB(200,200,210)
+        bugStatusLabel.Text = "Sending..."
+
+        task.spawn(function()
+            local ok,err = sendBugReport(text)
+            if ok then
+                bugBox.Text = ""
+                bugStatusLabel.TextColor3 = Color3.fromRGB(120,220,120)
+                bugStatusLabel.Text = "Bug sent!"
+            else
+                bugStatusLabel.TextColor3 = Color3.fromRGB(255,120,120)
+                bugStatusLabel.Text = "Failed ("..tostring(err or "unknown")..")"
+            end
+        end)
+    end)
 end
 
 ---------------------------------------------------------------------//
--- CLICKER STATE + ROW HELPER
+-- OTHERS PAGE (SCROLLING)
 ---------------------------------------------------------------------//
-local clicking         = false
-local cpsValue         = 10
-local modeType         = "Toggle"   -- Hold / Toggle
-local actionType       = "Click"    -- Click / Parry
-local toggleKey        = Enum.KeyCode.E
-local parryKey         = Enum.KeyCode.E
-local manualKey        = Enum.KeyCode.R
-local manualSpamActive = false
-local triggerbotOn     = false
-local antiAfkOn        = false
-
--- generic row builder for Main page
-local function makeRow(parent, y, labelText)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1,-40,0,34)
-    row.Position = UDim2.new(0,20,0,y)
-    row.BackgroundTransparency = 1
-    row.Parent = parent
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1,-160,1,0)
-    lbl.Position = UDim2.new(0,0,0,0)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 14
-    lbl.TextColor3 = Color3.fromRGB(220,220,230)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = labelText
-    lbl.Parent = row
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,90,0,26)
-    btn.Position = UDim2.new(1,-100,0.5,-13)
-    btn.BackgroundColor3 = Color3.fromRGB(35,35,50)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Text = "..."
-    btn.Parent = row
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,8)
-    c.Parent = btn
-
-    return row, lbl, btn
-end
-
----------------------------------------------------------------------//
--- LIVE STATUS PANEL (used on Main)
----------------------------------------------------------------------//
-local fpsLabel, pingLabel, wsLabel, jpLabel, regionLabel
-local liveStatusPanel
-
-do
-    local panel = Instance.new("Frame")
-    liveStatusPanel = panel
-
-    panel.Size = UDim2.new(0,230,0,110)
-    panel.AnchorPoint = Vector2.new(1,0)
-    panel.Position = UDim2.new(1,-20,0,20)
-    panel.BackgroundColor3 = Color3.fromRGB(18,18,28)
-    panel.BorderSizePixel = 0
-    panel.ZIndex = 10
-    panel.Parent = mainPage
+local function makeOthersCard(parent)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1,-20,0,56)
+    card.BackgroundColor3 = Color3.fromRGB(20,20,26)
+    card.BorderSizePixel = 0
+    card.ZIndex = 3
+    card.Parent = parent
 
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0,12)
-    c.ZIndex = 10
-    c.Parent = panel
+    c.Parent = card
 
-    local s = Instance.new("UIStroke")
-    s.Thickness = 1
-    s.Color = Color3.fromRGB(45,45,60)
-    s.ZIndex = 10
-    s.Parent = panel
+    return card
+end
 
+do
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,-40,0,28)
+    title.Position = UDim2.new(0,20,0,20)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBlack
+    title.TextSize = 20
+    title.TextColor3 = Color3.fromRGB(255,255,255)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Text = "Others"
+    title.ZIndex = 3
+    title.Parent = othersPage
+
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1,-40,0,40)
+    info.Position = UDim2.new(0,20,0,52)
+    info.BackgroundTransparency = 1
+    info.Font = Enum.Font.Gotham
+    info.TextSize = 13
+    info.TextColor3 = Color3.fromRGB(200,200,210)
+    info.TextWrapped = true
+    info.TextXAlignment = Enum.TextXAlignment.Left
+    info.TextYAlignment = Enum.TextYAlignment.Top
+    info.Text = "Extra stuff: Discord invite, FPS booster, player effects. Ability ESP is temporarily unavailable."
+    info.ZIndex = 3
+    info.Parent = othersPage
+
+    local othersScroll = Instance.new("ScrollingFrame")
+    othersScroll.Size = UDim2.new(1,-20,1,-100)
+    othersScroll.Position = UDim2.new(0,10,0,90)
+    othersScroll.BackgroundTransparency = 1
+    othersScroll.BorderSizePixel = 0
+    othersScroll.ScrollBarThickness = 4
+    othersScroll.CanvasSize = UDim2.new(0,0,0,0)
+    othersScroll.ZIndex = 3
+    othersScroll.Parent = othersPage
+
+    local oLayout = Instance.new("UIListLayout")
+    oLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    oLayout.Padding = UDim.new(0,10)
+    oLayout.Parent = othersScroll
+
+    oLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        othersScroll.CanvasSize = UDim2.new(0,0,0,oLayout.AbsoluteContentSize.Y + 10)
+    end)
+
+    local function makeTitle(parent,txt)
+        local t = Instance.new("TextLabel")
+        t.Size = UDim2.new(1,-20,0,20)
+        t.Position = UDim2.new(0,10,0,6)
+        t.BackgroundTransparency = 1
+        t.Font = Enum.Font.GothamSemibold
+        t.TextSize = 14
+        t.TextColor3 = Color3.fromRGB(255,255,255)
+        t.TextXAlignment = Enum.TextXAlignment.Left
+        t.Text = txt
+        t.ZIndex = 4
+        t.Parent = parent
+        return t
+    end
+
+    local function makeDesc(parent,txt)
+        local d = Instance.new("TextLabel")
+        d.Size = UDim2.new(1,-20,0,24)
+        d.Position = UDim2.new(0,10,0,26)
+        d.BackgroundTransparency = 1
+        d.Font = Enum.Font.Gotham
+        d.TextSize = 12
+        d.TextColor3 = Color3.fromRGB(200,200,210)
+        d.TextXAlignment = Enum.TextXAlignment.Left
+        d.TextYAlignment = Enum.TextYAlignment.Top
+        d.TextWrapped = true
+        d.Text = txt
+        d.ZIndex = 4
+        d.Parent = parent
+        return d
+    end
+
+    -----------------------------------------------------------------//
+    -- Discord card
+    -----------------------------------------------------------------//
+    local discordCard = makeOthersCard(othersScroll)
+    local dTitle = makeTitle(discordCard,"Discord")
+    local dDesc  = makeDesc(discordCard,"Join:  discord.gg/S4nPV2Rx7F")
+
+    local copyBtn = Instance.new("TextButton")
+    copyBtn.Size = UDim2.new(0,120,0,24)
+    copyBtn.Position = UDim2.new(1,-130,0,30)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(60,70,140)
+    copyBtn.BorderSizePixel = 0
+    copyBtn.Font = Enum.Font.GothamBold
+    copyBtn.TextSize = 13
+    copyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    copyBtn.Text = "Copy Invite"
+    copyBtn.ZIndex = 4
+    copyBtn.Parent = discordCard
+
+    local copyCorner = Instance.new("UICorner")
+    copyCorner.CornerRadius = UDim.new(0,10)
+    copyCorner.Parent = copyBtn
+
+    copyBtn.MouseButton1Click:Connect(function()
+        local invite = "https://discord.gg/S4nPV2Rx7F"
+        if setclipboard then
+            setclipboard(invite)
+            dDesc.Text = "Join:  discord.gg/S4nPV2Rx7F (Copied!)"
+        else
+            dDesc.Text = "Join:  discord.gg/S4nPV2Rx7F (Clipboard not supported.)"
+        end
+    end)
+
+    -----------------------------------------------------------------//
+    -- FPS Booster
+    -----------------------------------------------------------------//
+    local fpsCard = makeOthersCard(othersScroll)
+    local fTitle = makeTitle(fpsCard,"FPS Booster")
+    local fDesc  = makeDesc(fpsCard,"Turn graphics low + remove shadows to help FPS (client-side).")
+
+    local fpsToggleFrame = Instance.new("Frame")
+    fpsToggleFrame.Size = UDim2.new(0,40,0,20)
+    fpsToggleFrame.Position = UDim2.new(1,-50,0,18)
+    fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
+    fpsToggleFrame.BorderSizePixel = 0
+    fpsToggleFrame.ZIndex = 4
+    fpsToggleFrame.Parent = fpsCard
+
+    local fpsToggleCorner = Instance.new("UICorner")
+    fpsToggleCorner.CornerRadius = UDim.new(1,0)
+    fpsToggleCorner.Parent = fpsToggleFrame
+
+    local fpsThumb = Instance.new("Frame")
+    fpsThumb.Size = UDim2.new(0,16,0,16)
+    fpsThumb.Position = UDim2.new(0,2,0.5,-8)
+    fpsThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    fpsThumb.BorderSizePixel = 0
+    fpsThumb.ZIndex = 5
+    fpsThumb.Parent = fpsToggleFrame
+
+    local fpsThumbCorner = Instance.new("UICorner")
+    fpsThumbCorner.CornerRadius = UDim.new(1,0)
+    fpsThumbCorner.Parent = fpsThumb
+
+    local function updateFpsVisual()
+        if fpsBoostOn then
+            fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(80,200,120)
+            fpsThumb.Position = UDim2.new(1,-18,0.5,-8)
+        else
+            fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
+            fpsThumb.Position = UDim2.new(0,2,0.5,-8)
+        end
+    end
+    updateFpsVisual()
+
+    fpsToggleFrame.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            fpsBoostOn = not fpsBoostOn
+            applyFpsBoost(fpsBoostOn)
+            updateFpsVisual()
+        end
+    end)
+
+    -----------------------------------------------------------------//
+    -- Player Effects
+    -----------------------------------------------------------------//
+    local peCard = makeOthersCard(othersScroll)
+    local peTitle = makeTitle(peCard,"Player Effects")
+    local peDesc  = makeDesc(peCard,"Activates korblox and headless effects (local visual).")
+
+    local peToggle = fpsToggleFrame:Clone()
+    peToggle.Parent = peCard
+    local peThumb = peToggle:FindFirstChildOfClass("Frame")
+
+    local function updatePeVisual()
+        if playerEffectsOn then
+            peToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+            peThumb.Position = UDim2.new(1,-18,0.5,-8)
+        else
+            peToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+            peThumb.Position = UDim2.new(0,2,0.5,-8)
+        end
+    end
+    updatePeVisual()
+
+    peToggle.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            playerEffectsOn = not playerEffectsOn
+            applyPlayerEffects(playerEffectsOn)
+            updatePeVisual()
+        end
+    end)
+
+    -----------------------------------------------------------------//
+    -- Ability ESP (TEMP UNAVAILABLE)
+    -----------------------------------------------------------------//
+    local espCard = makeOthersCard(othersScroll)
+    local espTitle = makeTitle(espCard,"Ability ESP (Unavailable)")
+    local espDesc  = makeDesc(espCard,"Temporarily unavailable.")
+
+    local espToggle = Instance.new("Frame")
+    espToggle.Size = UDim2.new(0,40,0,20)
+    espToggle.Position = UDim2.new(1,-50,0,18)
+    espToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+    espToggle.BorderSizePixel = 0
+    espToggle.ZIndex = 4
+    espToggle.Parent = espCard
+
+    local espToggleCorner = Instance.new("UICorner")
+    espToggleCorner.CornerRadius = UDim.new(1,0)
+    espToggleCorner.Parent = espToggle
+
+    local espThumb = Instance.new("Frame")
+    espThumb.Size = UDim2.new(0,16,0,16)
+    espThumb.Position = UDim2.new(0,2,0.5,-8)
+    espThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    espThumb.BorderSizePixel = 0
+    espThumb.ZIndex = 5
+    espThumb.Parent = espToggle
+
+    local espThumbCorner = Instance.new("UICorner")
+    espThumbCorner.CornerRadius = UDim.new(1,0)
+    espThumbCorner.Parent = espThumb
+end
+
+---------------------------------------------------------------------//
+-- MAIN PAGE (Auto Click / Parry)
+---------------------------------------------------------------------//
+local function keyToString(keycode)
+    local s = tostring(keycode)
+    return s:match("%.(.+)") or s
+end
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1,-40,0,24)
+status.Position = UDim2.new(0,20,0,20)
+status.BackgroundTransparency = 1
+status.Font = Enum.Font.Gotham
+status.TextSize = 16
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.TextColor3 = Color3.fromRGB(255,80,80)
+status.Text = "Status: OFF (Toggle, Click)"
+status.ZIndex = 3
+status.Parent = mainPage
+
+local function mkLabel(txt,x,y)
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(0,140,0,20)
+    l.Position = UDim2.new(0,x,0,y)
+    l.BackgroundTransparency = 1
+    l.Font = Enum.Font.Gotham
+    l.TextSize = 14
+    l.TextColor3 = Color3.fromRGB(230,230,235)
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Text = txt
+    l.ZIndex = 3
+    l.Parent = mainPage
+    return l
+end
+
+mkLabel("CPS:",20,60)
+local cpsBox = Instance.new("TextBox")
+cpsBox.Size = UDim2.new(0,70,0,24)
+cpsBox.Position = UDim2.new(0,70,0,58)
+cpsBox.BackgroundColor3 = Color3.fromRGB(30,30,35)
+cpsBox.BorderSizePixel = 0
+cpsBox.Font = Enum.Font.Gotham
+cpsBox.TextSize = 14
+cpsBox.TextColor3 = Color3.fromRGB(255,255,255)
+cpsBox.Text = "10"
+cpsBox.ClearTextOnFocus = false
+cpsBox.ZIndex = 3
+cpsBox.Parent = mainPage
+
+local cpsCorner = Instance.new("UICorner")
+cpsCorner.CornerRadius = UDim.new(0,8)
+cpsCorner.Parent = cpsBox
+
+mkLabel("Click Keybind:",20,96)
+local keyButton = Instance.new("TextButton")
+keyButton.Size = UDim2.new(0,70,0,24)
+keyButton.Position = UDim2.new(0,130,0,94)
+keyButton.BackgroundColor3 = Color3.fromRGB(30,30,35)
+keyButton.BorderSizePixel = 0
+keyButton.Font = Enum.Font.GothamBold
+keyButton.TextSize = 14
+keyButton.TextColor3 = Color3.fromRGB(255,255,255)
+keyButton.Text = keyToString(toggleKey)
+keyButton.ZIndex = 3
+keyButton.Parent = mainPage
+
+local keyCorner = Instance.new("UICorner")
+keyCorner.CornerRadius = UDim.new(0,8)
+keyCorner.Parent = keyButton
+
+mkLabel("Mode:",20,132)
+local modeButton = Instance.new("TextButton")
+modeButton.Size = UDim2.new(0,90,0,24)
+modeButton.Position = UDim2.new(0,80,0,130)
+modeButton.BackgroundColor3 = Color3.fromRGB(30,30,35)
+modeButton.BorderSizePixel = 0
+modeButton.Font = Enum.Font.GothamBold
+modeButton.TextSize = 14
+modeButton.TextColor3 = Color3.fromRGB(255,255,255)
+modeButton.Text = mode
+modeButton.ZIndex = 3
+modeButton.Parent = mainPage
+
+local modeCorner = Instance.new("UICorner")
+modeCorner.CornerRadius = UDim.new(0,8)
+modeCorner.Parent = modeButton
+
+mkLabel("Action:",20,168)
+local actionButton = Instance.new("TextButton")
+actionButton.Size = UDim2.new(0,90,0,24)
+actionButton.Position = UDim2.new(0,80,0,166)
+actionButton.BackgroundColor3 = Color3.fromRGB(30,30,35)
+actionButton.BorderSizePixel = 0
+actionButton.Font = Enum.Font.GothamBold
+actionButton.TextSize = 14
+actionButton.TextColor3 = Color3.fromRGB(255,255,255)
+actionButton.Text = actionMode
+actionButton.ZIndex = 3
+actionButton.Parent = mainPage
+
+local actionCorner = Instance.new("UICorner")
+actionCorner.CornerRadius = UDim.new(0,8)
+actionCorner.Parent = actionButton
+
+local lockedLabel = Instance.new("TextLabel")
+lockedLabel.Size = UDim2.new(1,-40,0,20)
+lockedLabel.Position = UDim2.new(0,20,0,204)
+lockedLabel.BackgroundTransparency = 1
+lockedLabel.Font = Enum.Font.Gotham
+lockedLabel.TextSize = 13
+lockedLabel.TextColor3 = Color3.fromRGB(200,200,210)
+lockedLabel.TextXAlignment = Enum.TextXAlignment.Left
+lockedLabel.Text = "Parry Key: E (locked)   |   Slash of Fury Key: Q (locked / disabled)"
+lockedLabel.ZIndex = 3
+lockedLabel.Parent = mainPage
+
+local infoLabel = Instance.new("TextLabel")
+infoLabel.Size = UDim2.new(1,-40,0,40)
+infoLabel.Position = UDim2.new(0,20,0,230)
+infoLabel.BackgroundTransparency = 1
+infoLabel.Font = Enum.Font.Gotham
+infoLabel.TextSize = 12
+infoLabel.TextWrapped = true
+infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+infoLabel.TextYAlignment = Enum.TextYAlignment.Top
+infoLabel.TextColor3 = Color3.fromRGB(180,180,190)
+infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Speed is now a toggle in Blatant > Player Options."
+infoLabel.ZIndex = 3
+infoLabel.Parent = mainPage
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0,220,0,34)
+toggleBtn.Position = UDim2.new(0,20,0,280)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(60,60,70)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 18
+toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.Text = "Start"
+toggleBtn.ZIndex = 3
+toggleBtn.Parent = mainPage
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0,10)
+toggleCorner.Parent = toggleBtn
+
+local function getCPS()
+    local n = tonumber(cpsBox.Text)
+    if not n or n <= 0 then
+        n = 10
+        cpsBox.Text = "10"
+    end
+    if n > 100 then
+        n = 100
+        cpsBox.Text = "100"
+    end
+    return n
+end
+
+local function updateStatus()
+    cps = getCPS()
+    local onOff = clicking and "ON" or "OFF"
+    local color = clicking and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,80,80)
+    status.Text = string.format("Status: %s (%d CPS, %s, %s)",onOff,cps,mode,actionMode)
+    status.TextColor3 = color
+end
+
+local function toggleClicker()
+    clicking = not clicking
+    updateStatus()
+    if clicking then
+        toggleBtn.Text = "Stop"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(70,140,70)
+    else
+        toggleBtn.Text = "Start"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(60,60,70)
+    end
+end
+
+toggleBtn.MouseButton1Click:Connect(toggleClicker)
+cpsBox.FocusLost:Connect(updateStatus)
+
+modeButton.MouseButton1Click:Connect(function()
+    mode = (mode == "Toggle") and "Hold" or "Toggle"
+    modeButton.Text = mode
+    updateStatus()
+end)
+
+actionButton.MouseButton1Click:Connect(function()
+    actionMode = (actionMode == "Click") and "Parry" or "Click"
+    actionButton.Text = actionMode
+    updateStatus()
+end)
+
+keyButton.MouseButton1Click:Connect(function()
+    if listeningForKey or listeningForManual then return end
+    listeningForKey = true
+    infoLabel.Text = "Press a key for main Toggle/Hold (RightCtrl reserved)."
+end)
+
+---------------------------------------------------------------------//
+-- BLATANT PAGE (SCROLL FRAME)
+---------------------------------------------------------------------//
+local blatantScroll = Instance.new("ScrollingFrame")
+blatantScroll.Size = UDim2.new(1,-20,1,-20)
+blatantScroll.Position = UDim2.new(0,10,0,10)
+blatantScroll.BackgroundTransparency = 1
+blatantScroll.BorderSizePixel = 0
+blatantScroll.ScrollBarThickness = 4
+blatantScroll.CanvasSize = UDim2.new(0,0,0,0)
+blatantScroll.ZIndex = 3
+blatantScroll.Parent = blatantPage
+
+local bLayout = Instance.new("UIListLayout")
+bLayout.SortOrder = Enum.SortOrder.LayoutOrder
+bLayout.Padding = UDim.new(0,10)
+bLayout.Parent = blatantScroll
+
+bLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    blatantScroll.CanvasSize = UDim2.new(0,0,0,bLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local function createBlatantCard(height)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1,0,0,height)
+    card.BackgroundColor3 = Color3.fromRGB(20,20,26)
+    card.BorderSizePixel = 0
+    card.ZIndex = 3
+    card.Parent = blatantScroll
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,12)
+    c.Parent = card
+
+    return card
+end
+
+local function blatantHeader(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,0,0,22)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 14
+    lbl.TextColor3 = Color3.fromRGB(230,230,235)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.ZIndex = 3
+    lbl.Parent = blatantScroll
+end
+
+local function makeBlatantTitle(parent,txt)
     local t = Instance.new("TextLabel")
-    t.Size = UDim2.new(1,-10,0,20)
-    t.Position = UDim2.new(0,8,0,6)
+    t.Size = UDim2.new(1,-60,0,20)
+    t.Position = UDim2.new(0,10,0,6)
     t.BackgroundTransparency = 1
     t.Font = Enum.Font.GothamSemibold
     t.TextSize = 14
     t.TextColor3 = Color3.fromRGB(255,255,255)
     t.TextXAlignment = Enum.TextXAlignment.Left
-    t.Text = "Live Status"
-    t.ZIndex = 11
-    t.Parent = panel
-
-    local function mk(y, text)
-        local l = Instance.new("TextLabel")
-        l.Size = UDim2.new(1,-16,0,16)
-        l.Position = UDim2.new(0,8,0,y)
-        l.BackgroundTransparency = 1
-        l.Font = Enum.Font.Gotham
-        l.TextSize = 12
-        l.TextColor3 = Color3.fromRGB(210,210,220)
-        l.TextXAlignment = Enum.TextXAlignment.Left
-        l.Text = text
-        l.ZIndex = 11
-        l.Parent = panel
-        return l
-    end
-
-    fpsLabel    = mk(28,"FPS: --")
-    pingLabel   = mk(44,"Ping: -- ms")
-    wsLabel     = mk(60,"WalkSpeed: --")
-    jpLabel     = mk(76,"JumpPower: --")
-    regionLabel = mk(92,"Region: --")
+    t.Text = txt
+    t.ZIndex = 4
+    t.Parent = parent
+    return t
 end
 
--- FPS / Ping / Region update
-local lastFps = 0
-RunService.RenderStepped:Connect(function(dt)
-    if dt > 0 then
-        lastFps = math.floor(1/dt + 0.5)
+local function makeBlatantDesc(parent,txt)
+    local d = Instance.new("TextLabel")
+    d.Size = UDim2.new(1,-60,0,16)
+    d.Position = UDim2.new(0,10,0,28)
+    d.BackgroundTransparency = 1
+    d.Font = Enum.Font.Gotham
+    d.TextSize = 12
+    d.TextColor3 = Color3.fromRGB(200,200,210)
+    d.TextXAlignment = Enum.TextXAlignment.Left
+    d.ZIndex = 4
+    d.Text = txt
+    d.Parent = parent
+    return d
+end
+
+---------------------------------------------------------------------//
+-- SEMI IMMORTAL (TEMP DISABLED)
+---------------------------------------------------------------------//
+local semiCard = createBlatantCard(52)
+makeBlatantTitle(semiCard,"Semi Immortal")
+makeBlatantDesc(semiCard,"Temporarily unavailable.")
+
+local semiToggle = Instance.new("Frame")
+semiToggle.Size = UDim2.new(0,40,0,20)
+semiToggle.Position = UDim2.new(1,-50,0,16)
+semiToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+semiToggle.BorderSizePixel = 0
+semiToggle.ZIndex = 4
+semiToggle.Parent = semiCard
+
+local semiToggleCorner = Instance.new("UICorner")
+semiToggleCorner.CornerRadius = UDim.new(1,0)
+semiToggleCorner.Parent = semiToggle
+
+local semiThumb = Instance.new("Frame")
+semiThumb.Size = UDim2.new(0,16,0,16)
+semiThumb.Position = UDim2.new(0,2,0.5,-8)
+semiThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+semiThumb.BorderSizePixel = 0
+semiThumb.ZIndex = 5
+semiThumb.Parent = semiToggle
+
+local semiThumbCorner = Instance.new("UICorner")
+semiThumbCorner.CornerRadius = UDim.new(1,0)
+semiThumbCorner.Parent = semiThumb
+
+---------------------------------------------------------------------//
+-- SETTINGS (BLATANT COSMETIC)
+---------------------------------------------------------------------//
+local setCard = createBlatantCard(52)
+makeBlatantTitle(setCard,"Settings")
+makeBlatantDesc(setCard,"Semi-Immortal configuration (currently disabled).")
+
+local setButton = Instance.new("TextButton")
+setButton.Size = UDim2.new(0,110,0,24)
+setButton.Position = UDim2.new(1,-120,0,14)
+setButton.BackgroundColor3 = Color3.fromRGB(30,30,38)
+setButton.BorderSizePixel = 0
+setButton.Font = Enum.Font.Gotham
+setButton.TextSize = 14
+setButton.TextColor3 = Color3.fromRGB(150,150,160)
+setButton.TextXAlignment = Enum.TextXAlignment.Center
+setButton.Text = "Normal"
+setButton.ZIndex = 4
+setButton.Parent = setCard
+
+local setCorner = Instance.new("UICorner")
+setCorner.CornerRadius = UDim.new(0,10)
+setCorner.Parent = setButton
+
+setButton.AutoButtonColor = false
+setButton.MouseButton1Click:Connect(function()
+    infoLabel.Text = "Semi Immortal is disabled in this build."
+end)
+
+---------------------------------------------------------------------//
+-- DETECTIONS (ALL DISABLED)
+---------------------------------------------------------------------//
+blatantHeader("Detections")
+
+local function createDisabledDetection(title,desc)
+    local card = createBlatantCard(52)
+    makeBlatantTitle(card,title)
+    makeBlatantDesc(card,(desc or "").." Temporarily unavailable.")
+
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(0,40,0,20)
+    toggleFrame.Position = UDim2.new(1,-50,0,16)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.ZIndex = 4
+    toggleFrame.Parent = card
+
+    local tfCorner = Instance.new("UICorner")
+    tfCorner.CornerRadius = UDim.new(1,0)
+    tfCorner.Parent = toggleFrame
+
+    local thumb = Instance.new("Frame")
+    thumb.Size = UDim2.new(0,16,0,16)
+    thumb.Position = UDim2.new(0,2,0.5,-8)
+    thumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    thumb.BorderSizePixel = 0
+    thumb.ZIndex = 5
+    thumb.Parent = toggleFrame
+
+    local thCorner = Instance.new("UICorner")
+    thCorner.CornerRadius = UDim.new(1,0)
+    thCorner.Parent = thumb
+end
+
+createDisabledDetection("Infinity Detection","Avoid accidental crashes by having the skill.")
+createDisabledDetection("Death Slash Detection","Generates the shot when activating the ability.")
+createDisabledDetection("Time Hole Detection","Avoid failing when someone has that skill.")
+
+-- Slash of Fury Detection (TEMP UNAVAILABLE)
+local slashCard = createBlatantCard(52)
+makeBlatantTitle(slashCard,"Slash of Fury Detection")
+makeBlatantDesc(slashCard,"Temporarily unavailable.")
+
+local slashToggle = Instance.new("Frame")
+slashToggle.Size = UDim2.new(0,40,0,20)
+slashToggle.Position = UDim2.new(1,-50,0,16)
+slashToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+slashToggle.BorderSizePixel = 0
+slashToggle.ZIndex = 4
+slashToggle.Parent = slashCard
+
+local slashToggleCorner = Instance.new("UICorner")
+slashToggleCorner.CornerRadius = UDim.new(1,0)
+slashToggleCorner.Parent = slashToggle
+
+local slashThumb = Instance.new("Frame")
+slashThumb.Size = UDim2.new(0,16,0,16)
+slashThumb.Position = UDim2.new(0,2,0.5,-8)
+slashThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+slashThumb.BorderSizePixel = 0
+slashThumb.ZIndex = 5
+slashThumb.Parent = slashToggle
+
+local slashThumbCorner = Instance.new("UICorner")
+slashThumbCorner.CornerRadius = UDim.new(1,0)
+slashThumbCorner.Parent = slashThumb
+
+---------------------------------------------------------------------//
+-- PLAYER OPTIONS (Speed toggle + Jump slider)
+---------------------------------------------------------------------//
+blatantHeader("Player Options")
+
+-- Speed card with toggle
+local speedCard = createBlatantCard(64)
+makeBlatantTitle(speedCard,"Speed")
+makeBlatantDesc(speedCard,"Choose the speed of your character. Toggle must be ON to apply.")
+
+local speedValueLabel = Instance.new("TextLabel")
+speedValueLabel.Size = UDim2.new(0,40,0,16)
+speedValueLabel.Position = UDim2.new(1,-90,0,8)
+speedValueLabel.BackgroundTransparency = 1
+speedValueLabel.Font = Enum.Font.Gotham
+speedValueLabel.TextSize = 12
+speedValueLabel.TextColor3 = Color3.fromRGB(220,220,230)
+speedValueLabel.Text = tostring(speedValue)
+speedValueLabel.ZIndex = 4
+speedValueLabel.Parent = speedCard
+
+local speedToggleFrame = Instance.new("Frame")
+speedToggleFrame.Size = UDim2.new(0,40,0,20)
+speedToggleFrame.Position = UDim2.new(1,-50,0,8)
+speedToggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
+speedToggleFrame.BorderSizePixel = 0
+speedToggleFrame.ZIndex = 4
+speedToggleFrame.Parent = speedCard
+
+local speedToggleCorner = Instance.new("UICorner")
+speedToggleCorner.CornerRadius = UDim.new(1,0)
+speedToggleCorner.Parent = speedToggleFrame
+
+local speedThumb = Instance.new("Frame")
+speedThumb.Size = UDim2.new(0,16,0,16)
+speedThumb.Position = UDim2.new(0,2,0.5,-8)
+speedThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+speedThumb.BorderSizePixel = 0
+speedThumb.ZIndex = 5
+speedThumb.Parent = speedToggleFrame
+
+local speedThumbCorner = Instance.new("UICorner")
+speedThumbCorner.CornerRadius = UDim.new(1,0)
+speedThumbCorner.Parent = speedThumb
+
+local function updateSpeedToggleVisual()
+    if speedEnabled then
+        speedToggleFrame.BackgroundColor3 = Color3.fromRGB(80,200,120)
+        speedThumb.Position = UDim2.new(1,-18,0.5,-8)
+    else
+        speedToggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
+        speedThumb.Position = UDim2.new(0,2,0.5,-8)
+    end
+end
+updateSpeedToggleVisual()
+
+speedToggleFrame.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        speedEnabled = not speedEnabled
+        updateSpeedToggleVisual()
+        applySpeed()
     end
 end)
 
-local function getPingMs()
-    local ok, ping = pcall(function()
-        if LocalPlayer and LocalPlayer.GetNetworkPing then
-            return LocalPlayer:GetNetworkPing()
-        end
-    end)
-    if ok and ping then
-        return math.floor(ping * 1000 + 0.5)
-    end
+local speedBar = Instance.new("Frame")
+speedBar.Size = UDim2.new(1,-40,0,6)
+speedBar.Position = UDim2.new(0,10,0,40)
+speedBar.BackgroundColor3 = Color3.fromRGB(35,35,42)
+speedBar.BorderSizePixel = 0
+speedBar.ZIndex = 4
+speedBar.Parent = speedCard
 
-    local Stats = game:FindService("Stats") or game:GetService("Stats")
-    local success, ms = pcall(function()
-        local net = Stats.Network
-        local si  = net:FindFirstChild("ServerStatsItem")
-        if si then
-            local dp = si:FindFirstChild("Data Ping") or si:FindFirstChild("Ping")
-            if dp then
-                local str = dp:GetValueString()
-                local n = tonumber(str:match("(%d+)%s*ms"))
-                return n
-            end
-        end
-    end)
-    if success and ms then return ms end
-    return nil
+local speedBarCorner = Instance.new("UICorner")
+speedBarCorner.CornerRadius = UDim.new(0,6)
+speedBarCorner.Parent = speedBar
+
+local speedFill = Instance.new("Frame")
+speedFill.Size = UDim2.new((speedValue-10)/(100-10),0,1,0)
+speedFill.BackgroundColor3 = Color3.fromRGB(140,200,255)
+speedFill.BorderSizePixel = 0
+speedFill.ZIndex = 5
+speedFill.Parent = speedBar
+
+local speedFillCorner = Instance.new("UICorner")
+speedFillCorner.CornerRadius = UDim.new(0,6)
+speedFillCorner.Parent = speedFill
+
+local speedDragging = false
+local function setSpeedFromX(x)
+    local rel = math.clamp((x - speedBar.AbsolutePosition.X)/speedBar.AbsoluteSize.X,0,1)
+    local val = math.floor(10 + (100-10)*rel + 0.5)
+    speedValue = val
+    speedValueLabel.Text = tostring(val)
+    speedFill.Size = UDim2.new(rel,0,1,0)
+    applySpeed()
 end
 
-local cachedRegion
-local function getServerRegion()
-    if cachedRegion ~= nil then return cachedRegion end
+speedBar.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        speedDragging = true
+        setSpeedFromX(inp.Position.X)
+    end
+end)
 
-    local ok, joinData = pcall(function()
-        return LocalPlayer and LocalPlayer:GetJoinData()
-    end)
-    if ok and joinData then
-        if joinData.Region then
-            cachedRegion = tostring(joinData.Region)
-            return cachedRegion
-        elseif joinData.matchmakingContext then
-            cachedRegion = tostring(joinData.matchmakingContext)
-            return cachedRegion
+UIS.InputChanged:Connect(function(inp)
+    if speedDragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+        setSpeedFromX(inp.Position.X)
+    end
+end)
+
+UIS.InputEnded:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        speedDragging = false
+    end
+end)
+
+-- Jump slider
+local function createSlider(title,desc,min,max,default,callback)
+    local card = createBlatantCard(64)
+    makeBlatantTitle(card,title)
+    makeBlatantDesc(card,desc)
+
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0,40,0,16)
+    valueLabel.Position = UDim2.new(1,-46,0,8)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Font = Enum.Font.Gotham
+    valueLabel.TextSize = 12
+    valueLabel.TextColor3 = Color3.fromRGB(220,220,230)
+    valueLabel.Text = tostring(default)
+    valueLabel.ZIndex = 4
+    valueLabel.Parent = card
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1,-40,0,6)
+    bar.Position = UDim2.new(0,10,0,40)
+    bar.BackgroundColor3 = Color3.fromRGB(35,35,42)
+    bar.BorderSizePixel = 0
+    bar.ZIndex = 4
+    bar.Parent = card
+
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0,6)
+    barCorner.Parent = bar
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
+    fill.BackgroundColor3 = Color3.fromRGB(140,200,255)
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 5
+    fill.Parent = bar
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0,6)
+    fillCorner.Parent = fill
+
+    local dragging = false
+    local function setFromX(x)
+        local rel = math.clamp((x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+        local val = math.floor(min + (max-min)*rel + 0.5)
+        valueLabel.Text = tostring(val)
+        fill.Size = UDim2.new(rel,0,1,0)
+        if callback then callback(val) end
+    end
+
+    bar.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            setFromX(inp.Position.X)
         end
-    end
-
-    local ok2, loc = pcall(function()
-        return LocalizationService.RobloxLocaleId or LocalizationService.SystemLocaleId
     end)
-    if ok2 and loc then
-        cachedRegion = tostring(loc)
-        return cachedRegion
-    end
 
-    cachedRegion = "Unknown"
-    return cachedRegion
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+            setFromX(inp.Position.X)
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    if callback then callback(default) end
 end
 
-task.spawn(function()
-    while true do
-        local hum = getHumanoid()
-        local ws,jp = 0,0
-        if hum then
-            ws = hum.WalkSpeed or 0
-            if hum.UseJumpPower ~= nil then
-                jp = hum.JumpPower or 0
-            end
-        end
-
-        local pingMs = getPingMs()
-        local region = getServerRegion()
-
-        if fpsLabel then fpsLabel.Text = "FPS: "..tostring(lastFps) end
-        if pingLabel then
-            pingLabel.Text = pingMs and ("Ping: "..pingMs.." ms") or "Ping: N/A"
-        end
-        if wsLabel then wsLabel.Text = string.format("WalkSpeed: %.1f", ws) end
-        if jpLabel then jpLabel.Text = string.format("JumpPower: %.1f", jp) end
-        if regionLabel then regionLabel.Text = "Region: "..tostring(region) end
-
-        task.wait(0.1)
+createSlider("Jump Power","Choose the jump power of your character.",25,150,50,function(val)
+    local hum = getHumanoid()
+    if hum then
+        if hum.UseJumpPower ~= nil then hum.UseJumpPower = true end
+        hum.JumpPower = val
     end
 end)
 
 ---------------------------------------------------------------------//
--- MAIN PAGE (CLICKER / MODES)
+-- MANUAL SPAM + TRIGGERBOT
 ---------------------------------------------------------------------//
-do
-    local header = Instance.new("TextLabel")
-    header.Size = UDim2.new(1,-40,0,26)
-    header.Position = UDim2.new(0,20,0,16)
-    header.BackgroundTransparency = 1
-    header.Font = Enum.Font.GothamBlack
-    header.TextSize = 20
-    header.TextColor3 = Color3.fromRGB(255,255,255)
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Main Hub"
-    header.Parent = mainPage
+local manualCard = createBlatantCard(48)
+makeBlatantTitle(manualCard,"Manual Spam")
+makeBlatantDesc(manualCard,"Spam push on keypress.")
 
-    local status = Instance.new("TextLabel")
-    status.Size = UDim2.new(1,-40,0,20)
-    status.Position = UDim2.new(0,20,0,44)
-    status.BackgroundTransparency = 1
-    status.Font = Enum.Font.Gotham
-    status.TextSize = 13
-    status.TextColor3 = Color3.fromRGB(255,80,80)
-    status.TextXAlignment = Enum.TextXAlignment.Left
-    status.Text = "Status: OFF (10 CPS, Toggle, Click)"
-    status.Parent = mainPage
+local manualKeyButton = Instance.new("TextButton")
+manualKeyButton.Size = UDim2.new(0,60,0,24)
+manualKeyButton.Position = UDim2.new(1,-70,0,12)
+manualKeyButton.BackgroundColor3 = Color3.fromRGB(30,30,38)
+manualKeyButton.BorderSizePixel = 0
+manualKeyButton.Font = Enum.Font.GothamBold
+manualKeyButton.TextSize = 14
+manualKeyButton.TextColor3 = Color3.fromRGB(255,255,255)
+manualKeyButton.Text = keyToString(manualKey)
+manualKeyButton.ZIndex = 4
+manualKeyButton.Parent = manualCard
 
-    local function updateStatus()
-        local onOff = clicking and "ON" or "OFF"
-        status.TextColor3 = clicking and Color3.fromRGB(80,255,120) or Color3.fromRGB(255,80,80)
-        status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cpsValue, modeType, actionType)
+local manualKeyCorner = Instance.new("UICorner")
+manualKeyCorner.CornerRadius = UDim.new(0,10)
+manualKeyCorner.Parent = manualKeyButton
+
+local triggerCard = createBlatantCard(48)
+makeBlatantTitle(triggerCard,"Triggerbot")
+makeBlatantDesc(triggerCard,"Block instant when they target you. (Here: constant parry spam.)")
+
+local trigToggle = semiToggle:Clone()
+trigToggle.Parent = triggerCard
+trigToggle.Position = UDim2.new(1,-50,0,14)
+local trigThumb = trigToggle:FindFirstChildOfClass("Frame")
+
+local function updateTriggerVisual()
+    if triggerbotOn then
+        trigToggle.BackgroundColor3 = Color3.fromRGB(80,200,120)
+        trigThumb.Position = UDim2.new(1,-18,0.5,-8)
+    else
+        trigToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+        trigThumb.Position = UDim2.new(0,2,0.5,-8)
     end
+end
+updateTriggerVisual()
 
-    local function shrinkRow(row)
-        row.Size = UDim2.new(0,380,0,34)
-    end
-
-    local row1,_, modeBtn   = makeRow(mainPage, 80,  "Mode Type (Hold/Toggle)")
-    shrinkRow(row1)
-    local row2,_, actionBtn = makeRow(mainPage, 120, "Action Type (Click/Parry)")
-    shrinkRow(row2)
-    local row3,_, rapidBtn  = makeRow(mainPage, 160, "Rapid Fire (Hold-Only)")
-    shrinkRow(row3)
-    local row4,_, triggerBtn = makeRow(mainPage, 200, "Triggerbot (Parry Spam)")
-    shrinkRow(row4)
-    local row5,_, manualBtn = makeRow(mainPage, 240, "Manual Spam Key (press to spam)")
-    shrinkRow(row5)
-
-    modeBtn.Text = modeType
-    modeBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
-
-    actionBtn.Text = actionType
-    actionBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
-
-    modeBtn.MouseButton1Click:Connect(function()
-        modeType = (modeType == "Toggle") and "Hold" or "Toggle"
-        modeBtn.Text = modeType
-        updateStatus()
-    end)
-
-    actionBtn.MouseButton1Click:Connect(function()
-        actionType = (actionType == "Click") and "Parry" or "Click"
-        actionBtn.Text = actionType
-        updateStatus()
-    end)
-
-    local function setToggleVisual(btn, on)
-        btn.Text = on and "ON" or "OFF"
-        btn.BackgroundColor3 = on and ThemeAccentOn or Color3.fromRGB(120,40,40)
-    end
-
-    local rapidOn = false
-    setToggleVisual(rapidBtn,false)
-    setToggleVisual(triggerBtn,false)
-
-    rapidBtn.MouseButton1Click:Connect(function()
-        rapidOn = not rapidOn
-        setToggleVisual(rapidBtn, rapidOn)
-    end)
-
-    triggerBtn.MouseButton1Click:Connect(function()
+trigToggle.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
         triggerbotOn = not triggerbotOn
-        setToggleVisual(triggerBtn, triggerbotOn)
-    end)
-
-    manualBtn.Text = "Key: R"
-    manualBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
-
-    manualBtn.MouseButton1Click:Connect(function()
-        manualBtn.Text = "Press..."
-        local listening = true
-
-        local conn; conn = UIS.InputBegan:Connect(function(inp,gp)
-            if not listening or gp then return end
-            if inp.UserInputType == Enum.UserInputType.Keyboard then
-                manualKey = inp.KeyCode
-                local name = tostring(manualKey):match("%.(.+)") or tostring(manualKey)
-                manualBtn.Text = "Key: "..name
-                listening = false
-                conn:Disconnect()
-            end
-        end)
-    end)
-
-    local cpsLabel = Instance.new("TextLabel")
-    cpsLabel.Size = UDim2.new(0,60,0,18)
-    cpsLabel.Position = UDim2.new(0,20,0,284)
-    cpsLabel.BackgroundTransparency = 1
-    cpsLabel.Font = Enum.Font.Gotham
-    cpsLabel.TextSize = 13
-    cpsLabel.TextColor3 = Color3.fromRGB(220,220,230)
-    cpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    cpsLabel.Text = "CPS:"
-    cpsLabel.Parent = mainPage
-
-    local cpsBox = Instance.new("TextBox")
-    cpsBox.Size = UDim2.new(0,60,0,22)
-    cpsBox.Position = UDim2.new(0,60,0,282)
-    cpsBox.BackgroundColor3 = Color3.fromRGB(26,26,34)
-    cpsBox.BorderSizePixel = 0
-    cpsBox.Font = Enum.Font.Gotham
-    cpsBox.TextSize = 13
-    cpsBox.TextColor3 = Color3.fromRGB(255,255,255)
-    cpsBox.Text = tostring(cpsValue)
-    cpsBox.ClearTextOnFocus = false
-    cpsBox.Parent = mainPage
-
-    local cpsCorner = Instance.new("UICorner")
-    cpsCorner.CornerRadius = UDim.new(0,6)
-    cpsCorner.Parent = cpsBox
-
-    cpsBox.FocusLost:Connect(function()
-        local n = tonumber(cpsBox.Text)
-        if not n or n <= 0 then n = 10 end
-        if n > 100 then n = 100 end
-        cpsValue = n
-        cpsBox.Text = tostring(n)
-        updateStatus()
-    end)
-
-    local startBtn = Instance.new("TextButton")
-    startBtn.Size = UDim2.new(0,200,0,32)
-    startBtn.Position = UDim2.new(0,20,0,314)
-    startBtn.BackgroundColor3 = Color3.fromRGB(80,80,100)
-    startBtn.BorderSizePixel = 0
-    startBtn.Font = Enum.Font.GothamBold
-    startBtn.TextSize = 18
-    startBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    startBtn.Text = "Start"
-    startBtn.Parent = mainPage
-
-    local sbCorner = Instance.new("UICorner")
-    sbCorner.CornerRadius = UDim.new(0,10)
-    sbCorner.Parent = startBtn
-
-    local function toggleClicker()
-        clicking = not clicking
-        if clicking then
-            startBtn.Text = "Stop"
-            startBtn.BackgroundColor3 = ThemeAccentOn
-        else
-            startBtn.Text = "Start"
-            startBtn.BackgroundColor3 = Color3.fromRGB(80,80,100)
-        end
-        updateStatus()
-    end
-
-    startBtn.MouseButton1Click:Connect(toggleClicker)
-
-    updateStatus()
-end
-
----------------------------------------------------------------------//
--- BLATANT PAGE (SPEED & JUMP BOOSTS)
----------------------------------------------------------------------//
--- (keep your existing Blatant / Others / Settings / Input / Anti-AFK /
--- spam loop code here – that part of your script was fine)
-
----------------------------------------------------------------------//
--- BOTTOM-RIGHT STATIC LABEL
----------------------------------------------------------------------//
-do
-    local label = Instance.new("TextLabel")
-    label.AnchorPoint = Vector2.new(1,1)
-    label.Size = UDim2.new(0,320,0,20)
-    label.Position = UDim2.new(1,-25,1,-10)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 12
-    label.TextXAlignment = Enum.TextXAlignment.Right
-    label.TextColor3 = Color3.fromRGB(200,200,210)
-    label.Text = "Anticheat bypass | Script made by Binxix"
-    label.Parent = root
-end
-
----------------------------------------------------------------------//
--- FINAL INIT
----------------------------------------------------------------------//
-setActivePage("Home")
-
-task.spawn(function()
-    task.wait(1)
-    local ok,err = pcall(sendWebhookLog)
-    if not ok then
-        warn("[BinHubX] Failed to send execution log: "..tostring(err))
+        updateTriggerVisual()
     end
 end)
+
+manualKeyButton.MouseButton1Click:Connect(function()
+    if listeningForKey or listeningForManual then return end
+    listeningForManual = true
+    infoLabel.Text = "Press a key for Manual Spam."
+end)
+
+---------------------------------------------------------------------//
+-- INPUT HANDLING
+---------------------------------------------------------------------//
+UIS.InputBegan:Connect(function(input,gp)
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+    -- Hub toggle
+    if input.KeyCode == Enum.KeyCode.RightControl
+        and not listeningForKey and not listeningForManual then
+        guiVisible = not guiVisible
+        gui.Enabled = guiVisible
+        return
+    end
+
+    -- Listening modes
+    if listeningForKey then
+        if input.KeyCode == Enum.KeyCode.RightControl then
+            infoLabel.Text = "RightCtrl is hub toggle only."
+        else
+            toggleKey = input.KeyCode
+            keyButton.Text = keyToString(toggleKey)
+            infoLabel.Text = "Main keybind set to: "..keyButton.Text
+        end
+        listeningForKey = false
+        return
+    end
+
+    if listeningForManual then
+        manualKey = input.KeyCode
+        manualKeyButton.Text = keyToString(manualKey)
+        infoLabel.Text = "Manual spam key set to: "..manualKeyButton.Text
+        listeningForManual = false
+        return
+    end
+
+    if gp then return end
+
+    -- Slash of Fury disabled, so abilityKey/Q does nothing
+
+    -- Main clicker toggle / hold
+    if input.KeyCode == toggleKey then
+        if mode == "Toggle" then
+            toggleClicker()
+        else
+            clicking = true
+            updateStatus()
+        end
+        return
+    end
+
+    -- Manual spam
+    if input.KeyCode == manualKey then
+        manualSpamActive = true
+    end
+end)
+
+UIS.InputEnded
+
