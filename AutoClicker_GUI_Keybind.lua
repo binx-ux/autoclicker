@@ -687,22 +687,35 @@ end
 ---------------------------------------------------------------------//
 -- LIVE STATUS PANEL (used on Main)
 ---------------------------------------------------------------------//
+---------------------------------------------------------------------//
+-- LIVE STATUS PANEL (used on Main)
+---------------------------------------------------------------------//
 local fpsLabel, pingLabel, wsLabel, jpLabel, regionLabel
+local liveStatusPanel
 do
     local panel = Instance.new("Frame")
+    liveStatusPanel = panel
+
+    -- size of the box
     panel.Size = UDim2.new(0,230,0,110)
-    panel.Position = UDim2.new(1,-250,0,20)
+    -- anchor it to the top-right of the Main page
+    panel.AnchorPoint = Vector2.new(1,0)
+    panel.Position = UDim2.new(1,-20,0,20)
+
     panel.BackgroundColor3 = Color3.fromRGB(18,18,28)
     panel.BorderSizePixel = 0
+    panel.ZIndex = 10
     panel.Parent = mainPage
 
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0,12)
+    c.ZIndex = 10
     c.Parent = panel
 
     local s = Instance.new("UIStroke")
     s.Thickness = 1
     s.Color = Color3.fromRGB(45,45,60)
+    s.ZIndex = 10
     s.Parent = panel
 
     local t = Instance.new("TextLabel")
@@ -714,6 +727,7 @@ do
     t.TextColor3 = Color3.fromRGB(255,255,255)
     t.TextXAlignment = Enum.TextXAlignment.Left
     t.Text = "Live Status"
+    t.ZIndex = 11
     t.Parent = panel
 
     local function mk(y, text)
@@ -726,6 +740,7 @@ do
         l.TextColor3 = Color3.fromRGB(210,210,220)
         l.TextXAlignment = Enum.TextXAlignment.Left
         l.Text = text
+        l.ZIndex = 11
         l.Parent = panel
         return l
     end
@@ -736,6 +751,7 @@ do
     jpLabel     = mk(76,"JumpPower: --")
     regionLabel = mk(92,"Region: --")
 end
+
 
 -- FPS / Ping / Region update
 local lastFps = 0
