@@ -846,26 +846,15 @@ end)
 ---------------------------------------------------------------------//
 -- MAIN PAGE (CLICKER / MODES)
 ---------------------------------------------------------------------//
-local toggleKey   = Enum.KeyCode.E
-local parryKey    = Enum.KeyCode.E
-local manualKey   = Enum.KeyCode.R
-
-local modeType    = "Toggle" -- or "Hold"
-local actionType  = "Click"  -- or "Parry"
-
-local clicking         = false
-local manualSpamActive = false
-local triggerbotOn     = false
-local cpsValue         = 10
-
-local antiAfkOn        = false
-
 local function makeRow(parent, y, leftText)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1,-40,0,34)
+    -- shrink width so it doesn't go under the Live Status panel
+    -- (left side only, leaves ~250px on the right)
+    row.Size = UDim2.new(1,-280,0,34)
     row.Position = UDim2.new(0,20,0,y)
     row.BackgroundColor3 = Color3.fromRGB(20,20,30)
     row.BorderSizePixel = 0
+    row.ZIndex = 1
     row.Parent = parent
 
     local c = Instance.new("UICorner")
@@ -881,6 +870,7 @@ local function makeRow(parent, y, leftText)
     lbl.TextColor3 = Color3.fromRGB(235,235,245)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Text = leftText
+    lbl.ZIndex = 2
     lbl.Parent = row
 
     local toggleBtn = Instance.new("TextButton")
@@ -892,6 +882,7 @@ local function makeRow(parent, y, leftText)
     toggleBtn.TextSize = 12
     toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
     toggleBtn.Text = "OFF"
+    toggleBtn.ZIndex = 3
     toggleBtn.Parent = row
 
     local tc = Instance.new("UICorner")
@@ -900,6 +891,7 @@ local function makeRow(parent, y, leftText)
 
     return row, lbl, toggleBtn
 end
+
 
 do
     local header = Instance.new("TextLabel")
