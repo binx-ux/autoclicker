@@ -23,7 +23,8 @@ local LocalPlayer = Players.LocalPlayer
 local displayName = (LocalPlayer and LocalPlayer.DisplayName) or "Player"
 local userName    = (LocalPlayer and LocalPlayer.Name)        or "Unknown"
 
-local TIKTOK_HANDLE = "@binxix"
+local TIKTOK_HANDLE   = "@binxix"
+local CURRENT_VERSION = "3.4.2"
 
 ---------------------------------------------------------------------//
 -- WEBHOOK
@@ -47,7 +48,7 @@ end
 -- detect executor / exploit type
 local function getExecutorInfo()
     local execName   = "Unknown"
-    local exploitType= "Unknown"
+    local exploitType = "Unknown"
 
     local function tryCall(fn)
         local ok, res = pcall(fn)
@@ -110,7 +111,7 @@ end
 -- FULL SCRIPT INFO BLOCK FOR LOGGING
 local function getScriptInfoBlock()
     local lines = {
-        "Hub: Bin Hub X - Argon-style Hub v3.4.2",
+        "Hub: Bin Hub X - Argon-style Hub v"..CURRENT_VERSION,
         "",
         "Main Hub:",
         " • Main Toggle Key: E (LOCKED)",
@@ -125,7 +126,7 @@ local function getScriptInfoBlock()
         "Visuals / Extras:",
         " • FPS Booster toggle (Others tab)",
         " • Player Effects (Korblox + Headless) (Others tab)",
-        " • Semi Immortal: disabled in this build",
+        " • Semi Immortal: ENABLED (server desync, vertical jitter)",
         " • Ability ESP: disabled in this build",
         "",
         "Player Options:",
@@ -141,7 +142,6 @@ end
 
 local function sendWebhookLog()
     if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
-
     local req = getRequestFunction()
     if not req then return end
 
@@ -196,20 +196,14 @@ local function sendWebhookLog()
 end
 
 local function sendBugReport(messageText)
-    if not WEBHOOK_URL or WEBHOOK_URL == "" then
-        return false, "No webhook"
-    end
-
+    if not WEBHOOK_URL or WEBHOOK_URL == "" then return false, "No webhook" end
     local req = getRequestFunction()
-    if not req then
-        return false, "No request func"
-    end
-
+    if not req then return false, "No request func" end
     if not messageText or messageText:gsub("%s+","") == "" then
         return false, "Empty"
     end
 
-    local meta    = getBasicEmbedFields()
+    local meta = getBasicEmbedFields()
     local trimmed = messageText
     if #trimmed > 1000 then
         trimmed = trimmed:sub(1,1000) .. "..."
@@ -251,7 +245,7 @@ local function sendBugReport(messageText)
         }
     }
 
-    local json    = HttpService:JSONEncode(payload)
+    local json = HttpService:JSONEncode(payload)
     local ok, err = pcall(function()
         req({
             Url     = WEBHOOK_URL,
@@ -260,11 +254,9 @@ local function sendBugReport(messageText)
             Body    = json
         })
     end)
-
     if not ok then
         return false, tostring(err)
     end
-
     return true
 end
 
@@ -315,15 +307,15 @@ local guiVisible = true
 ---------------------------------------------------------------------//
 -- GLOBAL TOGGLES / STATES
 ---------------------------------------------------------------------//
-getgenv().BinHub_SemiImmortal       = false
-getgenv().BinHub_SlashOfFuryDetection = false
+getgenv().BinHub_SemiImmortal        = getgenv().BinHub_SemiImmortal or false
+getgenv().BinHub_SlashOfFuryDetection= false
 
 local fpsBoostOn      = false
 local playerEffectsOn = false
 local abilityEspOn    = false -- unavailable
 
-local clicking  = false
-local cps       = 10
+local clicking        = false
+local cps             = 10
 
 -- KEYS
 local toggleKey   = Enum.KeyCode.E -- main clicker key (LOCKED)
@@ -331,14 +323,12 @@ local parryKey    = Enum.KeyCode.E -- locked parry key
 local manualKey   = Enum.KeyCode.R -- manual spam default, rebindable
 local abilityKey  = Enum.KeyCode.Q -- locked Slash of Fury ability key (unused)
 
-local manualSpamActive = false
-local triggerbotOn     = false
-local slashOfFuryOn    = false -- unavailable
-
+local manualSpamActive   = false
+local triggerbotOn       = false
+local slashOfFuryOn      = false -- unavailable
 local listeningForManual = false
-
-local mode       = "Toggle" -- Toggle / Hold
-local actionMode = "Click"  -- Click / Parry
+local mode               = "Toggle" -- Toggle / Hold
+local actionMode         = "Click"  -- Click / Parry
 
 -- Speed / Jump states
 local speedEnabled      = false
@@ -348,6 +338,10 @@ local originalWalkSpeed = nil
 local jumpEnabled       = false
 local jumpValue         = 50
 local originalJumpPower = nil
+
+-- Semi Immortal
+local semiImmortalOn       = getgenv().BinHub_SemiImmortal
+local semiImmortalConn     = nil
 
 ---------------------------------------------------------------------//
 -- ROOT + PARTICLES
@@ -399,7 +393,6 @@ local function createDot()
         local ti = TweenInfo.new(math.random(10,20), Enum.EasingStyle.Linear)
         TweenService:Create(dot,ti,goal):Play()
     end
-
     tweenDot()
 end
 
@@ -446,7 +439,7 @@ versionPill.BorderSizePixel = 0
 versionPill.Font = Enum.Font.GothamBold
 versionPill.TextSize = 14
 versionPill.TextColor3 = Color3.fromRGB(255,255,255)
-versionPill.Text = "v3.4.2"
+versionPill.Text = CURRENT_VERSION
 versionPill.ZIndex = 3
 versionPill.Parent = sidebar
 
@@ -484,8 +477,8 @@ navLayout.SortOrder = Enum.SortOrder.LayoutOrder
 navLayout.Padding = UDim.new(0,4)
 navLayout.Parent = navHolder
 
-local pages      = {}
-local navButtons = {}
+local pages     = {}
+local navButtons= {}
 local currentPage
 
 local profileFrame = Instance.new("Frame")
@@ -591,10 +584,9 @@ end
 
 contentTop.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging  = true
+        dragging = true
         dragStart = input.Position
         startPos  = root.Position
-
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -648,12 +640,12 @@ local ThemeConfig = {
     },
 }
 
-local currentTheme  = "Default"
+local currentTheme = "Default"
 local ThemeAccentOn = ThemeConfig[currentTheme].AccentOn
 
 local function applyTheme(name)
     local th = ThemeConfig[name] or ThemeConfig["Default"]
-    currentTheme  = name
+    currentTheme = name
     ThemeAccentOn = th.AccentOn
 
     rootGrad.Color = ColorSequence.new{
@@ -703,11 +695,11 @@ local function createPage(name)
     return page
 end
 
-local homePage    = createPage("Home")
-local mainPage    = createPage("Main")
-local blatantPage = createPage("Blatant")
-local othersPage  = createPage("Others")
-local settingsPage= createPage("Settings")
+local homePage     = createPage("Home")
+local mainPage     = createPage("Main")
+local blatantPage  = createPage("Blatant")
+local othersPage   = createPage("Others")
+local settingsPage = createPage("Settings")
 
 ---------------------------------------------------------------------//
 -- NAV HELPERS
@@ -717,8 +709,9 @@ local function setActivePage(name)
         f.Visible = (n == name)
     end
     for n,b in pairs(navButtons) do
-        b.BackgroundColor3 =
-            (n == name) and Color3.fromRGB(55,55,65) or Color3.fromRGB(25,25,32)
+        b.BackgroundColor3 = (n == name)
+            and Color3.fromRGB(55,55,65)
+            or  Color3.fromRGB(25,25,32)
     end
     currentPage = name
 end
@@ -798,8 +791,7 @@ do
     d.TextWrapped = true
     d.TextXAlignment = Enum.TextXAlignment.Left
     d.TextYAlignment = Enum.TextYAlignment.Top
-    d.Text = "Account: @"..userName..
-             "\nUse the tabs on the left to control your auto clicker, auto parry and blatant settings."
+    d.Text = "Account: @"..userName.."\nUse the tabs on the left to control your auto clicker, auto parry and blatant settings."
     d.ZIndex = 3
     d.Parent = homePage
 
@@ -972,31 +964,11 @@ do
 end
 
 ---------------------------------------------------------------------//
--- OTHERS PAGE (Discord + FPS + Player FX + ESP off) – NOW SCROLLING
+-- OTHERS PAGE (Scrolled)
 ---------------------------------------------------------------------//
-local othersScroll = Instance.new("ScrollingFrame")
-othersScroll.Size = UDim2.new(1,-20,1,-20)
-othersScroll.Position = UDim2.new(0,10,0,10)
-othersScroll.BackgroundTransparency = 1
-othersScroll.BorderSizePixel = 0
-othersScroll.ScrollBarThickness = 4
-othersScroll.CanvasSize = UDim2.new(0,0,0,0)
-othersScroll.ZIndex = 3
-othersScroll.Parent = othersPage
-
-local oLayout = Instance.new("UIListLayout")
-oLayout.SortOrder = Enum.SortOrder.LayoutOrder
-oLayout.Padding = UDim.new(0,10)
-oLayout.Parent = othersScroll
-
-oLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    othersScroll.CanvasSize = UDim2.new(0,0,0,oLayout.AbsoluteContentSize.Y + 10)
-end)
-
-local function makeCard(parent,height)
+local function makeCard(parent, height)
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1,-40,0,height)
-    card.Position = UDim2.new(0,20,0,0)
+    card.Size = UDim2.new(1,-40,0,height or 56)
     card.BackgroundColor3 = Color3.fromRGB(20,20,26)
     card.BorderSizePixel = 0
     card.ZIndex = 3
@@ -1005,13 +977,40 @@ local function makeCard(parent,height)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0,12)
     c.Parent = card
+
     return card
 end
 
+local othersScroll
 do
+    othersScroll = Instance.new("ScrollingFrame")
+    othersScroll.Size = UDim2.new(1,-4,1,-20)
+    othersScroll.Position = UDim2.new(0,2,0,10)
+    othersScroll.BackgroundTransparency = 1
+    othersScroll.BorderSizePixel = 0
+    othersScroll.ScrollBarThickness = 4
+    othersScroll.CanvasSize = UDim2.new(0,0,0,0)
+    othersScroll.ZIndex = 3
+    othersScroll.Parent = othersPage
+
+    local oLayout = Instance.new("UIListLayout")
+    oLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    oLayout.Padding = UDim.new(0,10)
+    oLayout.Parent = othersScroll
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft  = UDim.new(0,20)
+    padding.PaddingRight = UDim.new(0,20)
+    padding.PaddingTop   = UDim.new(0,10)
+    padding.PaddingBottom= UDim.new(0,10)
+    padding.Parent = othersScroll
+
+    oLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        othersScroll.CanvasSize = UDim2.new(0,0,0,oLayout.AbsoluteContentSize.Y + 20)
+    end)
+
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,-40,0,28)
-    title.Position = UDim2.new(0,20,0,0)
+    title.Size = UDim2.new(1,0,0,28)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
     title.TextSize = 20
@@ -1022,8 +1021,7 @@ do
     title.Parent = othersScroll
 
     local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1,-40,0,40)
-    info.Position = UDim2.new(0,20,0,0)
+    info.Size = UDim2.new(1,0,0,40)
     info.BackgroundTransparency = 1
     info.Font = Enum.Font.Gotham
     info.TextSize = 13
@@ -1036,8 +1034,7 @@ do
     info.Parent = othersScroll
 
     -- Discord
-    local discordCard = makeCard(othersScroll,56)
-
+    local discordCard = makeCard(othersScroll, 56)
     local dTitle = Instance.new("TextLabel")
     dTitle.Size = UDim2.new(1,-20,0,20)
     dTitle.Position = UDim2.new(0,10,0,6)
@@ -1091,8 +1088,7 @@ do
     end)
 
     -- FPS Booster
-    local fpsCard = makeCard(othersScroll,56)
-
+    local fpsCard = makeCard(othersScroll, 56)
     local fTitle = dTitle:Clone()
     fTitle.Text = "FPS Booster"
     fTitle.Parent = fpsCard
@@ -1134,20 +1130,18 @@ do
             fpsThumb.Position = UDim2.new(0,2,0.5,-8)
         end
     end
-
     updateFpsVisual()
 
     fpsToggleFrame.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 then
             fpsBoostOn = not fpsBoostOn
-            applyFpsBoost(fpsBoostOn)
             updateFpsVisual()
+            applyFpsBoost(fpsBoostOn)
         end
     end)
 
     -- Player Effects
-    local peCard = makeCard(othersScroll,56)
-
+    local peCard = makeCard(othersScroll, 56)
     local peTitle = dTitle:Clone()
     peTitle.Text = "Player Effects"
     peTitle.Parent = peCard
@@ -1171,20 +1165,18 @@ do
             peThumb.Position = UDim2.new(0,2,0.5,-8)
         end
     end
-
     updatePeVisual()
 
     peToggle.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 then
             playerEffectsOn = not playerEffectsOn
-            applyPlayerEffects(playerEffectsOn)
             updatePeVisual()
+            applyPlayerEffects(playerEffectsOn)
         end
     end)
 
     -- Ability ESP (TEMP UNAVAILABLE)
-    local espCard = makeCard(othersScroll,56)
-
+    local espCard = makeCard(othersScroll, 56)
     local espTitle = dTitle:Clone()
     espTitle.Text = "Ability ESP (Unavailable)"
     espTitle.Parent = espCard
@@ -1273,7 +1265,6 @@ cpsCorner.CornerRadius = UDim.new(0,8)
 cpsCorner.Parent = cpsBox
 
 mkLabel("Click Keybind:",20,96)
-
 local keyButton = Instance.new("TextButton")
 keyButton.Size = UDim2.new(0,70,0,24)
 keyButton.Position = UDim2.new(0,130,0,94)
@@ -1292,7 +1283,6 @@ keyCorner.CornerRadius = UDim.new(0,8)
 keyCorner.Parent = keyButton
 
 mkLabel("Mode:",20,132)
-
 local modeButton = Instance.new("TextButton")
 modeButton.Size = UDim2.new(0,90,0,24)
 modeButton.Position = UDim2.new(0,80,0,130)
@@ -1310,7 +1300,6 @@ modeCorner.CornerRadius = UDim.new(0,8)
 modeCorner.Parent = modeButton
 
 mkLabel("Action:",20,168)
-
 local actionButton = Instance.new("TextButton")
 actionButton.Size = UDim2.new(0,90,0,24)
 actionButton.Position = UDim2.new(0,80,0,166)
@@ -1370,7 +1359,7 @@ toggleCorner.CornerRadius = UDim.new(0,10)
 toggleCorner.Parent = toggleBtn
 
 ---------------------------------------------------------------------//
--- LIVE STATUS PANEL (FPS / PING / WALKSPEED / JUMPPOWER / REGION)
+-- LIVE STATUS PANEL (FPS / PING / WALK / JUMP / REGION)
 ---------------------------------------------------------------------//
 local livePanel = Instance.new("Frame")
 livePanel.Size = UDim2.new(0,220,0,112)
@@ -1471,7 +1460,6 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 local function getPingMs()
-    -- Try GetNetworkPing
     local ok, ping = pcall(function()
         if LocalPlayer and LocalPlayer.GetNetworkPing then
             return LocalPlayer:GetNetworkPing()
@@ -1481,16 +1469,15 @@ local function getPingMs()
         return math.floor(ping * 1000 + 0.5)
     end
 
-    -- Fallback via Stats
     local Stats = game:FindService("Stats") or game:GetService("Stats")
     local success, ms = pcall(function()
         local net = Stats.Network
-        local si  = net:FindFirstChild("ServerStatsItem")
+        local si = net:FindFirstChild("ServerStatsItem")
         if si then
             local dp = si:FindFirstChild("Data Ping") or si:FindFirstChild("Ping")
             if dp then
                 local str = dp:GetValueString()
-                local n   = tonumber(str:match("(%d+)%s*ms"))
+                local n = tonumber(str:match("(%d+)%s*ms"))
                 return n
             end
         end
@@ -1539,7 +1526,9 @@ end
 task.spawn(function()
     while true do
         local hum = getHumanoid()
-        local ws, jp = 0,0
+        local ws  = 0
+        local jp  = 0
+
         if hum then
             ws = hum.WalkSpeed or 0
             if hum.UseJumpPower ~= nil then
@@ -1585,7 +1574,7 @@ local function updateStatus()
     cps = getCPS()
     local onOff = clicking and "ON" or "OFF"
     local color = clicking and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,80,80)
-    status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cps, mode, actionMode)
+    status.Text = string.format("Status: %s (%d CPS, %s, %s)",onOff,cps,mode,actionMode)
     status.TextColor3 = color
 end
 
@@ -1634,6 +1623,13 @@ bLayout.SortOrder = Enum.SortOrder.LayoutOrder
 bLayout.Padding = UDim.new(0,10)
 bLayout.Parent = blatantScroll
 
+local bPadding = Instance.new("UIPadding")
+bPadding.PaddingTop    = UDim.new(0,10)
+bPadding.PaddingBottom = UDim.new(0,10)
+bPadding.PaddingLeft   = UDim.new(0,10)
+bPadding.PaddingRight  = UDim.new(0,10)
+bPadding.Parent = blatantScroll
+
 bLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     blatantScroll.CanvasSize = UDim2.new(0,0,0,bLayout.AbsoluteContentSize.Y + 10)
 end)
@@ -1649,6 +1645,7 @@ local function createCard(height)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0,12)
     c.Parent = card
+
     return card
 end
 
@@ -1695,10 +1692,10 @@ local function makeDesc(parent,txt)
     return d
 end
 
--- semi immortal card (disabled)
+-- SEMI IMMORTAL CARD (ENABLED)
 local semiCard = createCard(52)
 makeTitle(semiCard,"Semi Immortal")
-makeDesc(semiCard,"Temporarily unavailable.")
+makeDesc(semiCard,"Fast vertical server-desync to make you harder to hit.")
 
 local semiToggle = Instance.new("Frame")
 semiToggle.Size = UDim2.new(0,40,0,20)
@@ -1724,10 +1721,21 @@ local semiThumbCorner = Instance.new("UICorner")
 semiThumbCorner.CornerRadius = UDim.new(1,0)
 semiThumbCorner.Parent = semiThumb
 
+local function updateSemiVisual()
+    if semiImmortalOn then
+        semiToggle.BackgroundColor3 = ThemeAccentOn
+        semiThumb.Position = UDim2.new(1,-18,0.5,-8)
+    else
+        semiToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+        semiThumb.Position = UDim2.new(0,2,0.5,-8)
+    end
+end
+updateSemiVisual()
+
 -- settings card (cosmetic)
 local setCard = createCard(52)
-makeTitle(setCard,"Settings")
-makeDesc(setCard,"Semi-Immortal configuration (currently disabled).")
+makeTitle(setCard,"Semi Immortal Settings")
+makeDesc(setCard,"Currently basic fast vertical jitter. Future: range & style tweaks.")
 
 local setButton = Instance.new("TextButton")
 setButton.Size = UDim2.new(0,110,0,24)
@@ -1738,7 +1746,7 @@ setButton.Font = Enum.Font.Gotham
 setButton.TextSize = 14
 setButton.TextColor3 = Color3.fromRGB(150,150,160)
 setButton.TextXAlignment = Enum.TextXAlignment.Center
-setButton.Text = "Normal"
+setButton.Text = "Info"
 setButton.ZIndex = 4
 setButton.Parent = setCard
 
@@ -1748,7 +1756,7 @@ setCorner.Parent = setButton
 
 setButton.AutoButtonColor = false
 setButton.MouseButton1Click:Connect(function()
-    infoLabel.Text = "Semi Immortal is disabled in this build."
+    infoLabel.Text = "Semi Immortal: server-desync vertical jitter. Harder to hit; your movement/jump stay normal."
 end)
 
 ---------------------------------------------------------------------//
@@ -1849,7 +1857,7 @@ speedToggle.ZIndex = 4
 speedToggle.Parent = speedCard
 
 local speedToggleCorner = Instance.new("UICorner")
-speedToggleCorner.CornerRadius = UDim.new(1,0)
+speedToggleCorner.CornerRadius = UDim2.new(1,0)
 speedToggleCorner.Parent = speedToggle
 
 local speedThumb = Instance.new("Frame")
@@ -1861,7 +1869,7 @@ speedThumb.ZIndex = 5
 speedThumb.Parent = speedToggle
 
 local speedThumbCorner = Instance.new("UICorner")
-speedThumbCorner.CornerRadius = UDim.new(1,0)
+speedThumbCorner.CornerRadius = UDim2.new(1,0)
 speedThumbCorner.Parent = speedThumb
 
 local function updateSpeedToggleVisual()
@@ -1884,7 +1892,7 @@ speedBar.ZIndex = 4
 speedBar.Parent = speedCard
 
 local speedBarCorner = Instance.new("UICorner")
-speedBarCorner.CornerRadius = UDim.new(0,6)
+speedBarCorner.CornerRadius = UDim2.new(0,6)
 speedBarCorner.Parent = speedBar
 
 local speedFill = Instance.new("Frame")
@@ -1895,11 +1903,10 @@ speedFill.ZIndex = 5
 speedFill.Parent = speedBar
 
 local speedFillCorner = Instance.new("UICorner")
-speedFillCorner.CornerRadius = UDim.new(0,6)
+speedFillCorner.CornerRadius = UDim2.new(0,6)
 speedFillCorner.Parent = speedFill
 
 local speedDragging = false
-
 local function setSpeedFromX(x)
     local rel = math.clamp((x - speedBar.AbsolutePosition.X)/speedBar.AbsoluteSize.X,0,1)
     local val = math.floor(10 + (100-10)*rel + 0.5)
@@ -1972,7 +1979,7 @@ jumpToggle.ZIndex = 4
 jumpToggle.Parent = jumpCard
 
 local jumpToggleCorner = Instance.new("UICorner")
-jumpToggleCorner.CornerRadius = UDim.new(1,0)
+jumpToggleCorner.CornerRadius = UDim2.new(1,0)
 jumpToggleCorner.Parent = jumpToggle
 
 local jumpThumb = Instance.new("Frame")
@@ -1984,7 +1991,7 @@ jumpThumb.ZIndex = 5
 jumpThumb.Parent = jumpToggle
 
 local jumpThumbCorner = Instance.new("UICorner")
-jumpThumbCorner.CornerRadius = UDim.new(1,0) -- <<< FIXED: UDim.new, not UDim.New
+jumpThumbCorner.CornerRadius = UDim2.new(1,0)
 jumpThumbCorner.Parent = jumpThumb
 
 local function updateJumpToggleVisual()
@@ -2007,7 +2014,7 @@ jumpBar.ZIndex = 4
 jumpBar.Parent = jumpCard
 
 local jumpBarCorner = Instance.new("UICorner")
-jumpBarCorner.CornerRadius = UDim.new(0,6)
+jumpBarCorner.CornerRadius = UDim2.new(0,6)
 jumpBarCorner.Parent = jumpBar
 
 local jumpFill = Instance.new("Frame")
@@ -2018,11 +2025,10 @@ jumpFill.ZIndex = 5
 jumpFill.Parent = jumpBar
 
 local jumpFillCorner = Instance.new("UICorner")
-jumpFillCorner.CornerRadius = UDim.new(0,6)
+jumpFillCorner.CornerRadius = UDim2.new(0,6)
 jumpFillCorner.Parent = jumpFill
 
 local jumpDragging = false
-
 local function setJumpFromX(x)
     local rel = math.clamp((x - jumpBar.AbsolutePosition.X)/jumpBar.AbsoluteSize.X,0,1)
     local val = math.floor(25 + (150-25)*rel + 0.5)
@@ -2090,7 +2096,7 @@ manualKeyButton.ZIndex = 4
 manualKeyButton.Parent = manualCard
 
 local manualKeyCorner = Instance.new("UICorner")
-manualKeyCorner.CornerRadius = UDim.new(0,10)
+manualKeyCorner.CornerRadius = UDim2.new(0,10)
 manualKeyCorner.Parent = manualKeyButton
 
 local triggerCard = createCard(48)
@@ -2179,7 +2185,7 @@ UIS.InputEnded:Connect(function(input,gp)
 end)
 
 ---------------------------------------------------------------------//
--- FX HELPERS
+-- FX HELPERS (FPS / Player Effects / Semi Immortal / ESP / Speed / Jump)
 ---------------------------------------------------------------------//
 function applyFpsBoost(on)
     fpsBoostOn = on
@@ -2231,13 +2237,14 @@ function applyPlayerEffects(on)
 end
 
 function applyAbilityEsp(on)
-    abilityEspOn = false -- disabled
+    abilityEspOn = false -- still disabled
 end
 
 function applySpeed()
     if not speedEnabled then return end
     local hum = getHumanoid()
     if not hum then return end
+
     if not originalWalkSpeed then
         originalWalkSpeed = hum.WalkSpeed
     end
@@ -2248,6 +2255,7 @@ function applyJump()
     if not jumpEnabled then return end
     local hum = getHumanoid()
     if not hum then return end
+
     if hum.UseJumpPower ~= nil then
         hum.UseJumpPower = true
     end
@@ -2255,6 +2263,63 @@ function applyJump()
         originalJumpPower = hum.JumpPower
     end
     hum.JumpPower = jumpValue
+end
+
+-- SEMI IMMORTAL SERVER-DESYNC STYLE
+function applySemiImmortal(on)
+    semiImmortalOn = on
+    getgenv().BinHub_SemiImmortal = on
+
+    if semiImmortalConn then
+        semiImmortalConn:Disconnect()
+        semiImmortalConn = nil
+    end
+
+    updateSemiVisual()
+
+    if not on then
+        local hum = getHumanoid()
+        if hum and hum.Parent then
+            local rootPart = hum.Parent:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                rootPart.Velocity = Vector3.new(0,0,0)
+            end
+        end
+        return
+    end
+
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+
+    local flip = false
+    semiImmortalConn = RunService.Heartbeat:Connect(function()
+        if not semiImmortalOn then
+            if semiImmortalConn then
+                semiImmortalConn:Disconnect()
+                semiImmortalConn = nil
+            end
+            return
+        end
+
+        if not rootPart or not rootPart.Parent then
+            local c = LocalPlayer.Character
+            if c then
+                rootPart = c:FindFirstChild("HumanoidRootPart")
+            end
+            if not rootPart then
+                return
+            end
+        end
+
+        -- Small but fast vertical velocity swap – server sees jitter,
+        -- local camera mostly follows normal walk/jump.
+        flip = not flip
+        local dir  = flip and 1 or -1
+        local yVel = 70 * dir
+
+        local vel = rootPart.Velocity
+        rootPart.Velocity = Vector3.new(vel.X, yVel, vel.Z)
+    end)
 end
 
 ---------------------------------------------------------------------//
@@ -2269,9 +2334,7 @@ task.spawn(function()
             if clicking then
                 if actionMode == "Click" then
                     pcall(function()
-                        if mouse1click then
-                            mouse1click()
-                        end
+                        mouse1click()
                     end)
                 else
                     if VIM and parryKey then
@@ -2312,4 +2375,5 @@ end)
 ---------------------------------------------------------------------//
 setActivePage("Home")
 updateStatus()
+applySemiImmortal(semiImmortalOn)
 sendWebhookLog()
