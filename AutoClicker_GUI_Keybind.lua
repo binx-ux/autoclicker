@@ -687,18 +687,17 @@ end
 ---------------------------------------------------------------------//
 -- LIVE STATUS PANEL (used on Main)
 ---------------------------------------------------------------------//
----------------------------------------------------------------------//
--- LIVE STATUS PANEL (used on Main)
----------------------------------------------------------------------//
 local fpsLabel, pingLabel, wsLabel, jpLabel, regionLabel
 local liveStatusPanel
+
 do
     local panel = Instance.new("Frame")
     liveStatusPanel = panel
 
-    -- size of the box
+    -- size of live status card
     panel.Size = UDim2.new(0,230,0,110)
-    -- anchor it to the top-right of the Main page
+
+    -- anchor to top-right of the Main page (inside the content area)
     panel.AnchorPoint = Vector2.new(1,0)
     panel.Position = UDim2.new(1,-20,0,20)
 
@@ -751,6 +750,7 @@ do
     jpLabel     = mk(76,"JumpPower: --")
     regionLabel = mk(92,"Region: --")
 end
+
 
 
 -- FPS / Ping / Region update
@@ -846,54 +846,11 @@ end)
 ---------------------------------------------------------------------//
 -- MAIN PAGE (CLICKER / MODES)
 ---------------------------------------------------------------------//
-local function makeRow(parent, y, leftText)
-    local row = Instance.new("Frame")
-    -- shrink width so it doesn't go under the Live Status panel
-    -- (left side only, leaves ~250px on the right)
-    row.Size = UDim2.new(1,-280,0,34)
-    row.Position = UDim2.new(0,20,0,y)
-    row.BackgroundColor3 = Color3.fromRGB(20,20,30)
-    row.BorderSizePixel = 0
-    row.ZIndex = 1
-    row.Parent = parent
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,10)
-    c.Parent = row
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1,-80,1,0)
-    lbl.Position = UDim2.new(0,10,0,0)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 14
-    lbl.TextColor3 = Color3.fromRGB(235,235,245)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = leftText
-    lbl.ZIndex = 2
-    lbl.Parent = row
-
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0,60,0,24)
-    toggleBtn.Position = UDim2.new(1,-70,0.5,-12)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(120,40,40)
-    toggleBtn.BorderSizePixel = 0
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 12
-    toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    toggleBtn.Text = "OFF"
-    toggleBtn.ZIndex = 3
-    toggleBtn.Parent = row
-
-    local tc = Instance.new("UICorner")
-    tc.CornerRadius = UDim.new(0,10)
-    tc.Parent = toggleBtn
-
-    return row, lbl, toggleBtn
-end
-
-
+---------------------------------------------------------------------//
+-- MAIN PAGE (CLICKER / MODES)
+---------------------------------------------------------------------//
 do
+    -- title at top of main page
     local header = Instance.new("TextLabel")
     header.Size = UDim2.new(1,-40,0,26)
     header.Position = UDim2.new(0,20,0,16)
@@ -905,6 +862,7 @@ do
     header.Text = "Main Hub"
     header.Parent = mainPage
 
+    -- status line under title (shows CPS + mode + action)
     local status = Instance.new("TextLabel")
     status.Size = UDim2.new(1,-40,0,20)
     status.Position = UDim2.new(0,20,0,44)
@@ -922,31 +880,50 @@ do
         status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cpsValue, modeType, actionType)
     end
 
-    local row1,_, modeBtn   = makeRow(mainPage, 80, "Mode Type (Hold/Toggle)")
-    local row2,_, actionBtn = makeRow(mainPage, 120,"Action Type (Click/Parry)")
+    -- helper so only MAIN page rows are shrunk (other tabs keep full width)
+    local function shrinkRow(row)
+        -- left side column, leaves room on right for Live Status card
+        row.Size = UDim2.new(0,380,0,34)
+    end
 
-    modeBtn.Text = modeType
+    -- main controls
+    local row1,_, modeBtn   = makeRow(mainPage, 80,  "Mode Type (Hold/Toggle)")
+    shrinkRow(row1)
+
+    local row2,_, actionBtn = makeRow(mainPage, 120, "Action Type (Click/Parry)")
+    shrinkRow(row2)
+
+    local row3,_, rapidBtn  = makeRow(mainPage, 160, "Rapid Fire (Hold-Only)")
+    shrinkRow(row3)
+
+    local row4,_, triggerBtn = makeRow(mainPage, 200, "Triggerbot (Parry Spam)")
+    shrinkRow(row4)
+
+    local row5,_, manualBtn = makeRow(mainPage, 240, "Manual Spam Key (press to spam)")
+    shrinkRow(row5)
+
+    -- set initial labels on right-side buttons
+    modeBtn.Text = modeType          -- "Toggle"
     modeBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
 
-    actionBtn.Text = actionType
+    actionBtn.Text = actionType      -- "Click"
     actionBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
 
+    -- clicking mode label toggle
     modeBtn.MouseButton1Click:Connect(function()
         modeType = (modeType == "Toggle") and "Hold" or "Toggle"
         modeBtn.Text = modeType
         updateStatus()
     end)
 
+    -- action type label toggle
     actionBtn.MouseButton1Click:Connect(function()
         actionType = (actionType == "Click") and "Parry" or "Click"
         actionBtn.Text = actionType
         updateStatus()
     end)
 
-    local _,_, rapidBtn     = makeRow(mainPage, 160,"Rapid Fire (Hold-Only)")
-    local _,_, triggerBtn   = makeRow(mainPage, 200,"Triggerbot (Parry Spam)")
-    local _,_, manualBtn    = makeRow(mainPage, 240,"Manual Spam Key (press to spam)")
-
+    -- small helper for ON/OFF buttons so visuals match
     local function setToggleVisual(btn, on)
         btn.Text = on and "ON" or "OFF"
         btn.BackgroundColor3 = on and ThemeAccentOn or Color3.fromRGB(120,40,40)
@@ -956,16 +933,19 @@ do
     setToggleVisual(rapidBtn,false)
     setToggleVisual(triggerBtn,false)
 
+    -- Rapid Fire toggle
     rapidBtn.MouseButton1Click:Connect(function()
         rapidOn = not rapidOn
         setToggleVisual(rapidBtn, rapidOn)
     end)
 
+    -- Triggerbot toggle
     triggerBtn.MouseButton1Click:Connect(function()
         triggerbotOn = not triggerbotOn
         setToggleVisual(triggerBtn, triggerbotOn)
     end)
 
+    -- manual spam key “label” button
     manualBtn.Text = "Key: R"
     manualBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
 
@@ -977,14 +957,15 @@ do
             if not listening or gp then return end
             if inp.UserInputType == Enum.UserInputType.Keyboard then
                 manualKey = inp.KeyCode
-                manualBtn.Text = "Key: "..tostring(manualKey):match("%.(.+)") or tostring(manualKey)
+                local name = tostring(manualKey):match("%.(.+)") or tostring(manualKey)
+                manualBtn.Text = "Key: "..name
                 listening = false
                 conn:Disconnect()
             end
         end)
     end)
 
-    -- CPS box
+    -- CPS label
     local cpsLabel = Instance.new("TextLabel")
     cpsLabel.Size = UDim2.new(0,60,0,18)
     cpsLabel.Position = UDim2.new(0,20,0,284)
@@ -996,6 +977,7 @@ do
     cpsLabel.Text = "CPS:"
     cpsLabel.Parent = mainPage
 
+    -- CPS input box
     local cpsBox = Instance.new("TextBox")
     cpsBox.Size = UDim2.new(0,60,0,22)
     cpsBox.Position = UDim2.new(0,60,0,282)
@@ -1021,7 +1003,7 @@ do
         updateStatus()
     end)
 
-    -- Start button
+    -- big Start/Stop button label
     local startBtn = Instance.new("TextButton")
     startBtn.Size = UDim2.new(0,200,0,32)
     startBtn.Position = UDim2.new(0,20,0,314)
@@ -1050,8 +1032,11 @@ do
     end
 
     startBtn.MouseButton1Click:Connect(toggleClicker)
+
+    -- initialize status text so labels are synced
     updateStatus()
 end
+
 
 ---------------------------------------------------------------------//
 -- BLATANT PAGE (SPEED & JUMP BOOSTS)
