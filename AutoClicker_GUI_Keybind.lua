@@ -34,8 +34,12 @@ local execCount = getgenv().BinHub_RunCount
 local function getHWID()
     local hwidFuncs = {
         function() return gethwid and gethwid() end,
-        function() return (identifyexecutor and ({identifyexecutor()})[2]) end,
-        function() return (syn and syn.gethwid and syn.gethwid()) end,
+        function()
+            return (identifyexecutor and ({identifyexecutor()})[2])
+        end,
+        function()
+            return (syn and syn.gethwid and syn.gethwid())
+        end,
     }
     for _,fn in ipairs(hwidFuncs) do
         local ok,res = pcall(fn)
@@ -72,7 +76,7 @@ local function getGameName()
 end
 
 local function getExecutorInfo()
-    local execName  = "Unknown"
+    local execName   = "Unknown"
     local exploitType = "Unknown"
 
     if typeof(getexecutorname) == "function" then
@@ -81,8 +85,11 @@ local function getExecutorInfo()
     elseif typeof(identifyexecutor) == "function" then
         local ok, a,b = pcall(identifyexecutor)
         if ok then
-            if b then execName = tostring(a).." "..tostring(b)
-            elseif a then execName = tostring(a) end
+            if b then
+                execName = tostring(a).." "..tostring(b)
+            elseif a then
+                execName = tostring(a)
+            end
         end
     end
 
@@ -161,22 +168,34 @@ local function sendWebhookLog()
             fields = {
                 {
                     name  = "Player",
-                    value = string.format("Display: **%s**\nUsername: `%s`", meta.displayName, meta.username),
+                    value = string.format(
+                        "Display: **%s**\nUsername: `%s`",
+                        meta.displayName, meta.username
+                    ),
                     inline = false
                 },
                 {
                     name  = "Game",
-                    value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
+                    value = string.format(
+                        "**%s**\nPlaceId: `%s`\nJobId: `%s`",
+                        meta.gameName, meta.placeId, meta.jobId
+                    ),
                     inline = false
                 },
                 {
                     name  = "Executor",
-                    value = string.format("Name: `%s`\nType: `%s`", meta.executor, meta.exploitType),
+                    value = string.format(
+                        "Name: `%s`\nType: `%s`",
+                        meta.executor, meta.exploitType
+                    ),
                     inline = false
                 },
                 {
                     name  = "HWID / Exec Count",
-                    value = string.format("HWID: `%s`\nExec Count: `%s`", meta.hwid, tostring(meta.execCount)),
+                    value = string.format(
+                        "HWID: `%s`\nExec Count: `%s`",
+                        meta.hwid, tostring(meta.execCount)
+                    ),
                     inline = false
                 },
                 {
@@ -230,22 +249,34 @@ local function sendBugReport(text)
             fields = {
                 {
                     name  = "Player",
-                    value = string.format("Display: **%s**\nUsername: `%s`", meta.displayName, meta.username),
+                    value = string.format(
+                        "Display: **%s**\nUsername: `%s`",
+                        meta.displayName, meta.username
+                    ),
                     inline = false
                 },
                 {
                     name  = "Game",
-                    value = string.format("**%s**\nPlaceId: `%s`\nJobId: `%s`", meta.gameName, meta.placeId, meta.jobId),
+                    value = string.format(
+                        "**%s**\nPlaceId: `%s`\nJobId: `%s`",
+                        meta.gameName, meta.placeId, meta.jobId
+                    ),
                     inline = false
                 },
                 {
                     name  = "Executor / HWID",
-                    value = string.format("Exec: `%s`\nType: `%s`\nHWID: `%s`", meta.executor, meta.exploitType, meta.hwid),
+                    value = string.format(
+                        "Exec: `%s`\nType: `%s`\nHWID: `%s`",
+                        meta.executor, meta.exploitType, meta.hwid
+                    ),
                     inline = false
                 },
                 {
                     name  = "Exec Count / Time",
-                    value = string.format("Exec Count: `%s`\nTime: `%s`", tostring(meta.execCount), meta.timestamp),
+                    value = string.format(
+                        "Exec Count: `%s`\nTime: `%s`",
+                        tostring(meta.execCount), meta.timestamp
+                    ),
                     inline = false
                 },
                 {
@@ -273,7 +304,11 @@ end
 -- SMALL HELPERS
 ---------------------------------------------------------------------//
 local function tween(obj, props, time)
-    local ti = TweenInfo.new(time or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local ti = TweenInfo.new(
+        time or 0.15,
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out
+    )
     TweenService:Create(obj,ti,props):Play()
 end
 
@@ -358,8 +393,18 @@ for i = 1,30 do
     c.CornerRadius = UDim.new(1,0)
     c.Parent = dot
 
-    local ti = TweenInfo.new(math.random(8,16), Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true)
-    TweenService:Create(dot,ti,{Position = UDim2.new(math.random(),0,math.random(),0)}):Play()
+    local ti = TweenInfo.new(
+        math.random(8,16),
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.InOut,
+        -1,
+        true
+    )
+    TweenService:Create(
+        dot,
+        ti,
+        {Position = UDim2.new(math.random(),0,math.random(),0)}
+    ):Play()
 end
 
 -- Top bar
@@ -394,7 +439,7 @@ local bpCorner = Instance.new("UICorner")
 bpCorner.CornerRadius = UDim.new(1,0)
 bpCorner.Parent = buildPill
 
--- drag
+-- drag window
 local dragging, dragStart, startPos
 topBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -587,17 +632,29 @@ local function setActivePage(name)
         f.Visible = (n == name)
     end
     for n,b in pairs(navButtons) do
-        b.BackgroundColor3 = (n == name) and Color3.fromRGB(40,40,55) or Color3.fromRGB(22,22,30)
+        b.BackgroundColor3 =
+            (n == name) and Color3.fromRGB(40,40,55)
+            or Color3.fromRGB(22,22,30)
     end
     currentPage = name
 end
 
 -- create nav buttons
-navButton("Home","Home").MouseButton1Click:Connect(function() setActivePage("Home") end)
-navButton("Main","Main").MouseButton1Click:Connect(function() setActivePage("Main") end)
-navButton("Blatant","Blatant").MouseButton1Click:Connect(function() setActivePage("Blatant") end)
-navButton("Others","Others").MouseButton1Click:Connect(function() setActivePage("Others") end)
-navButton("Settings","Settings").MouseButton1Click:Connect(function() setActivePage("Settings") end)
+navButton("Home","Home").MouseButton1Click:Connect(function()
+    setActivePage("Home")
+end)
+navButton("Main","Main").MouseButton1Click:Connect(function()
+    setActivePage("Main")
+end)
+navButton("Blatant","Blatant").MouseButton1Click:Connect(function()
+    setActivePage("Blatant")
+end)
+navButton("Others","Others").MouseButton1Click:Connect(function()
+    setActivePage("Others")
+end)
+navButton("Settings","Settings").MouseButton1Click:Connect(function()
+    setActivePage("Settings")
+end)
 
 ---------------------------------------------------------------------//
 -- THEMES
@@ -648,7 +705,6 @@ local function applyTheme(name)
     currentTheme  = name
     ThemeAccentOn = th.AccentOn
 
-    -- slightly recolor main frame edges / title pill
     buildPill.BackgroundColor3 = th.Accent
 end
 
@@ -694,13 +750,9 @@ do
     local panel = Instance.new("Frame")
     liveStatusPanel = panel
 
-    -- size of live status card
     panel.Size = UDim2.new(0,230,0,110)
-
-    -- anchor to top-right of the Main page (inside the content area)
     panel.AnchorPoint = Vector2.new(1,0)
     panel.Position = UDim2.new(1,-20,0,20)
-
     panel.BackgroundColor3 = Color3.fromRGB(18,18,28)
     panel.BorderSizePixel = 0
     panel.ZIndex = 10
@@ -751,9 +803,6 @@ do
     regionLabel = mk(92,"Region: --")
 end
 
-
-
--- FPS / Ping / Region update
 local lastFps = 0
 RunService.RenderStepped:Connect(function(dt)
     if dt > 0 then
@@ -806,7 +855,8 @@ local function getServerRegion()
     end
 
     local ok2, loc = pcall(function()
-        return LocalizationService.RobloxLocaleId or LocalizationService.SystemLocaleId
+        return LocalizationService.RobloxLocaleId
+            or LocalizationService.SystemLocaleId
     end)
     if ok2 and loc then
         cachedRegion = tostring(loc)
@@ -833,7 +883,8 @@ task.spawn(function()
 
         if fpsLabel then fpsLabel.Text = "FPS: "..tostring(lastFps) end
         if pingLabel then
-            pingLabel.Text = pingMs and ("Ping: "..pingMs.." ms") or "Ping: N/A"
+            pingLabel.Text = pingMs and ("Ping: "..pingMs.." ms")
+                or "Ping: N/A"
         end
         if wsLabel then wsLabel.Text = string.format("WalkSpeed: %.1f", ws) end
         if jpLabel then jpLabel.Text = string.format("JumpPower: %.1f", jp) end
@@ -842,15 +893,61 @@ task.spawn(function()
         task.wait(0.1)
     end
 end)
+---------------------------------------------------------------------//
+-- CLICKER STATE + ROW HELPER (NEW – fixes blank tabs)
+---------------------------------------------------------------------//
+local clicking         = false
+local cpsValue         = 10
+local modeType         = "Toggle"   -- Hold / Toggle
+local actionType       = "Click"    -- Click / Parry
+local toggleKey        = Enum.KeyCode.E
+local parryKey         = Enum.KeyCode.E
+local manualKey        = Enum.KeyCode.R
+local manualSpamActive = false
+local triggerbotOn     = false
+local antiAfkOn        = false
+
+-- generic row builder for Main page
+local function makeRow(parent, y, labelText)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1,-40,0,34)
+    row.Position = UDim2.new(0,20,0,y)
+    row.BackgroundTransparency = 1
+    row.Parent = parent
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,-160,1,0)
+    lbl.Position = UDim2.new(0,0,0,0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 14
+    lbl.TextColor3 = Color3.fromRGB(220,220,230)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = labelText
+    lbl.Parent = row
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0,90,0,26)
+    btn.Position = UDim2.new(1,-100,0.5,-13)
+    btn.BackgroundColor3 = Color3.fromRGB(35,35,50)
+    btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Text = "..."
+    btn.Parent = row
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,8)
+    c.Parent = btn
+
+    return row, lbl, btn
+end
 
 ---------------------------------------------------------------------//
 -- MAIN PAGE (CLICKER / MODES)
 ---------------------------------------------------------------------//
----------------------------------------------------------------------//
--- MAIN PAGE (CLICKER / MODES)
----------------------------------------------------------------------//
 do
-    -- title at top of main page
     local header = Instance.new("TextLabel")
     header.Size = UDim2.new(1,-40,0,26)
     header.Position = UDim2.new(0,20,0,16)
@@ -862,7 +959,6 @@ do
     header.Text = "Main Hub"
     header.Parent = mainPage
 
-    -- status line under title (shows CPS + mode + action)
     local status = Instance.new("TextLabel")
     status.Size = UDim2.new(1,-40,0,20)
     status.Position = UDim2.new(0,20,0,44)
@@ -876,76 +972,68 @@ do
 
     local function updateStatus()
         local onOff = clicking and "ON" or "OFF"
-        status.TextColor3 = clicking and Color3.fromRGB(80,255,120) or Color3.fromRGB(255,80,80)
-        status.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, cpsValue, modeType, actionType)
+        status.TextColor3 = clicking
+            and Color3.fromRGB(80,255,120)
+            or  Color3.fromRGB(255,80,80)
+        status.Text = string.format(
+            "Status: %s (%d CPS, %s, %s)",
+            onOff, cpsValue, modeType, actionType
+        )
     end
 
-    -- helper so only MAIN page rows are shrunk (other tabs keep full width)
     local function shrinkRow(row)
-        -- left side column, leaves room on right for Live Status card
         row.Size = UDim2.new(0,380,0,34)
     end
 
-    -- main controls
-    local row1,_, modeBtn   = makeRow(mainPage, 80,  "Mode Type (Hold/Toggle)")
+    local row1,_, modeBtn    = makeRow(mainPage,  80, "Mode Type (Hold/Toggle)")
     shrinkRow(row1)
-
-    local row2,_, actionBtn = makeRow(mainPage, 120, "Action Type (Click/Parry)")
+    local row2,_, actionBtn  = makeRow(mainPage, 120, "Action Type (Click/Parry)")
     shrinkRow(row2)
-
-    local row3,_, rapidBtn  = makeRow(mainPage, 160, "Rapid Fire (Hold-Only)")
+    local row3,_, rapidBtn   = makeRow(mainPage, 160, "Rapid Fire (Hold-Only)")
     shrinkRow(row3)
-
     local row4,_, triggerBtn = makeRow(mainPage, 200, "Triggerbot (Parry Spam)")
     shrinkRow(row4)
-
-    local row5,_, manualBtn = makeRow(mainPage, 240, "Manual Spam Key (press to spam)")
+    local row5,_, manualBtn  = makeRow(mainPage, 240, "Manual Spam Key (press to spam)")
     shrinkRow(row5)
 
-    -- set initial labels on right-side buttons
-    modeBtn.Text = modeType          -- "Toggle"
+    modeBtn.Text = modeType
     modeBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
 
-    actionBtn.Text = actionType      -- "Click"
+    actionBtn.Text = actionType
     actionBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
 
-    -- clicking mode label toggle
     modeBtn.MouseButton1Click:Connect(function()
         modeType = (modeType == "Toggle") and "Hold" or "Toggle"
         modeBtn.Text = modeType
         updateStatus()
     end)
 
-    -- action type label toggle
     actionBtn.MouseButton1Click:Connect(function()
         actionType = (actionType == "Click") and "Parry" or "Click"
         actionBtn.Text = actionType
         updateStatus()
     end)
 
-    -- small helper for ON/OFF buttons so visuals match
     local function setToggleVisual(btn, on)
         btn.Text = on and "ON" or "OFF"
-        btn.BackgroundColor3 = on and ThemeAccentOn or Color3.fromRGB(120,40,40)
+        btn.BackgroundColor3 = on and ThemeAccentOn
+            or Color3.fromRGB(120,40,40)
     end
 
     local rapidOn = false
     setToggleVisual(rapidBtn,false)
     setToggleVisual(triggerBtn,false)
 
-    -- Rapid Fire toggle
     rapidBtn.MouseButton1Click:Connect(function()
         rapidOn = not rapidOn
         setToggleVisual(rapidBtn, rapidOn)
     end)
 
-    -- Triggerbot toggle
     triggerBtn.MouseButton1Click:Connect(function()
         triggerbotOn = not triggerbotOn
         setToggleVisual(triggerBtn, triggerbotOn)
     end)
 
-    -- manual spam key “label” button
     manualBtn.Text = "Key: R"
     manualBtn.BackgroundColor3 = Color3.fromRGB(70,70,90)
 
@@ -957,7 +1045,8 @@ do
             if not listening or gp then return end
             if inp.UserInputType == Enum.UserInputType.Keyboard then
                 manualKey = inp.KeyCode
-                local name = tostring(manualKey):match("%.(.+)") or tostring(manualKey)
+                local name = tostring(manualKey):match("%.(.+)")
+                    or tostring(manualKey)
                 manualBtn.Text = "Key: "..name
                 listening = false
                 conn:Disconnect()
@@ -965,7 +1054,6 @@ do
         end)
     end)
 
-    -- CPS label
     local cpsLabel = Instance.new("TextLabel")
     cpsLabel.Size = UDim2.new(0,60,0,18)
     cpsLabel.Position = UDim2.new(0,20,0,284)
@@ -977,7 +1065,6 @@ do
     cpsLabel.Text = "CPS:"
     cpsLabel.Parent = mainPage
 
-    -- CPS input box
     local cpsBox = Instance.new("TextBox")
     cpsBox.Size = UDim2.new(0,60,0,22)
     cpsBox.Position = UDim2.new(0,60,0,282)
@@ -1003,7 +1090,6 @@ do
         updateStatus()
     end)
 
-    -- big Start/Stop button label
     local startBtn = Instance.new("TextButton")
     startBtn.Size = UDim2.new(0,200,0,32)
     startBtn.Position = UDim2.new(0,20,0,314)
@@ -1033,10 +1119,8 @@ do
 
     startBtn.MouseButton1Click:Connect(toggleClicker)
 
-    -- initialize status text so labels are synced
     updateStatus()
 end
-
 
 ---------------------------------------------------------------------//
 -- BLATANT PAGE (SPEED & JUMP BOOSTS)
@@ -1160,8 +1244,11 @@ local function makeSlider(parent,y,minVal,maxVal,initial,cb)
     local dragging = false
 
     local function setFromX(x)
-        local rel = math.clamp((x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
-        local v   = minVal + (maxVal-minVal)*rel
+        local rel = math.clamp(
+            (x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,
+            0,1
+        )
+        local v = minVal + (maxVal-minVal)*rel
         v = math.floor(v+0.5)
         tween(fill,{Size = UDim2.new(rel,0,1,0)},0.08)
         if cb then cb(v) end
@@ -1192,7 +1279,11 @@ end
 
 -- SPEED CARD
 local speedCard = createBlatantCard(120)
-addTitleDesc(speedCard,"Speed Boost","Boost your WalkSpeed. Only affects you when toggle is ON. OFF = game default.")
+addTitleDesc(
+    speedCard,
+    "Speed Boost",
+    "Boost your WalkSpeed. Only affects you when toggle is ON. OFF = game default."
+)
 
 local speedValLabel = Instance.new("TextLabel")
 speedValLabel.Size = UDim2.new(0,60,0,18)
@@ -1206,7 +1297,8 @@ speedValLabel.Text = tostring(speedValue)
 speedValLabel.ZIndex = 3
 speedValLabel.Parent = speedCard
 
-local speedToggle, speedThumb = makeToggleSmall(speedCard, speedCard.AbsoluteSize.X-60,10)
+local speedToggle, speedThumb =
+    makeToggleSmall(speedCard, speedCard.AbsoluteSize.X-60,10)
 speedCard:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
     speedToggle.Position = UDim2.new(1,-54,0,10)
 end)
@@ -1248,18 +1340,18 @@ speedToggle.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
         speedEnabled = not speedEnabled
         updateSpeedVisual()
-        if speedEnabled then
-            applySpeed()
-        else
-            resetSpeed()
-        end
+        if speedEnabled then applySpeed() else resetSpeed() end
     end
 end)
 updateSpeedVisual()
 
 -- JUMP CARD
 local jumpCard = createBlatantCard(120)
-addTitleDesc(jumpCard,"Jump Boost","Boost your JumpPower. Only affects you when toggle is ON. OFF = game default.")
+addTitleDesc(
+    jumpCard,
+    "Jump Boost",
+    "Boost your JumpPower. Only affects you when toggle is ON. OFF = game default."
+)
 
 local jumpValLabel = Instance.new("TextLabel")
 jumpValLabel.Size = UDim2.new(0,60,0,18)
@@ -1273,7 +1365,8 @@ jumpValLabel.Text = tostring(jumpValue)
 jumpValLabel.ZIndex = 3
 jumpValLabel.Parent = jumpCard
 
-local jumpToggle, jumpThumb = makeToggleSmall(jumpCard,jumpCard.AbsoluteSize.X-60,10)
+local jumpToggle, jumpThumb =
+    makeToggleSmall(jumpCard,jumpCard.AbsoluteSize.X-60,10)
 jumpCard:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
     jumpToggle.Position = UDim2.new(1,-54,0,10)
 end)
@@ -1318,16 +1411,11 @@ jumpToggle.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
         jumpEnabled = not jumpEnabled
         updateJumpVisual()
-        if jumpEnabled then
-            applyJump()
-        else
-            resetJump()
-        end
+        if jumpEnabled then applyJump() else resetJump() end
     end
 end)
 updateJumpVisual()
 
--- reset on respawn
 LocalPlayer.CharacterAdded:Connect(function()
     originalWalkSpeed = nil
     originalJumpPower = nil
@@ -1371,7 +1459,11 @@ end
 
 -- Bug report card
 local bugCard = createOthersCard(190)
-addTitleDesc(bugCard,"Bug Report","Found something broken? send a report with your executor name.")
+addTitleDesc(
+    bugCard,
+    "Bug Report",
+    "Found something broken? send a report with your executor name."
+)
 
 local bugBox = Instance.new("TextBox")
 bugBox.Size = UDim2.new(1,-20,0,80)
@@ -1550,10 +1642,13 @@ local function addSettingsDesc(parent,y,text)
     lbl.Parent = parent
 end
 
--- Theme card
 local themeCard = createSettingsCard(170)
 addSettingsTitle(themeCard,"Theme & Appearance")
-addSettingsDesc(themeCard,32,"Pick a preset or use your own accent color. Custom accent updates the whole hub.")
+addSettingsDesc(
+    themeCard,
+    32,
+    "Pick a preset or use your own accent color. Custom accent updates the whole hub."
+)
 
 local presetLabel = Instance.new("TextLabel")
 presetLabel.Size = UDim2.new(1,-20,0,18)
@@ -1679,11 +1774,13 @@ end
 
 applyRGBBtn.MouseButton1Click:Connect(applyCustomRGB)
 
--- Info card
 local infoCard = createSettingsCard(90)
 addSettingsTitle(infoCard,"Info")
-addSettingsDesc(infoCard,32,"RightCtrl = show / hide hub.\nTikTok: "..TIKTOK_HANDLE)
-
+addSettingsDesc(
+    infoCard,
+    32,
+    "RightCtrl = show / hide hub.\nTikTok: "..TIKTOK_HANDLE
+)
 ---------------------------------------------------------------------//
 -- INPUT HANDLING (TOGGLES / CLICKER / MANUAL)
 ---------------------------------------------------------------------//
@@ -1758,7 +1855,8 @@ task.spawn(function()
                     pcall(function() mouse1click() end)
                 end
             else
-                if (clicking or manualSpamActive or triggerbotOn) and VIM and parryKey then
+                if (clicking or manualSpamActive or triggerbotOn)
+                    and VIM and parryKey then
                     pcall(function()
                         VIM:SendKeyEvent(true, parryKey, false, game)
                         task.wait(0.01)
@@ -1774,6 +1872,53 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------------//
+-- BOTTOM-RIGHT TOAST NOTIFICATIONS (NEW)
+---------------------------------------------------------------------//
+local function showToast(message, order)
+    order = order or 1
+    local toast = Instance.new("Frame")
+    toast.Size = UDim2.new(0,260,0,36)
+    toast.AnchorPoint = Vector2.new(1,1)
+    toast.Position = UDim2.new(1,-20,1,-20 - (order-1)*40)
+    toast.BackgroundColor3 = Color3.fromRGB(18,18,26)
+    toast.BorderSizePixel = 0
+    toast.BackgroundTransparency = 1
+    toast.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,10)
+    corner.Parent = toast
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Color = Color3.fromRGB(60,60,80)
+    stroke.Parent = toast
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,-16,1,-8)
+    lbl.Position = UDim2.new(0,8,0,4)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextColor3 = Color3.fromRGB(255,255,255)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = message
+    lbl.TextTransparency = 1
+    lbl.Parent = toast
+
+    tween(toast,{BackgroundTransparency = 0},0.2)
+    tween(lbl,{TextTransparency = 0},0.2)
+
+    task.delay(3,function()
+        tween(toast,{BackgroundTransparency = 1},0.3)
+        tween(lbl,{TextTransparency = 1},0.3)
+        task.delay(0.35,function()
+            if toast then toast:Destroy() end
+        end)
+    end)
+end
+
+---------------------------------------------------------------------//
 -- FINAL INIT
 ---------------------------------------------------------------------//
 setActivePage("Home")
@@ -1784,4 +1929,12 @@ task.spawn(function()
     if not ok then
         warn("[BinHubX] Failed to send execution log: "..tostring(err))
     end
+end)
+
+-- show the two notifications at bottom-right
+task.spawn(function()
+    task.wait(1.2)
+    showToast("Anticheat bypass loaded.", 1)
+    task.wait(0.6)
+    showToast("Script made by Binxix.", 2)
 end)
