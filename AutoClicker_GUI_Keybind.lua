@@ -1,4 +1,4 @@
--- Bin Hub X - Argon-style Hub v3.4.2
+-- Bin Hub X - Argon-style Hub v3.4.3
 -- RightCtrl = Show/Hide hub
 
 ---------------------------------------------------------------------//
@@ -12,264 +12,59 @@ local RunService         = game:GetService("RunService")
 local HttpService        = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local LocalizationService= game:GetService("LocalizationService")
+local Lighting           = game:GetService("Lighting")
 
+local LocalPlayer        = Players.LocalPlayer
+local displayName        = (LocalPlayer and LocalPlayer.DisplayName) or "Player"
+local userName           = (LocalPlayer and LocalPlayer.Name)        or "Unknown"
+
+-- Virtual Input Manager
 local VIM
 pcall(function()
     VIM = game:GetService("VirtualInputManager")
 end)
 
-local Lighting    = game:GetService("Lighting")
-local LocalPlayer = Players.LocalPlayer
-local displayName = (LocalPlayer and LocalPlayer.DisplayName) or "Player"
-local userName    = (LocalPlayer and LocalPlayer.Name)        or "Unknown"
-
-local TIKTOK_HANDLE   = "@binxix"
-local CURRENT_VERSION = "3.4.2"
+local TIKTOK_HANDLE      = "@binxix"
+local CURRENT_VERSION    = "3.4.3"
 
 ---------------------------------------------------------------------//
--- WEBHOOK
+-- GLOBAL VARIABLES + STATES
 ---------------------------------------------------------------------//
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
+getgenv().BinHub_RunCount = (getgenv().BinHub_RunCount or 0) + 1
 
-local function getRequestFunction()
-    return (syn and syn.request) or (http and http.request) or http_request or request or nil
-end
+local clicking = false
+local mode = "Toggle"       -- Toggle / Hold
+local actionMode = "Click"   -- Click / Parry
+local cps = 10
 
-local function getGameName()
-    local ok, info = pcall(function()
-        return MarketplaceService:GetProductInfo(game.PlaceId)
-    end)
-    if ok and info and info.Name then
-        return info.Name
-    end
-    return "Unknown Game"
-end
+-- Toggles
+local fpsBoostOn = false
+local playerEffectsOn = false
+local speedEnabled = false
+local jumpEnabled = false
+local semiImmortalOn = false
+local triggerbotOn = false
 
--- detect executor / exploit type
-local function getExecutorInfo()
-    local execName   = "Unknown"
-    local exploitType = "Unknown"
+-- Player values
+local speedValue = 20
+local jumpValue = 50
+local originalWalkSpeed = nil
+local originalJumpPower = nil
 
-    local function tryCall(fn)
-        local ok, res = pcall(fn)
-        if ok and res ~= nil then
-            return tostring(res)
-        end
-    end
+-- Keybinds
+local toggleKey = Enum.KeyCode.E -- locked
+local parryKey = Enum.KeyCode.E  -- locked
+local manualKey = Enum.KeyCode.R
+local manualSpamActive = false
 
-    if typeof(getexecutorname) == "function" then
-        execName = tryCall(getexecutorname) or execName
-    elseif typeof(identifyexecutor) == "function" then
-        local ok, n1, n2 = pcall(identifyexecutor)
-        if ok then
-            if n2 ~= nil then
-                execName = tostring(n1) .. " " .. tostring(n2)
-            elseif n1 ~= nil then
-                execName = tostring(n1)
-            end
-        end
-    end
-
-    if syn ~= nil then
-        exploitType = "Synapse Environment"
-    elseif KRNL_LOADED or iskrnlclosure then
-        exploitType = "KRNL Environment"
-    elseif fluxus or isfluxusclosure then
-        exploitType = "Fluxus Environment"
-    elseif sentinel then
-        exploitType = "Sentinel Environment"
-    else
-        if execName ~= "Unknown" then
-            exploitType = execName .. " Environment"
-        end
-    end
-
-    return execName, exploitType
-end
-
-local function getBasicEmbedFields()
-    local gameName  = getGameName()
-    local placeId   = tostring(game.PlaceId)
-    local jobId     = tostring(game.JobId)
-    local username  = userName
-    local dName     = displayName
-    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-    local execName, exploitType = getExecutorInfo()
-
-    return {
-        username   = username,
-        displayName= dName,
-        gameName   = gameName,
-        placeId    = placeId,
-        jobId      = jobId,
-        timestamp  = timestamp,
-        executor   = execName,
-        exploitType= exploitType,
-    }
-end
-
--- FULL SCRIPT INFO BLOCK FOR LOGGING
-local function getScriptInfoBlock()
-    local lines = {
-        "Hub: Bin Hub X - Argon-style Hub v"..CURRENT_VERSION,
-        "",
-        "Main Hub:",
-        " • Main Toggle Key: E (LOCKED)",
-        " • Mode: Toggle / Hold (UI controlled)",
-        " • Action: Click / Parry (UI controlled)",
-        "",
-        "Keybinds:",
-        " • Parry Key: E (locked)",
-        " • Manual Spam Key: R (default, rebindable in UI)",
-        " • Slash of Fury Key: Q (locked / disabled in this build)",
-        "",
-        "Visuals / Extras:",
-        " • FPS Booster toggle (Others tab)",
-        " • Player Effects (Korblox + Headless) (Others tab)",
-        " • Semi Immortal: ENABLED (server desync, vertical jitter)",
-        " • Ability ESP: disabled in this build",
-        "",
-        "Player Options:",
-        " • Speed: slider 10–100 (toggle required to apply, restores original on off)",
-        " • Jump Power: slider 25–150 (toggle required to apply, restores original on off)",
-        "",
-        "Notes:",
-        " • RightCtrl = Show/Hide hub",
-        " • Bug reports from Settings tab go to this same webhook.",
-    }
-    return table.concat(lines, "\n")
-end
-
-local function sendWebhookLog()
-    if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
-    local req = getRequestFunction()
-    if not req then return end
-
-    local meta       = getBasicEmbedFields()
-    local scriptInfo = getScriptInfoBlock()
-
-    local payload = {
-        embeds = {
-            {
-                title = "Bin Hub X - Script Executed (Full Log)",
-                color = 0x5865F2,
-                fields = {
-                    {
-                        name  = "Player",
-                        value = string.format("Display: **%s**\nUsername: %s", meta.displayName, meta.username),
-                        inline= false
-                    },
-                    {
-                        name  = "Game",
-                        value = string.format("**%s**\nPlaceId: %s\nJobId: %s", meta.gameName, meta.placeId, meta.jobId),
-                        inline= false
-                    },
-                    {
-                        name  = "Executor / Exploit",
-                        value = string.format("Executor: %s\nType: %s", meta.executor, meta.exploitType),
-                        inline= false
-                    },
-                    {
-                        name  = "Script / Hub Info",
-                        value = "\n" .. scriptInfo .. "\n",
-                        inline= false
-                    },
-                    {
-                        name  = "Time",
-                        value = "\n" .. meta.timestamp .. "\n",
-                        inline= false
-                    }
-                }
-            }
-        }
-    }
-
-    local json = HttpService:JSONEncode(payload)
-    pcall(function()
-        req({
-            Url     = WEBHOOK_URL,
-            Method  = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body    = json
-        })
-    end)
-end
-
-local function sendBugReport(messageText)
-    if not WEBHOOK_URL or WEBHOOK_URL == "" then return false, "No webhook" end
-    local req = getRequestFunction()
-    if not req then return false, "No request func" end
-    if not messageText or messageText:gsub("%s+","") == "" then
-        return false, "Empty"
-    end
-
-    local meta = getBasicEmbedFields()
-    local trimmed = messageText
-    if #trimmed > 1000 then
-        trimmed = trimmed:sub(1,1000) .. "..."
-    end
-
-    local payload = {
-        embeds = {
-            {
-                title = "Bin Hub X - Bug Report",
-                color = 0xFF0000,
-                fields = {
-                    {
-                        name  = "Player",
-                        value = string.format("Display: **%s**\nUsername: %s", meta.displayName, meta.username),
-                        inline= false
-                    },
-                    {
-                        name  = "Game",
-                        value = string.format("**%s**\nPlaceId: %s\nJobId: %s", meta.gameName, meta.placeId, meta.jobId),
-                        inline= false
-                    },
-                    {
-                        name  = "Executor / Exploit",
-                        value = string.format("Executor: %s\nType: %s", meta.executor, meta.exploitType),
-                        inline= false
-                    },
-                    {
-                        name  = "Time",
-                        value = "\n" .. meta.timestamp .. "\n",
-                        inline= false
-                    },
-                    {
-                        name  = "Bug Report",
-                        value = "\n" .. trimmed .. "\n",
-                        inline= false
-                    }
-                }
-            }
-        }
-    }
-
-    local json = HttpService:JSONEncode(payload)
-    local ok, err = pcall(function()
-        req({
-            Url     = WEBHOOK_URL,
-            Method  = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body    = json
-        })
-    end)
-    if not ok then
-        return false, tostring(err)
-    end
-    return true
-end
+-- GUI visibility
+local guiVisible = true
 
 ---------------------------------------------------------------------//
--- HELPERS
+-- SAFE GUI PARENT
 ---------------------------------------------------------------------//
-local function getHumanoid()
-    if not LocalPlayer then return end
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    return char:FindFirstChildOfClass("Humanoid")
-end
-
 local function safeParent()
+    -- UI protection for different executors
     local ok, res = pcall(function()
         if gethui then
             local g = Instance.new("ScreenGui")
@@ -293,6 +88,7 @@ local function safeParent()
     end)
     if ok and res then return res end
 
+    -- fallback
     local g = Instance.new("ScreenGui")
     g.Name = "BinHubX"
     g.ResetOnSpawn = false
@@ -300,52 +96,13 @@ local function safeParent()
     return g
 end
 
+---------------------------------------------------------------------//
+-- GUI ROOT
+---------------------------------------------------------------------//
 local gui = safeParent()
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-local guiVisible = true
 
----------------------------------------------------------------------//
--- GLOBAL TOGGLES / STATES
----------------------------------------------------------------------//
-getgenv().BinHub_SemiImmortal        = getgenv().BinHub_SemiImmortal or false
-getgenv().BinHub_SlashOfFuryDetection= false
-
-local fpsBoostOn      = false
-local playerEffectsOn = false
-local abilityEspOn    = false -- unavailable
-
-local clicking        = false
-local cps             = 10
-
--- KEYS
-local toggleKey   = Enum.KeyCode.E -- main clicker key (LOCKED)
-local parryKey    = Enum.KeyCode.E -- locked parry key
-local manualKey   = Enum.KeyCode.R -- manual spam default, rebindable
-local abilityKey  = Enum.KeyCode.Q -- locked Slash of Fury ability key (unused)
-
-local manualSpamActive   = false
-local triggerbotOn       = false
-local slashOfFuryOn      = false -- unavailable
-local listeningForManual = false
-local mode               = "Toggle" -- Toggle / Hold
-local actionMode         = "Click"  -- Click / Parry
-
--- Speed / Jump states
-local speedEnabled      = false
-local speedValue        = 20
-local originalWalkSpeed = nil
-
-local jumpEnabled       = false
-local jumpValue         = 50
-local originalJumpPower = nil
-
--- Semi Immortal
-local semiImmortalOn       = getgenv().BinHub_SemiImmortal
-local semiImmortalConn     = nil
-
----------------------------------------------------------------------//
--- ROOT + PARTICLES
----------------------------------------------------------------------//
+-- Main window
 local root = Instance.new("Frame")
 root.Name = "Root"
 root.Size = UDim2.new(0, 720, 0, 380)
@@ -371,6 +128,9 @@ rootGrad.Color = ColorSequence.new{
 rootGrad.Rotation = 45
 rootGrad.Parent = root
 
+---------------------------------------------------------------------//
+-- BACKGROUND PARTICLES
+---------------------------------------------------------------------//
 local function createDot()
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0,4,0,4)
@@ -393,13 +153,13 @@ local function createDot()
         local ti = TweenInfo.new(math.random(10,20), Enum.EasingStyle.Linear)
         TweenService:Create(dot,ti,goal):Play()
     end
+
     tweenDot()
 end
 
 for i=1,40 do
     createDot()
 end
-
 ---------------------------------------------------------------------//
 -- SIDEBAR
 ---------------------------------------------------------------------//
@@ -419,6 +179,7 @@ sidebarStroke.Thickness = 1
 sidebarStroke.Color = Color3.fromRGB(40,40,45)
 sidebarStroke.Parent = sidebar
 
+-- Title
 local titleBar = Instance.new("TextLabel")
 titleBar.Size = UDim2.new(1,-80,0,30)
 titleBar.Position = UDim2.new(0,18,0,14)
@@ -431,6 +192,7 @@ titleBar.Text = "Argon-Bin Hub"
 titleBar.ZIndex = 3
 titleBar.Parent = sidebar
 
+-- Version pill
 local versionPill = Instance.new("TextLabel")
 versionPill.Size = UDim2.new(0,60,0,22)
 versionPill.Position = UDim2.new(1,-72,0,14)
@@ -447,6 +209,7 @@ local vCorner = Instance.new("UICorner")
 vCorner.CornerRadius = UDim.new(1,0)
 vCorner.Parent = versionPill
 
+-- Search
 local searchBox = Instance.new("TextBox")
 searchBox.Size = UDim2.new(1,-36,0,32)
 searchBox.Position = UDim2.new(0,18,0,54)
@@ -465,6 +228,7 @@ local searchCorner = Instance.new("UICorner")
 searchCorner.CornerRadius = UDim.new(0,10)
 searchCorner.Parent = searchBox
 
+-- Nav holder
 local navHolder = Instance.new("Frame")
 navHolder.Size = UDim2.new(1,-36,1,-150)
 navHolder.Position = UDim2.new(0,18,0,96)
@@ -477,10 +241,7 @@ navLayout.SortOrder = Enum.SortOrder.LayoutOrder
 navLayout.Padding = UDim.new(0,4)
 navLayout.Parent = navHolder
 
-local pages     = {}
-local navButtons= {}
-local currentPage
-
+-- Profile
 local profileFrame = Instance.new("Frame")
 profileFrame.Size = UDim2.new(1,-36,0,76)
 profileFrame.Position = UDim2.new(0,18,1,-86)
@@ -530,7 +291,7 @@ pfTikTok.ZIndex = 4
 pfTikTok.Parent = profileFrame
 
 ---------------------------------------------------------------------//
--- TOP BAR (DRAG)
+-- TOP BAR (DRAG + CLOSE)
 ---------------------------------------------------------------------//
 local contentTop = Instance.new("Frame")
 contentTop.Size = UDim2.new(1,-230,0,36)
@@ -572,13 +333,16 @@ closeBtn.MouseButton1Click:Connect(function()
     gui.Enabled = false
 end)
 
+-- Dragging
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
     local delta = input.Position - dragStart
     root.Position = UDim2.new(
-        startPos.X.Scale, startPos.X.Offset + delta.X,
-        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
     )
 end
 
@@ -586,7 +350,7 @@ contentTop.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
-        startPos  = root.Position
+        startPos = root.Position
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -652,17 +416,17 @@ local function applyTheme(name)
         ColorSequenceKeypoint.new(0, th.RootTop),
         ColorSequenceKeypoint.new(1, th.RootBottom)
     }
+
     sidebar.BackgroundColor3 = th.Sidebar
     versionPill.BackgroundColor3 = th.Accent
     pfTikTok.TextColor3 = th.AccentText
-    titleBar.TextColor3 = Color3.fromRGB(255,255,255)
     topTitle.TextColor3 = th.TopTitle
 end
 
 applyTheme("Default")
 
 ---------------------------------------------------------------------//
--- PAGES CONTAINER
+-- PAGES CONTAINER + NAV HELPERS
 ---------------------------------------------------------------------//
 local contentHolder = Instance.new("Frame")
 contentHolder.Size = UDim2.new(1,-230,1,-40)
@@ -670,6 +434,10 @@ contentHolder.Position = UDim2.new(0,230,0,40)
 contentHolder.BackgroundTransparency = 1
 contentHolder.ZIndex = 1
 contentHolder.Parent = root
+
+local pages = {}
+local navButtons = {}
+local currentPage
 
 local function createPage(name)
     local page = Instance.new("Frame")
@@ -695,21 +463,18 @@ local function createPage(name)
     return page
 end
 
-local homePage     = createPage("Home")
-local mainPage     = createPage("Main")
-local blatantPage  = createPage("Blatant")
-local othersPage   = createPage("Others")
-local settingsPage = createPage("Settings")
+local homePage    = createPage("Home")
+local mainPage    = createPage("Main")
+local blatantPage = createPage("Blatant")
+local othersPage  = createPage("Others")
+local settingsPage= createPage("Settings")
 
----------------------------------------------------------------------//
--- NAV HELPERS
----------------------------------------------------------------------//
 local function setActivePage(name)
-    for n,f in pairs(pages) do
-        f.Visible = (n == name)
+    for n,frame in pairs(pages) do
+        frame.Visible = (n == name)
     end
-    for n,b in pairs(navButtons) do
-        b.BackgroundColor3 = (n == name)
+    for n,btn in pairs(navButtons) do
+        btn.BackgroundColor3 = (n == name)
             and Color3.fromRGB(55,55,65)
             or  Color3.fromRGB(25,25,32)
     end
@@ -763,9 +528,8 @@ navButton("Others","Others")
 
 sectionLabel("Settings")
 navButton("Settings","Settings")
-
 ---------------------------------------------------------------------//
--- HOME
+-- HOME PAGE
 ---------------------------------------------------------------------//
 do
     local t = Instance.new("TextLabel")
@@ -791,7 +555,8 @@ do
     d.TextWrapped = true
     d.TextXAlignment = Enum.TextXAlignment.Left
     d.TextYAlignment = Enum.TextYAlignment.Top
-    d.Text = "Account: @"..userName.."\nUse the tabs on the left to control your auto clicker, auto parry and blatant settings."
+    d.Text = "Account: @"..userName..
+        "\nUse the tabs on the left to control your auto clicker, parry, blatant and other settings."
     d.ZIndex = 3
     d.Parent = homePage
 
@@ -809,9 +574,248 @@ do
 end
 
 ---------------------------------------------------------------------//
+-- WEBHOOK HELPERS
+---------------------------------------------------------------------//
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
+
+local function getRequestFunction()
+    return (syn and syn.request)
+        or (http and http.request)
+        or http_request
+        or request
+        or nil
+end
+
+local function getGameName()
+    local ok, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
+    end)
+    if ok and info and info.Name then
+        return info.Name
+    end
+    return "Unknown Game"
+end
+
+-- executor info
+local function getExecutorInfo()
+    local execName = "Unknown"
+    local exploitType = "Unknown"
+
+    local function tryCall(fn)
+        local ok, res = pcall(fn)
+        if ok and res ~= nil then
+            return tostring(res)
+        end
+    end
+
+    if typeof(getexecutorname) == "function" then
+        execName = tryCall(getexecutorname) or execName
+    elseif typeof(identifyexecutor) == "function" then
+        local ok, n1, n2 = pcall(identifyexecutor)
+        if ok then
+            if n2 ~= nil then
+                execName = tostring(n1) .. " " .. tostring(n2)
+            elseif n1 ~= nil then
+                execName = tostring(n1)
+            end
+        end
+    end
+
+    if syn ~= nil then
+        exploitType = "Synapse Environment"
+    elseif KRNL_LOADED or iskrnlclosure then
+        exploitType = "KRNL Environment"
+    elseif fluxus or isfluxusclosure then
+        exploitType = "Fluxus Environment"
+    elseif sentinel then
+        exploitType = "Sentinel Environment"
+    else
+        if execName ~= "Unknown" then
+            exploitType = execName .. " Environment"
+        end
+    end
+
+    return execName, exploitType
+end
+
+local function getBasicEmbedFields()
+    local gameName = getGameName()
+    local placeId  = tostring(game.PlaceId)
+    local jobId    = tostring(game.JobId)
+    local username = userName
+    local dName    = displayName
+    local timestamp= os.date("%Y-%m-%d %H:%M:%S")
+    local execName, exploitType = getExecutorInfo()
+
+    return {
+        username   = username,
+        displayName= dName,
+        gameName   = gameName,
+        placeId    = placeId,
+        jobId      = jobId,
+        timestamp  = timestamp,
+        executor   = execName,
+        exploitType= exploitType,
+    }
+end
+
+local function getScriptInfoBlock()
+    local lines = {
+        "Hub: Bin Hub X - Argon-style Hub v"..CURRENT_VERSION,
+        "",
+        "Main Hub:",
+        " • Main Toggle Key: E (LOCKED)",
+        " • Mode: Toggle / Hold (UI controlled)",
+        " • Action: Click / Parry (UI controlled)",
+        "",
+        "Keybinds:",
+        " • Parry Key: E (locked)",
+        " • Manual Spam Key: R (rebindable in UI)",
+        "",
+        "Visuals / Extras:",
+        " • FPS Booster toggle (Others tab)",
+        " • Player Effects (Korblox + Headless) (Others tab)",
+        " • Semi Immortal: full body desync stutter (Blatant tab)",
+        "",
+        "Player Options:",
+        " • Speed: slider 10–100 (toggle required to apply, restores original on off)",
+        " • Jump Power: slider 25–150 (toggle required to apply, restores original on off)",
+        "",
+        "Notes:",
+        " • RightCtrl = Show/Hide hub",
+        " • Bug reports from Settings tab go to this same webhook.",
+    }
+    return table.concat(lines, "\n")
+end
+
+local function sendWebhookLog()
+    if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
+    local req = getRequestFunction()
+    if not req then return end
+
+    local meta = getBasicEmbedFields()
+    local scriptInfo = getScriptInfoBlock()
+
+    local payload = {
+        embeds = {{
+            title = "Bin Hub X - Script Executed (Full Log)",
+            color = 0x5865F2,
+            fields = {
+                {
+                    name = "Player",
+                    value = string.format("Display: **%s**\nUsername: %s", meta.displayName, meta.username),
+                    inline = false
+                },
+                {
+                    name = "Game",
+                    value = string.format("**%s**\nPlaceId: %s\nJobId: %s", meta.gameName, meta.placeId, meta.jobId),
+                    inline = false
+                },
+                {
+                    name = "Executor / Exploit",
+                    value = string.format("Executor: %s\nType: %s", meta.executor, meta.exploitType),
+                    inline = false
+                },
+                {
+                    name = "Script / Hub Info",
+                    value = "```"..scriptInfo.."```",
+                    inline = false
+                },
+                {
+                    name = "Time",
+                    value = "```"..meta.timestamp.."```",
+                    inline = false
+                },
+            }
+        }}
+    }
+
+    local json = HttpService:JSONEncode(payload)
+    pcall(function()
+        req({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = json
+        })
+    end)
+end
+
+local function sendBugReport(messageText)
+    if not WEBHOOK_URL or WEBHOOK_URL == "" then
+        return false, "No webhook"
+    end
+
+    local req = getRequestFunction()
+    if not req then
+        return false, "No request func"
+    end
+
+    if not messageText or messageText:gsub("%s+","") == "" then
+        return false, "Empty"
+    end
+
+    local meta = getBasicEmbedFields()
+    local trimmed = messageText
+    if #trimmed > 1000 then
+        trimmed = trimmed:sub(1,1000).."..."
+    end
+
+    local payload = {
+        embeds = {{
+            title = "Bin Hub X - Bug Report",
+            color = 0xFF0000,
+            fields = {
+                {
+                    name = "Player",
+                    value = string.format("Display: **%s**\nUsername: %s", meta.displayName, meta.username),
+                    inline = false
+                },
+                {
+                    name = "Game",
+                    value = string.format("**%s**\nPlaceId: %s\nJobId: %s", meta.gameName, meta.placeId, meta.jobId),
+                    inline = false
+                },
+                {
+                    name = "Executor / Exploit",
+                    value = string.format("Executor: %s\nType: %s", meta.executor, meta.exploitType),
+                    inline = false
+                },
+                {
+                    name = "Time",
+                    value = "```"..meta.timestamp.."```",
+                    inline = false
+                },
+                {
+                    name = "Bug Report",
+                    value = "```"..trimmed.."```",
+                    inline = false
+                },
+            }
+        }}
+    }
+
+    local json = HttpService:JSONEncode(payload)
+    local ok, err = pcall(function()
+        req({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = json
+        })
+    end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+    return true
+end
+
+---------------------------------------------------------------------//
 -- SETTINGS PAGE (BUG REPORT + THEMES)
 ---------------------------------------------------------------------//
 local bugStatusLabel
+
 do
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1,-40,0,28)
@@ -910,7 +914,7 @@ do
         bugStatusLabel.Text = "Sending..."
 
         task.spawn(function()
-            local ok,err = sendBugReport(text)
+            local ok, err = sendBugReport(text)
             if ok then
                 bugBox.Text = ""
                 bugStatusLabel.TextColor3 = Color3.fromRGB(120,220,120)
@@ -922,7 +926,7 @@ do
         end)
     end)
 
-    -- THEME SELECTOR
+    -- Theme selector
     local themeLabel = Instance.new("TextLabel")
     themeLabel.Size = UDim2.new(1,-40,0,20)
     themeLabel.Position = UDim2.new(0,20,0,310)
@@ -960,19 +964,38 @@ do
 
     makeThemeButton("Default", 20, "Default")
     makeThemeButton("Purple", 110, "Purple")
-    makeThemeButton("Aqua", 200, "Aqua")
+    makeThemeButton("Aqua",   200, "Aqua")
 end
+---------------------------------------------------------------------//
+-- OTHERS PAGE (Discord + FPS + Player FX + ESP placeholder)
+---------------------------------------------------------------------//
+-- Scroll container so nothing leaks out
+local othersScroll = Instance.new("ScrollingFrame")
+othersScroll.Size = UDim2.new(1,-20,1,-20)
+othersScroll.Position = UDim2.new(0,10,0,10)
+othersScroll.BackgroundTransparency = 1
+othersScroll.BorderSizePixel = 0
+othersScroll.ScrollBarThickness = 4
+othersScroll.CanvasSize = UDim2.new(0,0,0,0)
+othersScroll.ZIndex = 3
+othersScroll.Parent = othersPage
 
----------------------------------------------------------------------//
--- OTHERS PAGE (Scrolled)
----------------------------------------------------------------------//
-local function makeCard(parent, height)
+local othersLayout = Instance.new("UIListLayout")
+othersLayout.SortOrder = Enum.SortOrder.LayoutOrder
+othersLayout.Padding = UDim.new(0,10)
+othersLayout.Parent = othersScroll
+
+othersLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    othersScroll.CanvasSize = UDim2.new(0,0,0, othersLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local function makeOthersCard(height)
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1,-40,0,height or 56)
+    card.Size = UDim2.new(1,0,0,height)
     card.BackgroundColor3 = Color3.fromRGB(20,20,26)
     card.BorderSizePixel = 0
     card.ZIndex = 3
-    card.Parent = parent
+    card.Parent = othersScroll
 
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0,12)
@@ -981,36 +1004,43 @@ local function makeCard(parent, height)
     return card
 end
 
-local othersScroll
+local function makeCardTitle(parent, txt)
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(1,-60,0,20)
+    t.Position = UDim2.new(0,10,0,6)
+    t.BackgroundTransparency = 1
+    t.Font = Enum.Font.GothamSemibold
+    t.TextSize = 14
+    t.TextColor3 = Color3.fromRGB(255,255,255)
+    t.TextXAlignment = Enum.TextXAlignment.Left
+    t.Text = txt
+    t.ZIndex = 4
+    t.Parent = parent
+    return t
+end
+
+local function makeCardDesc(parent, txt)
+    local d = Instance.new("TextLabel")
+    d.Size = UDim2.new(1,-20,0,24)
+    d.Position = UDim2.new(0,10,0,26)
+    d.BackgroundTransparency = 1
+    d.Font = Enum.Font.Gotham
+    d.TextSize = 12
+    d.TextColor3 = Color3.fromRGB(200,200,210)
+    d.TextXAlignment = Enum.TextXAlignment.Left
+    d.TextYAlignment = Enum.TextYAlignment.Top
+    d.TextWrapped = true
+    d.Text = txt
+    d.ZIndex = 4
+    d.Parent = parent
+    return d
+end
+
 do
-    othersScroll = Instance.new("ScrollingFrame")
-    othersScroll.Size = UDim2.new(1,-4,1,-20)
-    othersScroll.Position = UDim2.new(0,2,0,10)
-    othersScroll.BackgroundTransparency = 1
-    othersScroll.BorderSizePixel = 0
-    othersScroll.ScrollBarThickness = 4
-    othersScroll.CanvasSize = UDim2.new(0,0,0,0)
-    othersScroll.ZIndex = 3
-    othersScroll.Parent = othersPage
-
-    local oLayout = Instance.new("UIListLayout")
-    oLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    oLayout.Padding = UDim.new(0,10)
-    oLayout.Parent = othersScroll
-
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft  = UDim.new(0,20)
-    padding.PaddingRight = UDim.new(0,20)
-    padding.PaddingTop   = UDim.new(0,10)
-    padding.PaddingBottom= UDim.new(0,10)
-    padding.Parent = othersScroll
-
-    oLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        othersScroll.CanvasSize = UDim2.new(0,0,0,oLayout.AbsoluteContentSize.Y + 20)
-    end)
-
+    -- Header
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,0,0,28)
+    title.Size = UDim2.new(1,-40,0,28)
+    title.Position = UDim2.new(0,20,0,0)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
     title.TextSize = 20
@@ -1021,7 +1051,8 @@ do
     title.Parent = othersScroll
 
     local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1,0,0,40)
+    info.Size = UDim2.new(1,-40,0,40)
+    info.Position = UDim2.new(0,20,0,30)
     info.BackgroundTransparency = 1
     info.Font = Enum.Font.Gotham
     info.TextSize = 13
@@ -1033,37 +1064,24 @@ do
     info.ZIndex = 3
     info.Parent = othersScroll
 
-    -- Discord
-    local discordCard = makeCard(othersScroll, 56)
-    local dTitle = Instance.new("TextLabel")
-    dTitle.Size = UDim2.new(1,-20,0,20)
-    dTitle.Position = UDim2.new(0,10,0,6)
-    dTitle.BackgroundTransparency = 1
-    dTitle.Font = Enum.Font.GothamSemibold
-    dTitle.TextSize = 14
-    dTitle.TextColor3 = Color3.fromRGB(255,255,255)
-    dTitle.TextXAlignment = Enum.TextXAlignment.Left
-    dTitle.Text = "Discord"
-    dTitle.ZIndex = 4
-    dTitle.Parent = discordCard
+    -- Spacer
+    local spacer = Instance.new("Frame")
+    spacer.Size = UDim2.new(1,0,0,10)
+    spacer.BackgroundTransparency = 1
+    spacer.BorderSizePixel = 0
+    spacer.ZIndex = 3
+    spacer.Parent = othersScroll
 
-    local dDesc = Instance.new("TextLabel")
-    dDesc.Size = UDim2.new(1,-20,0,24)
-    dDesc.Position = UDim2.new(0,10,0,26)
-    dDesc.BackgroundTransparency = 1
-    dDesc.Font = Enum.Font.Gotham
-    dDesc.TextSize = 12
-    dDesc.TextColor3 = Color3.fromRGB(200,200,210)
-    dDesc.TextXAlignment = Enum.TextXAlignment.Left
-    dDesc.TextYAlignment = Enum.TextYAlignment.Top
-    dDesc.TextWrapped = true
-    dDesc.Text = "Join: discord.gg/S4nPV2Rx7F"
-    dDesc.ZIndex = 4
-    dDesc.Parent = discordCard
+    -----------------------------------------------------------------//
+    -- Discord Card
+    -----------------------------------------------------------------//
+    local discordCard = makeOthersCard(70)
+    makeCardTitle(discordCard, "Discord")
+    local dDesc = makeCardDesc(discordCard, "Join: discord.gg/S4nPV2Rx7F")
 
     local copyBtn = Instance.new("TextButton")
     copyBtn.Size = UDim2.new(0,120,0,24)
-    copyBtn.Position = UDim2.new(1,-130,0,30)
+    copyBtn.Position = UDim2.new(1,-130,0,32)
     copyBtn.BackgroundColor3 = Color3.fromRGB(60,70,140)
     copyBtn.BorderSizePixel = 0
     copyBtn.Font = Enum.Font.GothamBold
@@ -1087,149 +1105,176 @@ do
         end
     end)
 
-    -- FPS Booster
-    local fpsCard = makeCard(othersScroll, 56)
-    local fTitle = dTitle:Clone()
-    fTitle.Text = "FPS Booster"
-    fTitle.Parent = fpsCard
+    -----------------------------------------------------------------//
+    -- FPS BOOSTER Card (WORKING TOGGLE)
+    -----------------------------------------------------------------//
+    local fpsCard = makeOthersCard(70)
+    makeCardTitle(fpsCard, "FPS Booster")
+    local fDesc = makeCardDesc(fpsCard, "Turn graphics low + remove some effects to help FPS (client-side).")
 
-    local fDesc = dDesc:Clone()
-    fDesc.Text = "Turn graphics low + remove shadows to help FPS (client-side)."
-    fDesc.Parent = fpsCard
-
-    local fpsToggleFrame = Instance.new("Frame")
-    fpsToggleFrame.Size = UDim2.new(0,40,0,20)
-    fpsToggleFrame.Position = UDim2.new(1,-50,0,18)
-    fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
-    fpsToggleFrame.BorderSizePixel = 0
-    fpsToggleFrame.ZIndex = 4
-    fpsToggleFrame.Parent = fpsCard
+    local fpsToggle = Instance.new("TextButton")
+    fpsToggle.Size = UDim2.new(0,50,0,22)
+    fpsToggle.Position = UDim2.new(1,-60,0,24)
+    fpsToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+    fpsToggle.BorderSizePixel = 0
+    fpsToggle.Font = Enum.Font.GothamBold
+    fpsToggle.TextSize = 12
+    fpsToggle.TextColor3 = Color3.fromRGB(230,230,235)
+    fpsToggle.Text = "OFF"
+    fpsToggle.ZIndex = 4
+    fpsToggle.Parent = fpsCard
 
     local fpsToggleCorner = Instance.new("UICorner")
     fpsToggleCorner.CornerRadius = UDim.new(1,0)
-    fpsToggleCorner.Parent = fpsToggleFrame
+    fpsToggleCorner.Parent = fpsToggle
 
     local fpsThumb = Instance.new("Frame")
     fpsThumb.Size = UDim2.new(0,16,0,16)
-    fpsThumb.Position = UDim2.new(0,2,0.5,-8)
+    fpsThumb.Position = UDim2.new(0,3,0.5,-8)
     fpsThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
     fpsThumb.BorderSizePixel = 0
     fpsThumb.ZIndex = 5
-    fpsThumb.Parent = fpsToggleFrame
+    fpsThumb.Parent = fpsToggle
 
     local fpsThumbCorner = Instance.new("UICorner")
     fpsThumbCorner.CornerRadius = UDim.new(1,0)
     fpsThumbCorner.Parent = fpsThumb
 
-    local function updateFpsVisual()
+    local function updateFpsToggleVisual()
         if fpsBoostOn then
-            fpsToggleFrame.BackgroundColor3 = ThemeAccentOn
-            fpsThumb.Position = UDim2.new(1,-18,0.5,-8)
+            fpsToggle.BackgroundColor3 = ThemeAccentOn
+            fpsToggle.Text = "ON"
+            fpsThumb.Position = UDim2.new(1,-19,0.5,-8)
         else
-            fpsToggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
-            fpsThumb.Position = UDim2.new(0,2,0.5,-8)
+            fpsToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+            fpsToggle.Text = "OFF"
+            fpsThumb.Position = UDim2.new(0,3,0.5,-8)
         end
     end
-    updateFpsVisual()
 
-    fpsToggleFrame.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            fpsBoostOn = not fpsBoostOn
-            updateFpsVisual()
+    updateFpsToggleVisual()
+
+    fpsToggle.MouseButton1Click:Connect(function()
+        fpsBoostOn = not fpsBoostOn
+        updateFpsToggleVisual()
+        if typeof(applyFpsBoost) == "function" then
             applyFpsBoost(fpsBoostOn)
         end
     end)
 
-    -- Player Effects
-    local peCard = makeCard(othersScroll, 56)
-    local peTitle = dTitle:Clone()
-    peTitle.Text = "Player Effects"
-    peTitle.Parent = peCard
+    -----------------------------------------------------------------//
+    -- PLAYER EFFECTS Card (Korblox + Headless local FX)
+    -----------------------------------------------------------------//
+    local peCard = makeOthersCard(70)
+    makeCardTitle(peCard, "Player Effects")
+    local peDesc = makeCardDesc(peCard, "Activates korblox/headless-style local visuals (client-side only).")
 
-    local peDesc = dDesc:Clone()
-    peDesc.Text = "Activates korblox and headless effects (local visual)."
-    peDesc.Parent = peCard
-
-    local peToggle = fpsToggleFrame:Clone()
-    peToggle.Position = UDim2.new(1,-50,0,18)
+    local peToggle = Instance.new("TextButton")
+    peToggle.Size = UDim2.new(0,50,0,22)
+    peToggle.Position = UDim2.new(1,-60,0,24)
+    peToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+    peToggle.BorderSizePixel = 0
+    peToggle.Font = Enum.Font.GothamBold
+    peToggle.TextSize = 12
+    peToggle.TextColor3 = Color3.fromRGB(230,230,235)
+    peToggle.Text = "OFF"
+    peToggle.ZIndex = 4
     peToggle.Parent = peCard
 
-    local peThumb = peToggle:FindFirstChildOfClass("Frame")
+    local peToggleCorner = Instance.new("UICorner")
+    peToggleCorner.CornerRadius = UDim.new(1,0)
+    peToggleCorner.Parent = peToggle
 
-    local function updatePeVisual()
+    local peThumb = Instance.new("Frame")
+    peThumb.Size = UDim2.new(0,16,0,16)
+    peThumb.Position = UDim2.new(0,3,0.5,-8)
+    peThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    peThumb.BorderSizePixel = 0
+    peThumb.ZIndex = 5
+    peThumb.Parent = peToggle
+
+    local peThumbCorner = Instance.new("UICorner")
+    peThumbCorner.CornerRadius = UDim.new(1,0)
+    peThumbCorner.Parent = peThumb
+
+    local function updatePeToggleVisual()
         if playerEffectsOn then
             peToggle.BackgroundColor3 = ThemeAccentOn
-            peThumb.Position = UDim2.new(1,-18,0.5,-8)
+            peToggle.Text = "ON"
+            peThumb.Position = UDim2.new(1,-19,0.5,-8)
         else
             peToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-            peThumb.Position = UDim2.new(0,2,0.5,-8)
+            peToggle.Text = "OFF"
+            peThumb.Position = UDim2.new(0,3,0.5,-8)
         end
     end
-    updatePeVisual()
 
-    peToggle.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            playerEffectsOn = not playerEffectsOn
-            updatePeVisual()
+    updatePeToggleVisual()
+
+    peToggle.MouseButton1Click:Connect(function()
+        playerEffectsOn = not playerEffectsOn
+        updatePeToggleVisual()
+        if typeof(applyPlayerEffects) == "function" then
             applyPlayerEffects(playerEffectsOn)
         end
     end)
 
-    -- Ability ESP (TEMP UNAVAILABLE)
-    local espCard = makeCard(othersScroll, 56)
-    local espTitle = dTitle:Clone()
-    espTitle.Text = "Ability ESP (Unavailable)"
-    espTitle.Parent = espCard
+    -----------------------------------------------------------------//
+    -- Ability ESP Card (UNAVAILABLE)
+    -----------------------------------------------------------------//
+    local espCard = makeOthersCard(70)
+    makeCardTitle(espCard, "Ability ESP (Unavailable)")
+    makeCardDesc(espCard, "Temporarily unavailable in this build.")
 
-    local espDesc = dDesc:Clone()
-    espDesc.Text = "Temporarily unavailable."
-    espDesc.Parent = espCard
-
-    local espToggle = Instance.new("Frame")
-    espToggle.Size = UDim2.new(0,40,0,20)
-    espToggle.Position = UDim2.new(1,-50,0,18)
+    local espToggle = Instance.new("TextButton")
+    espToggle.Size = UDim2.new(0,70,0,22)
+    espToggle.Position = UDim2.new(1,-80,0,24)
     espToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
     espToggle.BorderSizePixel = 0
+    espToggle.Font = Enum.Font.GothamBold
+    espToggle.TextSize = 12
+    espToggle.TextColor3 = Color3.fromRGB(180,180,190)
+    espToggle.Text = "LOCKED"
     espToggle.ZIndex = 4
+    espToggle.AutoButtonColor = false
     espToggle.Parent = espCard
 
-    local espToggleCorner = Instance.new("UICorner")
-    espToggleCorner.CornerRadius = UDim.new(1,0)
-    espToggleCorner.Parent = espToggle
-
-    local espThumb = Instance.new("Frame")
-    espThumb.Size = UDim2.new(0,16,0,16)
-    espThumb.Position = UDim2.new(0,2,0.5,-8)
-    espThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
-    espThumb.BorderSizePixel = 0
-    espThumb.ZIndex = 5
-    espThumb.Parent = espToggle
-
-    local espThumbCorner = Instance.new("UICorner")
-    espThumbCorner.CornerRadius = UDim.new(1,0)
-    espThumbCorner.Parent = espThumb
+    local espCorner = Instance.new("UICorner")
+    espCorner.CornerRadius = UDim.new(1,0)
+    espCorner.Parent = espToggle
+end
+---------------------------------------------------------------------//
+-- HELPER: GET HUMANOID
+---------------------------------------------------------------------//
+local function getHumanoid()
+    if not LocalPlayer then return nil end
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    if not char then return nil end
+    return char:FindFirstChildOfClass("Humanoid")
 end
 
 ---------------------------------------------------------------------//
--- MAIN PAGE (Auto Click / Parry + LIVE STATUS PANEL)
+-- MAIN PAGE (Auto Click / Parry + Status + Controls)
 ---------------------------------------------------------------------//
 local function keyToString(keycode)
     local s = tostring(keycode)
     return s:match("%.(.+)") or s
 end
 
-local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1,-40,0,24)
-status.Position = UDim2.new(0,20,0,20)
-status.BackgroundTransparency = 1
-status.Font = Enum.Font.Gotham
-status.TextSize = 16
-status.TextXAlignment = Enum.TextXAlignment.Left
-status.TextColor3 = Color3.fromRGB(255,80,80)
-status.Text = "Status: OFF (10 CPS, Toggle, Click)"
-status.ZIndex = 3
-status.Parent = mainPage
+-- Status label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1,-40,0,24)
+statusLabel.Position = UDim2.new(0,20,0,20)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 16
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextColor3 = Color3.fromRGB(255,80,80)
+statusLabel.Text = "Status: OFF (10 CPS, "..mode..", "..actionMode..")"
+statusLabel.ZIndex = 3
+statusLabel.Parent = mainPage
 
+-- Label helper
 local function mkLabel(txt,x,y)
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(0,140,0,20)
@@ -1245,6 +1290,7 @@ local function mkLabel(txt,x,y)
     return l
 end
 
+-- CPS
 mkLabel("CPS:",20,60)
 
 local cpsBox = Instance.new("TextBox")
@@ -1264,7 +1310,9 @@ local cpsCorner = Instance.new("UICorner")
 cpsCorner.CornerRadius = UDim.new(0,8)
 cpsCorner.Parent = cpsBox
 
+-- Click key (locked display)
 mkLabel("Click Keybind:",20,96)
+
 local keyButton = Instance.new("TextButton")
 keyButton.Size = UDim2.new(0,70,0,24)
 keyButton.Position = UDim2.new(0,130,0,94)
@@ -1273,7 +1321,7 @@ keyButton.BorderSizePixel = 0
 keyButton.Font = Enum.Font.GothamBold
 keyButton.TextSize = 14
 keyButton.TextColor3 = Color3.fromRGB(255,255,255)
-keyButton.Text = "E" -- locked display
+keyButton.Text = keyToString(toggleKey) .. " (Lock)"
 keyButton.ZIndex = 3
 keyButton.AutoButtonColor = false
 keyButton.Parent = mainPage
@@ -1282,7 +1330,9 @@ local keyCorner = Instance.new("UICorner")
 keyCorner.CornerRadius = UDim.new(0,8)
 keyCorner.Parent = keyButton
 
+-- Mode button
 mkLabel("Mode:",20,132)
+
 local modeButton = Instance.new("TextButton")
 modeButton.Size = UDim2.new(0,90,0,24)
 modeButton.Position = UDim2.new(0,80,0,130)
@@ -1299,7 +1349,9 @@ local modeCorner = Instance.new("UICorner")
 modeCorner.CornerRadius = UDim.new(0,8)
 modeCorner.Parent = modeButton
 
+-- Action button
 mkLabel("Action:",20,168)
+
 local actionButton = Instance.new("TextButton")
 actionButton.Size = UDim2.new(0,90,0,24)
 actionButton.Position = UDim2.new(0,80,0,166)
@@ -1316,6 +1368,7 @@ local actionCorner = Instance.new("UICorner")
 actionCorner.CornerRadius = UDim.new(0,8)
 actionCorner.Parent = actionButton
 
+-- Info text
 local lockedLabel = Instance.new("TextLabel")
 lockedLabel.Size = UDim2.new(1,-40,0,20)
 lockedLabel.Position = UDim2.new(0,20,0,204)
@@ -1324,7 +1377,7 @@ lockedLabel.Font = Enum.Font.Gotham
 lockedLabel.TextSize = 13
 lockedLabel.TextColor3 = Color3.fromRGB(200,200,210)
 lockedLabel.TextXAlignment = Enum.TextXAlignment.Left
-lockedLabel.Text = "Parry Key: E (locked) | Slash of Fury Key: Q (locked / disabled)"
+lockedLabel.Text = "Parry Key: E (locked) | Main click key: E (locked)"
 lockedLabel.ZIndex = 3
 lockedLabel.Parent = mainPage
 
@@ -1338,10 +1391,11 @@ infoLabel.TextWrapped = true
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 infoLabel.TextColor3 = Color3.fromRGB(180,180,190)
-infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Speed & Jump are toggles in Blatant > Player Options."
+infoLabel.Text = "RightCtrl = show/hide hub. Mode = Toggle/Hold. Action = Click/Parry. Speed & Jump are in Blatant > Player Options."
 infoLabel.ZIndex = 3
 infoLabel.Parent = mainPage
 
+-- Start / Stop button
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0,220,0,34)
 toggleBtn.Position = UDim2.new(0,20,0,280)
@@ -1359,7 +1413,7 @@ toggleCorner.CornerRadius = UDim.new(0,10)
 toggleCorner.Parent = toggleBtn
 
 ---------------------------------------------------------------------//
--- LIVE STATUS PANEL (FPS / PING / WALK / JUMP / REGION)
+-- LIVE STATUS PANEL (FPS / PING / WS / JP / REGION)
 ---------------------------------------------------------------------//
 local livePanel = Instance.new("Frame")
 livePanel.Size = UDim2.new(0,220,0,112)
@@ -1454,12 +1508,12 @@ regionLabel.Parent = livePanel
 local lastFps = 0
 RunService.RenderStepped:Connect(function(dt)
     if dt > 0 then
-        local current = math.floor(1/dt + 0.5)
-        lastFps = current
+        lastFps = math.floor(1/dt + 0.5)
     end
 end)
 
 local function getPingMs()
+    -- Prefer LocalPlayer:GetNetworkPing
     local ok, ping = pcall(function()
         if LocalPlayer and LocalPlayer.GetNetworkPing then
             return LocalPlayer:GetNetworkPing()
@@ -1469,6 +1523,7 @@ local function getPingMs()
         return math.floor(ping * 1000 + 0.5)
     end
 
+    -- Fallback Stats
     local Stats = game:FindService("Stats") or game:GetService("Stats")
     local success, ms = pcall(function()
         local net = Stats.Network
@@ -1482,24 +1537,27 @@ local function getPingMs()
             end
         end
     end)
+
     if success and ms then
         return ms
     end
+
     return nil
 end
 
--- server region best-effort
 local cachedRegion = nil
 local function getServerRegion()
     if cachedRegion ~= nil then
         return cachedRegion
     end
 
+    -- Try join data
     local ok, joinData = pcall(function()
         if LocalPlayer and LocalPlayer.GetJoinData then
             return LocalPlayer:GetJoinData()
         end
     end)
+
     if ok and joinData then
         if joinData.Region ~= nil then
             cachedRegion = tostring(joinData.Region)
@@ -1511,6 +1569,7 @@ local function getServerRegion()
         end
     end
 
+    -- Fallback: Roblox locale
     local ok2, loc = pcall(function()
         return LocalizationService.RobloxLocaleId or LocalizationService.SystemLocaleId
     end)
@@ -1523,12 +1582,11 @@ local function getServerRegion()
     return cachedRegion
 end
 
+-- Update loop
 task.spawn(function()
     while true do
         local hum = getHumanoid()
-        local ws  = 0
-        local jp  = 0
-
+        local ws, jp = 0, 0
         if hum then
             ws = hum.WalkSpeed or 0
             if hum.UseJumpPower ~= nil then
@@ -1555,7 +1613,7 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------------//
--- MAIN PAGE LOGIC
+-- STATUS HELPERS
 ---------------------------------------------------------------------//
 local function getCPS()
     local n = tonumber(cpsBox.Text)
@@ -1567,15 +1625,16 @@ local function getCPS()
         n = 100
         cpsBox.Text = "100"
     end
+    cps = n
     return n
 end
 
 local function updateStatus()
-    cps = getCPS()
+    local curCps = getCPS()
     local onOff = clicking and "ON" or "OFF"
     local color = clicking and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,80,80)
-    status.Text = string.format("Status: %s (%d CPS, %s, %s)",onOff,cps,mode,actionMode)
-    status.TextColor3 = color
+    statusLabel.Text = string.format("Status: %s (%d CPS, %s, %s)", onOff, curCps, mode, actionMode)
+    statusLabel.TextColor3 = color
 end
 
 local function toggleClicker()
@@ -1604,9 +1663,13 @@ actionButton.MouseButton1Click:Connect(function()
     actionButton.Text = actionMode
     updateStatus()
 end)
+---------------------------------------------------------------------//
+-- FORWARD-DECLARED FUNCTIONS (IMPLEMENTED LATER)
+---------------------------------------------------------------------//
+local setSemiImmortal -- will be assigned in Part 7 (desync engine)
 
 ---------------------------------------------------------------------//
--- BLATANT PAGE (scroll frame)
+-- BLATANT PAGE (Scroll + Semi Immortal + Player Options)
 ---------------------------------------------------------------------//
 local blatantScroll = Instance.new("ScrollingFrame")
 blatantScroll.Size = UDim2.new(1,-20,1,-20)
@@ -1623,18 +1686,11 @@ bLayout.SortOrder = Enum.SortOrder.LayoutOrder
 bLayout.Padding = UDim.new(0,10)
 bLayout.Parent = blatantScroll
 
-local bPadding = Instance.new("UIPadding")
-bPadding.PaddingTop    = UDim.new(0,10)
-bPadding.PaddingBottom = UDim.new(0,10)
-bPadding.PaddingLeft   = UDim.new(0,10)
-bPadding.PaddingRight  = UDim.new(0,10)
-bPadding.Parent = blatantScroll
-
 bLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    blatantScroll.CanvasSize = UDim2.new(0,0,0,bLayout.AbsoluteContentSize.Y + 10)
+    blatantScroll.CanvasSize = UDim2.new(0,0,0, bLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local function createCard(height)
+local function createBlatantCard(height)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(1,0,0,height)
     card.BackgroundColor3 = Color3.fromRGB(20,20,26)
@@ -1643,7 +1699,7 @@ local function createCard(height)
     card.Parent = blatantScroll
 
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,12)
+    c.CornerRadius = UDim2.new(0,12)
     c.Parent = card
 
     return card
@@ -1679,163 +1735,115 @@ end
 
 local function makeDesc(parent,txt)
     local d = Instance.new("TextLabel")
-    d.Size = UDim2.new(1,-60,0,16)
-    d.Position = UDim2.new(0,10,0,28)
+    d.Size = UDim2.new(1,-20,0,32)
+    d.Position = UDim2.new(0,10,0,26)
     d.BackgroundTransparency = 1
     d.Font = Enum.Font.Gotham
     d.TextSize = 12
     d.TextColor3 = Color3.fromRGB(200,200,210)
     d.TextXAlignment = Enum.TextXAlignment.Left
-    d.ZIndex = 4
+    d.TextYAlignment = Enum.TextYAlignment.Top
+    d.TextWrapped = true
     d.Text = txt
+    d.ZIndex = 4
     d.Parent = parent
     return d
 end
 
--- SEMI IMMORTAL CARD (ENABLED)
-local semiCard = createCard(52)
-makeTitle(semiCard,"Semi Immortal")
-makeDesc(semiCard,"Fast vertical server-desync to make you harder to hit.")
+---------------------------------------------------------------------//
+-- SEMI IMMORTAL (FULL BODY STUTTER DESYNC) - UI PART
+---------------------------------------------------------------------//
+blatantHeader("Semi Immortal")
 
-local semiToggle = Instance.new("Frame")
-semiToggle.Size = UDim2.new(0,40,0,20)
-semiToggle.Position = UDim2.new(1,-50,0,16)
+local semiCard = createBlatantCard(70)
+makeTitle(semiCard, "Semi Immortal")
+makeDesc(semiCard, "Full body micro-teleport stutter around your real position. You stay visually still, server sees you jittering.")
+
+local semiToggle = Instance.new("TextButton")
+semiToggle.Size = UDim2.new(0,60,0,24)
+semiToggle.Position = UDim2.new(1,-70,0,24)
 semiToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
 semiToggle.BorderSizePixel = 0
+semiToggle.Font = Enum.Font.GothamBold
+semiToggle.TextSize = 12
+semiToggle.TextColor3 = Color3.fromRGB(230,230,235)
+semiToggle.Text = "OFF"
 semiToggle.ZIndex = 4
 semiToggle.Parent = semiCard
 
-local semiToggleCorner = Instance.new("UICorner")
-semiToggleCorner.CornerRadius = UDim.new(1,0)
-semiToggleCorner.Parent = semiToggle
+local semiCorner = Instance.new("UICorner")
+semiCorner.CornerRadius = UDim2.new(1,0)
+semiCorner.Parent = semiToggle
 
-local semiThumb = Instance.new("Frame")
-semiThumb.Size = UDim2.new(0,16,0,16)
-semiThumb.Position = UDim2.new(0,2,0.5,-8)
-semiThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
-semiThumb.BorderSizePixel = 0
-semiThumb.ZIndex = 5
-semiThumb.Parent = semiToggle
-
-local semiThumbCorner = Instance.new("UICorner")
-semiThumbCorner.CornerRadius = UDim.new(1,0)
-semiThumbCorner.Parent = semiThumb
-
-local function updateSemiVisual()
+local function updateSemiImmortalVisual()
     if semiImmortalOn then
         semiToggle.BackgroundColor3 = ThemeAccentOn
-        semiThumb.Position = UDim2.new(1,-18,0.5,-8)
+        semiToggle.Text = "ON"
     else
         semiToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-        semiThumb.Position = UDim2.new(0,2,0.5,-8)
+        semiToggle.Text = "OFF"
     end
 end
-updateSemiVisual()
 
--- settings card (cosmetic)
-local setCard = createCard(52)
-makeTitle(setCard,"Semi Immortal Settings")
-makeDesc(setCard,"Currently basic fast vertical jitter. Future: range & style tweaks.")
+updateSemiImmortalVisual()
 
-local setButton = Instance.new("TextButton")
-setButton.Size = UDim2.new(0,110,0,24)
-setButton.Position = UDim2.new(1,-120,0,14)
-setButton.BackgroundColor3 = Color3.fromRGB(30,30,38)
-setButton.BorderSizePixel = 0
-setButton.Font = Enum.Font.Gotham
-setButton.TextSize = 14
-setButton.TextColor3 = Color3.fromRGB(150,150,160)
-setButton.TextXAlignment = Enum.TextXAlignment.Center
-setButton.Text = "Info"
-setButton.ZIndex = 4
-setButton.Parent = setCard
-
-local setCorner = Instance.new("UICorner")
-setCorner.CornerRadius = UDim.new(0,10)
-setCorner.Parent = setButton
-
-setButton.AutoButtonColor = false
-setButton.MouseButton1Click:Connect(function()
-    infoLabel.Text = "Semi Immortal: server-desync vertical jitter. Harder to hit; your movement/jump stay normal."
+semiToggle.MouseButton1Click:Connect(function()
+    semiImmortalOn = not semiImmortalOn
+    updateSemiImmortalVisual()
+    if setSemiImmortal then
+        setSemiImmortal(semiImmortalOn)
+    end
+    if semiImmortalOn then
+        infoLabel.Text = "Semi Immortal: FULL BODY STUTTER enabled (server-side desync)."
+    else
+        infoLabel.Text = "Semi Immortal disabled."
+    end
 end)
 
 ---------------------------------------------------------------------//
--- DETECTIONS (all disabled incl Slash of Fury)
+-- DETECTIONS (LOCKED PLACEHOLDERS)
 ---------------------------------------------------------------------//
 blatantHeader("Detections")
 
 local function createDisabledDetection(title,desc)
-    local card = createCard(52)
+    local card = createBlatantCard(52)
     makeTitle(card,title)
     makeDesc(card,(desc or "").." Temporarily unavailable.")
 
-    local toggleFrame = Instance.new("Frame")
-    toggleFrame.Size = UDim2.new(0,40,0,20)
-    toggleFrame.Position = UDim2.new(1,-50,0,16)
-    toggleFrame.BackgroundColor3 = Color3.fromRGB(40,40,48)
-    toggleFrame.BorderSizePixel = 0
-    toggleFrame.ZIndex = 4
-    toggleFrame.Parent = card
+    local lockBtn = Instance.new("TextButton")
+    lockBtn.Size = UDim2.new(0,70,0,22)
+    lockBtn.Position = UDim2.new(1,-80,0,16)
+    lockBtn.BackgroundColor3 = Color3.fromRGB(40,40,48)
+    lockBtn.BorderSizePixel = 0
+    lockBtn.Font = Enum.Font.GothamBold
+    lockBtn.TextSize = 12
+    lockBtn.TextColor3 = Color3.fromRGB(180,180,190)
+    lockBtn.Text = "LOCKED"
+    lockBtn.ZIndex = 4
+    lockBtn.AutoButtonColor = false
+    lockBtn.Parent = card
 
-    local tfCorner = Instance.new("UICorner")
-    tfCorner.CornerRadius = UDim.new(1,0)
-    tfCorner.Parent = toggleFrame
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim2.new(1,0)
+    c.Parent = lockBtn
 
-    local thumb = Instance.new("Frame")
-    thumb.Size = UDim2.new(0,16,0,16)
-    thumb.Position = UDim2.new(0,2,0.5,-8)
-    thumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
-    thumb.BorderSizePixel = 0
-    thumb.ZIndex = 5
-    thumb.Parent = toggleFrame
-
-    local thCorner = Instance.new("UICorner")
-    thCorner.CornerRadius = UDim.new(1,0)
-    thCorner.Parent = thumb
+    return card
 end
 
 createDisabledDetection("Infinity Detection","Avoid accidental crashes by having the skill.")
 createDisabledDetection("Death Slash Detection","Generates the shot when activating the ability.")
 createDisabledDetection("Time Hole Detection","Avoid failing when someone has that skill.")
-
--- Slash of Fury Detection (TEMP UNAVAILABLE)
-local slashCard = createCard(52)
-makeTitle(slashCard,"Slash of Fury Detection")
-makeDesc(slashCard,"Temporarily unavailable.")
-
-local slashToggle = Instance.new("Frame")
-slashToggle.Size = UDim2.new(0,40,0,20)
-slashToggle.Position = UDim2.new(1,-50,0,16)
-slashToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-slashToggle.BorderSizePixel = 0
-slashToggle.ZIndex = 4
-slashToggle.Parent = slashCard
-
-local slashToggleCorner = Instance.new("UICorner")
-slashToggleCorner.CornerRadius = UDim.new(1,0)
-slashToggleCorner.Parent = slashToggle
-
-local slashThumb = Instance.new("Frame")
-slashThumb.Size = UDim2.new(0,16,0,16)
-slashThumb.Position = UDim2.new(0,2,0.5,-8)
-slashThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
-slashThumb.BorderSizePixel = 0
-slashThumb.ZIndex = 5
-slashThumb.Parent = slashToggle
-
-local slashThumbCorner = Instance.new("UICorner")
-slashThumbCorner.CornerRadius = UDim.new(1,0)
-slashThumbCorner.Parent = slashThumb
+createDisabledDetection("Slash of Fury Detection","Will auto-react when Slash of Fury is used (disabled for now).")
 
 ---------------------------------------------------------------------//
--- PLAYER OPTIONS (Speed toggle + Jump toggle)
+-- PLAYER OPTIONS (SPEED + JUMP)
 ---------------------------------------------------------------------//
 blatantHeader("Player Options")
 
 -- SPEED CARD
-local speedCard = createCard(64)
+local speedCard = createBlatantCard(70)
 makeTitle(speedCard,"Speed")
-makeDesc(speedCard,"Choose the speed of your character. Toggle must be ON to apply.")
+makeDesc(speedCard,"Choose walk speed 10–100. Toggle must be ON to apply. Restores original when turned off.")
 
 local speedValueLabel = Instance.new("TextLabel")
 speedValueLabel.Size = UDim2.new(0,40,0,16)
@@ -1848,44 +1856,25 @@ speedValueLabel.Text = tostring(speedValue)
 speedValueLabel.ZIndex = 4
 speedValueLabel.Parent = speedCard
 
-local speedToggle = Instance.new("Frame")
-speedToggle.Size = UDim2.new(0,40,0,20)
-speedToggle.Position = UDim2.new(1,-50,0,8)
-speedToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-speedToggle.BorderSizePixel = 0
-speedToggle.ZIndex = 4
-speedToggle.Parent = speedCard
+local speedToggleBtn = Instance.new("TextButton")
+speedToggleBtn.Size = UDim2.new(0,50,0,22)
+speedToggleBtn.Position = UDim2.new(1,-60,0,8)
+speedToggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,48)
+speedToggleBtn.BorderSizePixel = 0
+speedToggleBtn.Font = Enum.Font.GothamBold
+speedToggleBtn.TextSize = 12
+speedToggleBtn.TextColor3 = Color3.fromRGB(230,230,235)
+speedToggleBtn.Text = "OFF"
+speedToggleBtn.ZIndex = 4
+speedToggleBtn.Parent = speedCard
 
 local speedToggleCorner = Instance.new("UICorner")
 speedToggleCorner.CornerRadius = UDim2.new(1,0)
-speedToggleCorner.Parent = speedToggle
-
-local speedThumb = Instance.new("Frame")
-speedThumb.Size = UDim2.new(0,16,0,16)
-speedThumb.Position = UDim2.new(0,2,0.5,-8)
-speedThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
-speedThumb.BorderSizePixel = 0
-speedThumb.ZIndex = 5
-speedThumb.Parent = speedToggle
-
-local speedThumbCorner = Instance.new("UICorner")
-speedThumbCorner.CornerRadius = UDim2.new(1,0)
-speedThumbCorner.Parent = speedThumb
-
-local function updateSpeedToggleVisual()
-    if speedEnabled then
-        speedToggle.BackgroundColor3 = ThemeAccentOn
-        speedThumb.Position = UDim2.new(1,-18,0.5,-8)
-    else
-        speedToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-        speedThumb.Position = UDim2.new(0,2,0.5,-8)
-    end
-end
-updateSpeedToggleVisual()
+speedToggleCorner.Parent = speedToggleBtn
 
 local speedBar = Instance.new("Frame")
 speedBar.Size = UDim2.new(1,-40,0,6)
-speedBar.Position = UDim2.new(0,10,0,40)
+speedBar.Position = UDim2.new(0,10,0,42)
 speedBar.BackgroundColor3 = Color3.fromRGB(35,35,42)
 speedBar.BorderSizePixel = 0
 speedBar.ZIndex = 4
@@ -1907,13 +1896,30 @@ speedFillCorner.CornerRadius = UDim2.new(0,6)
 speedFillCorner.Parent = speedFill
 
 local speedDragging = false
+
+local function updateSpeedToggleVisual()
+    if speedEnabled then
+        speedToggleBtn.BackgroundColor3 = ThemeAccentOn
+        speedToggleBtn.Text = "ON"
+    else
+        speedToggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,48)
+        speedToggleBtn.Text = "OFF"
+    end
+end
+
+updateSpeedToggleVisual()
+
 local function setSpeedFromX(x)
-    local rel = math.clamp((x - speedBar.AbsolutePosition.X)/speedBar.AbsoluteSize.X,0,1)
+    local rel = 0
+    if speedBar.AbsoluteSize.X > 0 then
+        rel = math.clamp((x - speedBar.AbsolutePosition.X)/speedBar.AbsoluteSize.X,0,1)
+    end
     local val = math.floor(10 + (100-10)*rel + 0.5)
     speedValue = val
     speedValueLabel.Text = tostring(val)
     speedFill.Size = UDim2.new(rel,0,1,0)
-    if speedEnabled then
+
+    if speedEnabled and typeof(applySpeed) == "function" then
         applySpeed()
     end
 end
@@ -1937,27 +1943,32 @@ UIS.InputEnded:Connect(function(inp)
     end
 end)
 
-speedToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        if speedEnabled then
-            speedEnabled = false
-            updateSpeedToggleVisual()
-            local hum = getHumanoid()
-            if hum and originalWalkSpeed ~= nil then
-                hum.WalkSpeed = originalWalkSpeed
-            end
-        else
-            speedEnabled = true
-            updateSpeedToggleVisual()
+speedToggleBtn.MouseButton1Click:Connect(function()
+    speedEnabled = not speedEnabled
+    updateSpeedToggleVisual()
+    local hum = getHumanoid()
+    if not hum then return end
+
+    if speedEnabled then
+        if originalWalkSpeed == nil then
+            originalWalkSpeed = hum.WalkSpeed
+        end
+        if typeof(applySpeed) == "function" then
             applySpeed()
+        else
+            hum.WalkSpeed = speedValue
+        end
+    else
+        if originalWalkSpeed ~= nil then
+            hum.WalkSpeed = originalWalkSpeed
         end
     end
 end)
 
--- JUMP CARD (TOGGLE + SLIDER)
-local jumpCard = createCard(64)
+-- JUMP CARD
+local jumpCard = createBlatantCard(70)
 makeTitle(jumpCard,"Jump Power")
-makeDesc(jumpCard,"Choose the jump power of your character. Toggle must be ON to apply.")
+makeDesc(jumpCard,"Choose jump power 25–150. Toggle must be ON to apply. Restores original when turned off.")
 
 local jumpValueLabel = Instance.new("TextLabel")
 jumpValueLabel.Size = UDim2.new(0,40,0,16)
@@ -1970,44 +1981,25 @@ jumpValueLabel.Text = tostring(jumpValue)
 jumpValueLabel.ZIndex = 4
 jumpValueLabel.Parent = jumpCard
 
-local jumpToggle = Instance.new("Frame")
-jumpToggle.Size = UDim2.new(0,40,0,20)
-jumpToggle.Position = UDim2.new(1,-50,0,8)
-jumpToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-jumpToggle.BorderSizePixel = 0
-jumpToggle.ZIndex = 4
-jumpToggle.Parent = jumpCard
+local jumpToggleBtn = Instance.new("TextButton")
+jumpToggleBtn.Size = UDim2.new(0,50,0,22)
+jumpToggleBtn.Position = UDim2.new(1,-60,0,8)
+jumpToggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,48)
+jumpToggleBtn.BorderSizePixel = 0
+jumpToggleBtn.Font = Enum.Font.GothamBold
+jumpToggleBtn.TextSize = 12
+jumpToggleBtn.TextColor3 = Color3.fromRGB(230,230,235)
+jumpToggleBtn.Text = "OFF"
+jumpToggleBtn.ZIndex = 4
+jumpToggleBtn.Parent = jumpCard
 
 local jumpToggleCorner = Instance.new("UICorner")
 jumpToggleCorner.CornerRadius = UDim2.new(1,0)
-jumpToggleCorner.Parent = jumpToggle
-
-local jumpThumb = Instance.new("Frame")
-jumpThumb.Size = UDim2.new(0,16,0,16)
-jumpThumb.Position = UDim2.new(0,2,0.5,-8)
-jumpThumb.BackgroundColor3 = Color3.fromRGB(80,80,80)
-jumpThumb.BorderSizePixel = 0
-jumpThumb.ZIndex = 5
-jumpThumb.Parent = jumpToggle
-
-local jumpThumbCorner = Instance.new("UICorner")
-jumpThumbCorner.CornerRadius = UDim2.new(1,0)
-jumpThumbCorner.Parent = jumpThumb
-
-local function updateJumpToggleVisual()
-    if jumpEnabled then
-        jumpToggle.BackgroundColor3 = ThemeAccentOn
-        jumpThumb.Position = UDim2.new(1,-18,0.5,-8)
-    else
-        jumpToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-        jumpThumb.Position = UDim2.new(0,2,0.5,-8)
-    end
-end
-updateJumpToggleVisual()
+jumpToggleCorner.Parent = jumpToggleBtn
 
 local jumpBar = Instance.new("Frame")
 jumpBar.Size = UDim2.new(1,-40,0,6)
-jumpBar.Position = UDim2.new(0,10,0,40)
+jumpBar.Position = UDim2.new(0,10,0,42)
 jumpBar.BackgroundColor3 = Color3.fromRGB(35,35,42)
 jumpBar.BorderSizePixel = 0
 jumpBar.ZIndex = 4
@@ -2029,13 +2021,30 @@ jumpFillCorner.CornerRadius = UDim2.new(0,6)
 jumpFillCorner.Parent = jumpFill
 
 local jumpDragging = false
+
+local function updateJumpToggleVisual()
+    if jumpEnabled then
+        jumpToggleBtn.BackgroundColor3 = ThemeAccentOn
+        jumpToggleBtn.Text = "ON"
+    else
+        jumpToggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,48)
+        jumpToggleBtn.Text = "OFF"
+    end
+end
+
+updateJumpToggleVisual()
+
 local function setJumpFromX(x)
-    local rel = math.clamp((x - jumpBar.AbsolutePosition.X)/jumpBar.AbsoluteSize.X,0,1)
+    local rel = 0
+    if jumpBar.AbsoluteSize.X > 0 then
+        rel = math.clamp((x - jumpBar.AbsolutePosition.X)/jumpBar.AbsoluteSize.X,0,1)
+    end
     local val = math.floor(25 + (150-25)*rel + 0.5)
     jumpValue = val
     jumpValueLabel.Text = tostring(val)
     jumpFill.Size = UDim2.new(rel,0,1,0)
-    if jumpEnabled then
+
+    if jumpEnabled and typeof(applyJump) == "function" then
         applyJump()
     end
 end
@@ -2059,19 +2068,27 @@ UIS.InputEnded:Connect(function(inp)
     end
 end)
 
-jumpToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        if jumpEnabled then
-            jumpEnabled = false
-            updateJumpToggleVisual()
-            local hum = getHumanoid()
-            if hum and originalJumpPower ~= nil then
-                hum.JumpPower = originalJumpPower
-            end
-        else
-            jumpEnabled = true
-            updateJumpToggleVisual()
+jumpToggleBtn.MouseButton1Click:Connect(function()
+    jumpEnabled = not jumpEnabled
+    updateJumpToggleVisual()
+    local hum = getHumanoid()
+    if not hum then return end
+
+    if jumpEnabled then
+        if originalJumpPower == nil then
+            originalJumpPower = hum.JumpPower
+        end
+        if typeof(applyJump) == "function" then
             applyJump()
+        else
+            if hum.UseJumpPower ~= nil then
+                hum.UseJumpPower = true
+            end
+            hum.JumpPower = jumpValue
+        end
+    else
+        if originalJumpPower ~= nil then
+            hum.JumpPower = originalJumpPower
         end
     end
 end)
@@ -2079,13 +2096,18 @@ end)
 ---------------------------------------------------------------------//
 -- MANUAL SPAM + TRIGGERBOT
 ---------------------------------------------------------------------//
-local manualCard = createCard(48)
+blatantHeader("Combat Helpers")
+
+local listeningForManual = false
+
+-- Manual spam card
+local manualCard = createBlatantCard(52)
 makeTitle(manualCard,"Manual Spam")
-makeDesc(manualCard,"Spam push on keypress.")
+makeDesc(manualCard,"Spam key on press. Click to set the key.")
 
 local manualKeyButton = Instance.new("TextButton")
-manualKeyButton.Size = UDim2.new(0,60,0,24)
-manualKeyButton.Position = UDim2.new(1,-70,0,12)
+manualKeyButton.Size = UDim2.new(0,70,0,24)
+manualKeyButton.Position = UDim2.new(1,-80,0,14)
 manualKeyButton.BackgroundColor3 = Color3.fromRGB(30,30,38)
 manualKeyButton.BorderSizePixel = 0
 manualKeyButton.Font = Enum.Font.GothamBold
@@ -2099,93 +2121,98 @@ local manualKeyCorner = Instance.new("UICorner")
 manualKeyCorner.CornerRadius = UDim2.new(0,10)
 manualKeyCorner.Parent = manualKeyButton
 
-local triggerCard = createCard(48)
+manualKeyButton.MouseButton1Click:Connect(function()
+    if listeningForManual then return end
+    listeningForManual = true
+    infoLabel.Text = "Press a key for Manual Spam..."
+end)
+
+-- Triggerbot card
+local triggerCard = createBlatantCard(52)
 makeTitle(triggerCard,"Triggerbot")
-makeDesc(triggerCard,"Block instant when they target you. (Here: constant parry spam.)")
+makeDesc(triggerCard,"Constant parry spam when enabled (good for simple games / testing).")
 
-local trigToggle = semiToggle:Clone()
+local trigToggle = Instance.new("TextButton")
+trigToggle.Size = UDim2.new(0,60,0,24)
+trigToggle.Position = UDim2.new(1,-70,0,14)
+trigToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
+trigToggle.BorderSizePixel = 0
+trigToggle.Font = Enum.Font.GothamBold
+trigToggle.TextSize = 12
+trigToggle.TextColor3 = Color3.fromRGB(230,230,235)
+trigToggle.Text = "OFF"
+trigToggle.ZIndex = 4
 trigToggle.Parent = triggerCard
-trigToggle.Position = UDim2.new(1,-50,0,14)
 
-local trigThumb = trigToggle:FindFirstChildOfClass("Frame")
+local trigCorner = Instance.new("UICorner")
+trigCorner.CornerRadius = UDim2.new(1,0)
+trigCorner.Parent = trigToggle
 
 local function updateTriggerVisual()
     if triggerbotOn then
         trigToggle.BackgroundColor3 = ThemeAccentOn
-        trigThumb.Position = UDim2.new(1,-18,0.5,-8)
+        trigToggle.Text = "ON"
     else
         trigToggle.BackgroundColor3 = Color3.fromRGB(40,40,48)
-        trigThumb.Position = UDim2.new(0,2,0.5,-8)
+        trigToggle.Text = "OFF"
     end
 end
+
 updateTriggerVisual()
 
-trigToggle.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        triggerbotOn = not triggerbotOn
-        updateTriggerVisual()
-    end
+trigToggle.MouseButton1Click:Connect(function()
+    triggerbotOn = not triggerbotOn
+    updateTriggerVisual()
 end)
-
-manualKeyButton.MouseButton1Click:Connect(function()
-    if listeningForManual then return end
-    listeningForManual = true
-    infoLabel.Text = "Press a key for Manual Spam."
-end)
-
 ---------------------------------------------------------------------//
--- INPUT HANDLING
+-- SEMI IMMORTAL ENGINE (FULL BODY STUTTER DESYNC)
 ---------------------------------------------------------------------//
-UIS.InputBegan:Connect(function(input,gp)
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+do
+    local semiConn
+    local lastOffsetY = 0
 
-    if input.KeyCode == Enum.KeyCode.RightControl and not listeningForManual then
-        guiVisible = not guiVisible
-        gui.Enabled = guiVisible
-        return
-    end
+    setSemiImmortal = function(on)
+        semiImmortalOn = on
 
-    if listeningForManual then
-        manualKey = input.KeyCode
-        manualKeyButton.Text = keyToString(manualKey)
-        infoLabel.Text = "Manual spam key set to: "..manualKeyButton.Text
-        listeningForManual = false
-        return
-    end
-
-    if gp then return end
-
-    if input.KeyCode == toggleKey then
-        if mode == "Toggle" then
-            toggleClicker()
-        else
-            clicking = true
-            updateStatus()
+        if semiConn then
+            semiConn:Disconnect()
+            semiConn = nil
         end
-        return
-    end
 
-    if input.KeyCode == manualKey then
-        manualSpamActive = true
-    end
-end)
+        if not on then
+            lastOffsetY = 0
+            return
+        end
 
-UIS.InputEnded:Connect(function(input,gp)
-    if gp then return end
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+        semiConn = RunService.Heartbeat:Connect(function(dt)
+            local lp = LocalPlayer
+            if not lp then return end
 
-    if input.KeyCode == toggleKey and mode == "Hold" then
-        clicking = false
-        updateStatus()
-    end
+            local char = lp.Character
+            if not char then return end
 
-    if input.KeyCode == manualKey then
-        manualSpamActive = false
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local cam = workspace.CurrentCamera
+            if not (hrp and cam) then return end
+
+            -- fast up/down wave
+            local t = tick() * 18 -- speed
+            local newY = math.sin(t) * 2.2 -- amplitude (small so you don't get kicked)
+            local dy = newY - lastOffsetY
+            lastOffsetY = newY
+
+            -- move server hitbox but keep your view stable
+            local cf = hrp.CFrame
+            hrp.CFrame = cf * CFrame.new(0, dy, 0)
+
+            -- cancel out visually for your camera
+            cam.CFrame = cam.CFrame * CFrame.new(0, -dy, 0)
+        end)
     end
-end)
+end
 
 ---------------------------------------------------------------------//
--- FX HELPERS (FPS / Player Effects / Semi Immortal / ESP / Speed / Jump)
+-- FX HELPERS (FPS BOOST, PLAYER EFFECTS, ABILITY ESP, SPEED, JUMP)
 ---------------------------------------------------------------------//
 function applyFpsBoost(on)
     fpsBoostOn = on
@@ -2206,14 +2233,17 @@ end
 
 function applyPlayerEffects(on)
     playerEffectsOn = on
-    local char = LocalPlayer and (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+    local lp = LocalPlayer
+    if not lp then return end
+
+    local char = lp.Character or lp.CharacterAdded:Wait()
     if not char then return end
 
     local function setPart(name, alpha)
         local p = char:FindFirstChild(name)
         if p and p:IsA("BasePart") then
             p.Transparency = alpha
-            for _,d in ipairs(p:GetDescendants()) do
+            for _, d in ipairs(p:GetDescendants()) do
                 if d:IsA("Decal") or d:IsA("Texture") then
                     d.Transparency = alpha
                 end
@@ -2221,23 +2251,26 @@ function applyPlayerEffects(on)
         end
     end
 
+    -- Headless effect
     local head = char:FindFirstChild("Head")
     if head then
         head.Transparency = on and 1 or 0
-        for _,d in ipairs(head:GetDescendants()) do
+        for _, d in ipairs(head:GetDescendants()) do
             if d:IsA("Decal") or d:IsA("Texture") then
                 d.Transparency = on and 1 or 0
             end
         end
     end
 
-    for _,n in ipairs({"RightUpperLeg","RightLowerLeg","RightFoot"}) do
+    -- Korblox effect (right leg)
+    for _, n in ipairs({"RightUpperLeg","RightLowerLeg","RightFoot"}) do
         setPart(n, on and 1 or 0)
     end
 end
 
 function applyAbilityEsp(on)
-    abilityEspOn = false -- still disabled
+    -- intentionally locked / stubbed
+    abilityEspOn = false
 end
 
 function applySpeed()
@@ -2245,9 +2278,10 @@ function applySpeed()
     local hum = getHumanoid()
     if not hum then return end
 
-    if not originalWalkSpeed then
+    if originalWalkSpeed == nil then
         originalWalkSpeed = hum.WalkSpeed
     end
+
     hum.WalkSpeed = speedValue
 end
 
@@ -2259,83 +2293,105 @@ function applyJump()
     if hum.UseJumpPower ~= nil then
         hum.UseJumpPower = true
     end
-    if not originalJumpPower then
+
+    if originalJumpPower == nil then
         originalJumpPower = hum.JumpPower
     end
+
     hum.JumpPower = jumpValue
 end
 
--- SEMI IMMORTAL SERVER-DESYNC STYLE
-function applySemiImmortal(on)
-    semiImmortalOn = on
-    getgenv().BinHub_SemiImmortal = on
+---------------------------------------------------------------------//
+-- INPUT HANDLING (GUI TOGGLE, MAIN TOGGLE, MANUAL KEY)
+---------------------------------------------------------------------//
+local function doMouseClick()
+    if mouse1click then
+        pcall(mouse1click)
+    elseif mouse1press and mouse1release then
+        mouse1press()
+        task.wait(0.01)
+        mouse1release()
+    elseif VIM then
+        pcall(function()
+            VIM:SendMouseButtonEvent(0,0,0,true,game,0)
+            task.wait(0.01)
+            VIM:SendMouseButtonEvent(0,0,0,false,game,0)
+        end)
+    end
+end
 
-    if semiImmortalConn then
-        semiImmortalConn:Disconnect()
-        semiImmortalConn = nil
+UIS.InputBegan:Connect(function(input, gp)
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+    -- Show / hide hub
+    if input.KeyCode == Enum.KeyCode.RightControl and not listeningForManual then
+        guiVisible = not guiVisible
+        gui.Enabled = guiVisible
+        return
     end
 
-    updateSemiVisual()
+    -- manual spam key rebind
+    if listeningForManual then
+        manualKey = input.KeyCode
+        if manualKeyButton then
+            manualKeyButton.Text = keyToString(manualKey)
+        end
+        infoLabel.Text = "Manual spam key set to: "..keyToString(manualKey)
+        listeningForManual = false
+        return
+    end
 
-    if not on then
-        local hum = getHumanoid()
-        if hum and hum.Parent then
-            local rootPart = hum.Parent:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                rootPart.Velocity = Vector3.new(0,0,0)
-            end
+    if gp then return end
+
+    -- main toggle key (E, locked)
+    if input.KeyCode == toggleKey then
+        if mode == "Toggle" then
+            toggleClicker()
+        else
+            clicking = true
+            updateStatus()
         end
         return
     end
 
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local rootPart = char:WaitForChild("HumanoidRootPart")
+    -- manual spam hold
+    if input.KeyCode == manualKey then
+        manualSpamActive = true
+        return
+    end
+end)
 
-    local flip = false
-    semiImmortalConn = RunService.Heartbeat:Connect(function()
-        if not semiImmortalOn then
-            if semiImmortalConn then
-                semiImmortalConn:Disconnect()
-                semiImmortalConn = nil
-            end
-            return
-        end
+UIS.InputEnded:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-        if not rootPart or not rootPart.Parent then
-            local c = LocalPlayer.Character
-            if c then
-                rootPart = c:FindFirstChild("HumanoidRootPart")
-            end
-            if not rootPart then
-                return
-            end
-        end
+    -- stop hold mode
+    if input.KeyCode == toggleKey and mode == "Hold" then
+        clicking = false
+        updateStatus()
+    end
 
-        -- Small but fast vertical velocity swap – server sees jitter,
-        -- local camera mostly follows normal walk/jump.
-        flip = not flip
-        local dir  = flip and 1 or -1
-        local yVel = 70 * dir
-
-        local vel = rootPart.Velocity
-        rootPart.Velocity = Vector3.new(vel.X, yVel, vel.Z)
-    end)
-end
+    -- stop manual spam on release
+    if input.KeyCode == manualKey then
+        manualSpamActive = false
+    end
+end)
 
 ---------------------------------------------------------------------//
--- MAIN SPAM LOOP
+-- MAIN SPAM LOOP (AUTO CLICK / PARRY / TRIGGERBOT / MANUAL)
 ---------------------------------------------------------------------//
 task.spawn(function()
     while true do
         if clicking or triggerbotOn or manualSpamActive then
             local delay = 1 / getCPS()
-            if delay < 0.001 then delay = 0.001 end
+            if delay < 0.001 then
+                delay = 0.001
+            end
 
+            -- main click / parry
             if clicking then
                 if actionMode == "Click" then
-                    pcall(function()
-                        mouse1click()
-                    end)
+                    doMouseClick()
                 else
                     if VIM and parryKey then
                         pcall(function()
@@ -2347,6 +2403,7 @@ task.spawn(function()
                 end
             end
 
+            -- triggerbot (constant parry)
             if triggerbotOn and VIM and parryKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, parryKey, false, game)
@@ -2355,6 +2412,7 @@ task.spawn(function()
                 end)
             end
 
+            -- manual spam key
             if manualSpamActive and VIM and manualKey then
                 pcall(function()
                     VIM:SendKeyEvent(true, manualKey, false, game)
@@ -2371,9 +2429,8 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------------//
--- START ON HOME + STATUS + WEBHOOK
+-- FINAL SETUP
 ---------------------------------------------------------------------//
 setActivePage("Home")
 updateStatus()
-applySemiImmortal(semiImmortalOn)
 sendWebhookLog()
