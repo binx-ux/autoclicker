@@ -24,7 +24,7 @@ end)
 -- DISCORD WEBHOOK (BUG REPORTS)
 ---------------------------------------------------------------------//
 --  🔹 PUT YOUR DISCORD WEBHOOK HERE 🔹
-local WEBHOOK_URL = "" https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk
+local WEBHOOK_URL = " https://discord.com/api/webhooks/1446656470287651050/ayflCl7nEQ3388YhXAZT7r3j5kTC40EP3WV9yO1BehR2vzHbtoDArV-YejWn_E_F6eUk"
 
 local function sendBugToWebhook(title, body)
     if WEBHOOK_URL == nil or WEBHOOK_URL == "" then return end
